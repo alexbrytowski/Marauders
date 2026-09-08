@@ -1,42 +1,56 @@
+using System.Text.Json;
+
 namespace Marauders.Server;
 
 public readonly record struct Hex(int Q, int R)
 {
-    public int DistanceTo(Hex other)
-    {
-        var dq = Q - other.Q;
-        var dr = R - other.R;
-        return (Math.Abs(dq) + Math.Abs(dr) + Math.Abs(dq + dr)) / 2;
-    }
+    public int DistanceTo(Hex other) => (Math.Abs(Q - other.Q) + Math.Abs(R - other.R) + Math.Abs(Q - other.Q + R - other.R)) / 2;
 }
+
+public sealed record BoardCell(int Q, int R, string Terrain, string? PortId = null, string? HarborId = null)
+{
+    public Hex Hex => new(Q, R);
+}
+public sealed record MapPort(string Id, string Name, int Col, int Row);
+public sealed record MapSource(string Version, string[] Rows, MapPort[] Ports);
 
 public static class BoardDefinition
 {
-    // This initial playable sea is intentionally represented independently of the
-    // photographed board. It lets the server validate every move deterministically;
-    // individual land hexes can be carved out without changing game rules.
-    public const int MinQ = 0;
-    public const int MaxQ = 28;
-    public const int MinR = 0;
-    public const int MaxR = 30;
+    public static readonly Hex[] Directions = [new(1, 0), new(1, -1), new(0, -1), new(-1, 0), new(-1, 1), new(0, 1)];
+    private static readonly MapSource Source = JsonSerializer.Deserialize<MapSource>(
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "board.json")), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+    public static string Version => Source.Version;
+    public static IReadOnlyList<MapPort> Ports => Source.Ports;
+    private static readonly Dictionary<string, Hex> PortHexes = Source.Ports.ToDictionary(p => p.Id, p => Offset(p.Col, p.Row));
+    public static IReadOnlyList<BoardCell> Cells { get; } = CreateCells();
+    private static readonly Dictionary<Hex, BoardCell> ByHex = Cells.ToDictionary(c => c.Hex);
+    public static Hex Offset(int col, int row) => new(col - (row + 1) / 2, row);
+    public static Hex PortHex(string portId) => PortHexes[portId];
+    public static BoardCell? Cell(Hex hex) => ByHex.GetValueOrDefault(hex);
+    public static IEnumerable<Hex> Adjacent(Hex hex) => Directions.Select(d => new Hex(hex.Q + d.Q, hex.R + d.R));
+    public static IEnumerable<Hex> Neighbors(Hex hex) => Adjacent(hex).Where(IsSailable);
+    public static bool IsSailable(Hex hex) => Cell(hex)?.Terrain is "water" or "harbor";
+    public static IReadOnlyList<Hex> Harbor(string portId) => Cells.Where(c => c.HarborId == portId).Select(c => c.Hex).ToArray();
+    public static bool InHarbor(Hex hex, string portId) => Cell(hex)?.HarborId == portId;
 
-    private static readonly Dictionary<string, Hex> portHexes = new()
+    private static BoardCell[] CreateCells()
     {
-        ["port-1"] = new(9, 1), ["port-2"] = new(23, 1), ["port-3"] = new(15, 6),
-        ["port-4"] = new(23, 7), ["port-5"] = new(2, 10), ["port-6"] = new(11, 10),
-        ["port-7"] = new(17, 14), ["port-8"] = new(26, 14), ["port-9"] = new(4, 18),
-        ["port-10"] = new(10, 19), ["port-11"] = new(20, 22), ["port-12"] = new(6, 28),
-        ["port-13"] = new(25, 28),
-    };
-    private static readonly Hex[] directions = [new(1, 0), new(1, -1), new(0, -1), new(-1, 0), new(-1, 1), new(0, 1)];
+        var result = new List<BoardCell>();
+        for (var row = 0; row < Source.Rows.Length; row++)
+            for (var col = 0; col < Source.Rows[row].Length; col++)
+            {
+                var hex = Offset(col, row);
+                var port = Source.Ports.SingleOrDefault(p => p.Col == col && p.Row == row);
+                var water = Source.Rows[row][col] == '.';
+                var harbor = water ? PortHexes.FirstOrDefault(p => p.Value.DistanceTo(hex) == 1).Key : null;
+                result.Add(new(hex.Q, hex.R, port is not null ? "port" : harbor is not null ? "harbor" : water ? "water" : "land", port?.Id, harbor));
+            }
+        return result.ToArray();
+    }
 
-    public static Hex PortHex(string portId) => portHexes[portId];
-    public static IReadOnlyList<Hex> Neighbors(Hex hex) => directions.Select(direction => new Hex(hex.Q + direction.Q, hex.R + direction.R)).Where(IsSailable).ToList();
-    public static bool IsSailable(Hex hex) => hex.Q >= MinQ && hex.Q <= MaxQ && hex.R >= MinR && hex.R <= MaxR && !portHexes.Values.Contains(hex);
-    public static Hex InitialShipHex(string portId, int slot) => Neighbors(PortHex(portId))[slot];
     public static IReadOnlyList<Hex>? FindPath(Hex start, Hex destination, ISet<Hex> blocked)
     {
-        if (!IsSailable(destination) || blocked.Contains(destination)) return null;
+        if (!IsSailable(start) || !IsSailable(destination) || blocked.Contains(destination)) return null;
         var queue = new Queue<Hex>();
         var previous = new Dictionary<Hex, Hex?> { [start] = null };
         queue.Enqueue(start);
@@ -52,14 +66,18 @@ public static class BoardDefinition
         path.Reverse();
         return path;
     }
-    public static Hex? NearestEmptyWater(Hex start, ISet<Hex> blocked)
+
+    public static Hex? SpawnHex(string portId, ISet<Hex> occupied)
     {
-        var queue = new Queue<Hex>(); var visited = new HashSet<Hex> { start }; queue.Enqueue(start);
+        foreach (var hex in Harbor(portId)) if (!occupied.Contains(hex)) return hex;
+        // Search over water, preferring harbor cells. Occupied cells can be
+        // searched through for spillover but never receive a new ship.
+        var queue = new Queue<Hex>(Harbor(portId));
+        var seen = Harbor(portId).ToHashSet();
         while (queue.TryDequeue(out var current))
         {
-            if (IsSailable(current) && !blocked.Contains(current)) return current;
-            foreach (var neighbor in directions.Select(direction => new Hex(current.Q + direction.Q, current.R + direction.R)))
-                if (IsSailable(neighbor) && visited.Add(neighbor)) queue.Enqueue(neighbor);
+            if (Cell(current)?.Terrain == "water" && !occupied.Contains(current)) return current;
+            foreach (var neighbor in Neighbors(current)) if (seen.Add(neighbor)) queue.Enqueue(neighbor);
         }
         return null;
     }

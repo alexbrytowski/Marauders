@@ -2,31 +2,41 @@ namespace Marauders.Server;
 
 public sealed class GameState
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string BoardVersion { get; set; } = BoardDefinition.Version;
+    public long Revision { get; set; }
     public string Phase { get; set; } = "lobby";
+    public string? HostPlayerId { get; set; }
+    public string? WinnerId { get; set; }
     public List<Player> Players { get; set; } = [];
-    public List<Port> Ports { get; set; } = Enumerable.Range(1, 13).Select(number => new Port { Id = $"port-{number}", Name = $"Port {number}" }).ToList();
+    public List<Port> Ports { get; set; } = BoardDefinition.Ports.Select(p => new Port { Id = p.Id, Name = p.Name }).ToList();
     public List<Ship> Ships { get; set; } = [];
     public List<Construction> Constructions { get; set; } = [];
+    public List<string> TurnOrder { get; set; } = [];
+    public List<string> PlacementDone { get; set; } = [];
     public int DraftPickNumber { get; set; }
     public string? ActivePlayerId { get; set; }
     public int RemainingActions { get; set; }
-    public int? LastRoll { get; set; }
     public int RemainingMovement { get; set; }
+    public int? LastRoll { get; set; }
     public int TurnNumber { get; set; }
     public DateTimeOffset? TurnEndsAt { get; set; }
-    public CombatState? Combat { get; set; }
+    public DateTimeOffset? ActionEndsAt { get; set; }
     public bool IsBuildPhase { get; set; }
     public int AvailableBuilds { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public CombatState? Combat { get; set; }
+    public List<CombatChoice> CombatChoices { get; set; } = [];
+    public List<GameEvent> Events { get; set; } = [];
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public sealed class Player
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#d84a4a";
+    public string Color { get; set; } = "#ed7866";
+    public string Character { get; set; } = "navigator";
 }
-
 public sealed class Port
 {
     public string Id { get; set; } = "";
@@ -34,17 +44,16 @@ public sealed class Port
     public string? OwnerId { get; set; }
     public int DefenseWeakness { get; set; }
 }
-
 public sealed class Ship
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string OwnerId { get; set; } = "";
     public string PortId { get; set; } = "";
-    public int Slot { get; set; }
+    public int Number { get; set; }
     public int Q { get; set; }
     public int R { get; set; }
+    public Hex Hex => new(Q, R);
 }
-
 public sealed class Construction
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
@@ -53,16 +62,37 @@ public sealed class Construction
     public int RemainingOwnerTurns { get; set; } = 2;
     public int StartedTurnNumber { get; set; }
 }
-
+public sealed record CombatChoice(string Id, string TriggerShipId, string OpponentShipId, string? HarborId);
 public sealed class CombatState
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Kind { get; set; } = "ships";
     public string TriggerShipId { get; set; } = "";
-    public string OpponentShipId { get; set; } = "";
+    public string? OpponentShipId { get; set; }
+    public string AttackerId { get; set; } = "";
+    public string DefenderId { get; set; } = "";
+    public string? PortId { get; set; }
     public List<string> ParticipantShipIds { get; set; } = [];
+    public List<string> SupportingPortIds { get; set; } = [];
     public string Status { get; set; } = "awaiting-roll";
     public string? LosingPlayerId { get; set; }
+    public string? WinnerId { get; set; }
     public Dictionary<string, List<int>> Rolls { get; set; } = [];
+    public int DefenseModifier { get; set; }
+    public int Round { get; set; }
+    public string Message { get; set; } = "All captains are watching.";
 }
-
-public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null);
+public sealed record GameEvent(string Id, DateTimeOffset At, int Turn, string Kind, string Message, Dictionary<string, List<int>>? Rolls = null);
+public sealed record GameCommand(string Type, string? PortId = null, string? ShipId = null, int? Q = null, int? R = null,
+    string? CombatId = null, string? ChoiceId = null, string? FirstPlayerId = null, long? ExpectedRevision = null);
+public sealed record JoinRequest(string Name, string Color, string Character);
+public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
+public sealed class GameOptions
+{
+    public int TurnSeconds { get; set; } = 120;
+    public int ActionSeconds { get; set; } = 45;
+    public string? DataDirectory { get; set; }
+}
+public interface IDice { int Roll(); }
+public sealed class ServerDice : IDice { public int Roll() => System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, 7); }
+public sealed class RuleException(string message) : Exception(message);

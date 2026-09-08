@@ -6,8 +6,20 @@ client/dist/
 server/bin/
 server/obj/
 .dotnet/
+.dotnet-sdk/
+dotnet-install.ps1
 .appdata/
 .localappdata/
 
 # Runtime game state (kept only on the server)
 server/data/game-state.json
+
+# Local tools, runtime saves, and verification artifacts
+.tools/
+server/data/game-state-v2.json*
+server/data/keys/
+artifacts/
+**/bin/
+**/obj/
+client/playwright-report/
+client/test-results/

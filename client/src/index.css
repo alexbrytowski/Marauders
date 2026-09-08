@@ -1,2 +1,180 @@
-@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English&family=Work+Sans:wght@400;600;700&display=swap');
-* { box-sizing: border-box; } body { margin: 0; min-width: 320px; color: #f8e9c8; background: radial-gradient(circle at 20% 0%, #214f69, transparent 45%), #08293a; font-family: 'Work Sans', sans-serif; } button, input { font: inherit; } button { cursor: pointer; }
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #dce8e5;
+  background: #09191f;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 400;
+  font-size: 14px;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 360px;
+  background: radial-gradient(ellipse at 50% 0, #17313a80, transparent 65%), #09191f;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+button {
+  border: 1px solid #38505a;
+  background: #19313b;
+  color: #dce8e5;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-weight: 600;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+button:not(:disabled):hover {
+  background: #29454f;
+  border-color: #83978c;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #e6be68;
+  outline-offset: 4px;
+}
+input,
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #395159;
+  background: #0b2028;
+  border-radius: 6px;
+  color: #eef0dd;
+}
+select {
+  text-transform: capitalize;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  font-weight: 500;
+}
+small {
+  font-size: 11px;
+  color: #91a7ab;
+}
+progress {
+  accent-color: #d9b96f;
+  height: 6px;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+progress::-webkit-progress-bar {
+  background: #28404a;
+}
+progress::-webkit-progress-value {
+  background: #d9b96f;
+}
+.icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.primary {
+  background: #e5bd73;
+  color: #14252b;
+  border-color: #e5bd73;
+}
+.primary:not(:disabled):hover {
+  background: #f3d295;
+  border-color: #f3d295;
+}
+.secondary {
+  background: transparent;
+}
+.danger-button {
+  color: #efa394;
+  background: #472d2c;
+  border-color: #86514a;
+}
+button .icon {
+  margin-right: 6px;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  color: #c9ac76;
+}
+.error {
+  background: #502d2d;
+  border: 1px solid #9e5950;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.error button {
+  padding: 1px 7px;
+  background: transparent;
+  border: 0;
+  font-size: 23px;
+}
+.loading-screen {
+  padding: 160px 20px;
+  text-align: center;
+}
+.loading-screen > .icon {
+  width: 60px;
+  height: 60px;
+  color: #d4b475;
+  margin-bottom: 25px;
+}
+.loading-screen h1 {
+  font:
+    42px 'Cormorant Garamond',
+    Georgia,
+    serif;
+}
+.loading-screen p {
+  color: #94a9ad;
+  margin-top: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

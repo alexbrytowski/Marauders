@@ -1,104 +1,96 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Marauders.Server;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOptions<GameOptions>().BindConfiguration("Game")
+    .Validate(o => o.TurnSeconds >= 10 && o.ActionSeconds >= 5, "Game timers must be at least 10/5 seconds.").ValidateOnStart();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<IDice, ServerDice>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<GameStateStore>();
 builder.Services.AddSingleton<GameHubNotifier>();
 builder.Services.AddHostedService<TurnTimerService>();
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
-    .WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+builder.Services.AddProblemDetails();
+builder.Services.AddHealthChecks();
+var dataDirectory = builder.Configuration["Game:DataDirectory"] ?? Path.Combine(builder.Environment.ContentRootPath, "data");
+builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(dataDirectory, "keys"))).SetApplicationName("Marauders");
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
+{
+    options.Cookie.Name = "Marauders.Browser";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.SlidingExpiration = true;
+    options.Events.OnRedirectToLogin = context => { context.Response.StatusCode = 401; return Task.CompletedTask; };
+    options.Events.OnRedirectToAccessDenied = context => { context.Response.StatusCode = 403; return Task.CompletedTask; };
+});
+builder.Services.AddAuthorization();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("mutations", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
+builder.Services.Configure<ForwardedHeadersOptions>(options => options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
 var app = builder.Build();
-app.UseCors();
-app.MapGet("/api/board-image", (IHostEnvironment environment) =>
+app.UseForwardedHeaders();
+app.UseExceptionHandler();
+if (!app.Environment.IsDevelopment()) { app.UseHsts(); app.UseHttpsRedirection(); }
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
+app.Use(async (context, next) =>
 {
-    var imagePath = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "Original Marauders Board.jpeg"));
-    return File.Exists(imagePath) ? Results.File(imagePath, "image/jpeg") : Results.NotFound();
+    // A custom header plus no cross-origin CORS permission prevents form/CSRF
+    // mutations; SameSite cookies provide an additional browser boundary.
+    if (context.Request.Method == "POST" && context.Request.Path.StartsWithSegments("/api") && context.Request.Headers["X-Marauders-Client"] != "web")
+    {
+        context.Response.StatusCode = 403;
+        await context.Response.WriteAsJsonAsync(new { error = "Use the Marauders game client." }); return;
+    }
+    if (context.Request.Path.StartsWithSegments("/api")) context.Response.Headers.CacheControl = "no-store";
+    await next();
 });
-app.MapGet("/api/game", (GameStateStore store) => Results.Ok(store.Read()));
-app.MapPost("/api/game/reset", async (GameStateStore store, GameHubNotifier notifier) =>
+app.MapHealthChecks("/api/health");
+app.MapGet("/api/board", () => Results.Ok(new { version = BoardDefinition.Version, cells = BoardDefinition.Cells }));
+app.MapGet("/api/game", async (GameStateStore store) => Results.Ok(await store.ReadAsync()));
+app.MapGet("/api/session", async (HttpContext context, GameStateStore store) =>
 {
-    var state = await store.ResetAsync();
-    await notifier.GameUpdatedAsync(state);
-    return Results.Ok(state);
+    var browser = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (browser is null)
+    {
+        browser = Guid.NewGuid().ToString("N");
+        var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, browser)], CookieAuthenticationDefaults.AuthenticationScheme);
+        await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = true });
+    }
+    return Results.Ok(new { playerId = await store.PlayerIdAsync(browser), canReset = app.Environment.IsDevelopment() });
 });
-app.MapPost("/api/game/players", async (AddPlayerRequest request, GameStateStore store, GameHubNotifier notifier) =>
+static string Browser(HttpContext context) => context.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+static async Task<IResult> Publish(MutationResult result, GameHubNotifier notifier)
 {
-    var result = await store.AddPlayerAsync(request.Name, request.Color);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
+    if (!result.Success) return Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
     await notifier.GameUpdatedAsync(result.State!);
     return Results.Ok(result.State);
-});
-app.MapPost("/api/game/start-draft", async (GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.StartDraftAsync();
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/draft", async (DraftPortRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.DraftPortAsync(request.PlayerId, request.PortId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/roll-movement", async (PlayerRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.RollMovementAsync(request.PlayerId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/end-turn", async (PlayerRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.EndTurnAsync(request.PlayerId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/move", async (MoveRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.MoveShipAsync(request.PlayerId, request.ShipId, request.Q, request.R);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/combat/roll", async (CombatRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.RollCombatAsync(request.PlayerId, request.CombatId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/combat/remove-ship", async (CombatLossRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.RemoveCombatShipAsync(request.PlayerId, request.CombatId, request.ShipId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/attack-port", async (PortAttackRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.AttackPortAsync(request.PlayerId, request.ShipId, request.PortId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapPost("/api/game/start-construction", async (ConstructionRequest request, GameStateStore store, GameHubNotifier notifier) =>
-{
-    var result = await store.StartConstructionAsync(request.PlayerId, request.PortId);
-    if (!result.Success) return Results.BadRequest(new { error = result.Error });
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-});
-app.MapHub<GameHub>("/hubs/game");
+}
+var api = app.MapGroup("/api/game").RequireAuthorization().RequireRateLimiting("mutations");
+api.MapPost("/players", async (JoinRequest request, HttpContext context, GameStateStore store, GameHubNotifier notifier)
+    => await Publish(await store.JoinAsync(Browser(context), request), notifier));
+api.MapPost("/action", async (GameCommand request, HttpContext context, GameStateStore store, GameHubNotifier notifier)
+    => await Publish(await store.ActAsync(Browser(context), request), notifier));
+if (app.Environment.IsDevelopment())
+    api.MapPost("/reset", async (HttpContext context, GameStateStore store, GameHubNotifier notifier)
+        => await Publish(await store.ResetAsync(Browser(context)), notifier));
+app.MapHub<GameHub>("/hubs/game").RequireAuthorization();
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
 app.Run();
 
-public record AddPlayerRequest(string Name, string Color);
-public record DraftPortRequest(string PlayerId, string PortId);
-public record PlayerRequest(string PlayerId);
-public record MoveRequest(string PlayerId, string ShipId, int Q, int R);
-public record CombatRequest(string PlayerId, string CombatId);
-public record CombatLossRequest(string PlayerId, string CombatId, string ShipId);
-public record PortAttackRequest(string PlayerId, string ShipId, string PortId);
-public record ConstructionRequest(string PlayerId, string PortId);
+public partial class Program;

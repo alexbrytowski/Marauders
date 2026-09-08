@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/server/">
     <Project Path="server/Marauders.Server.csproj" />
+    <Project Path="server.Tests/Marauders.Server.Tests.csproj" />
   </Folder>
 </Solution>
