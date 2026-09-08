@@ -1,0 +1,13 @@
+# React dependencies and build output
+client/node_modules/
+client/dist/
+
+# .NET build output and local tooling state
+server/bin/
+server/obj/
+.dotnet/
+.appdata/
+.localappdata/
+
+# Runtime game state (kept only on the server)
+server/data/game-state.json

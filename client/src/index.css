@@ -1,0 +1,2 @@
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English&family=Work+Sans:wght@400;600;700&display=swap');
+* { box-sizing: border-box; } body { margin: 0; min-width: 320px; color: #f8e9c8; background: radial-gradient(circle at 20% 0%, #214f69, transparent 45%), #08293a; font-family: 'Work Sans', sans-serif; } button, input { font: inherit; } button { cursor: pointer; }
