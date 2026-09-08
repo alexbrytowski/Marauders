@@ -79,6 +79,9 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Health endpoint, structured framework logs, exception responses, production
   HSTS/HTTPS configuration, and same-origin static-client publish support.
 - [x] Document environment configuration and local verification commands.
+- [x] Windows one-command launcher locates the local SDK, builds and starts the API
+  and website, waits for readiness, and stops its services on Ctrl+C. User PATH
+  includes the installed SDK; existing terminals can use the launcher immediately.
 - [ ] Replace local JSON storage with a database-backed match model and migrations.
 - [ ] Add multiple matches with lobby codes and match-scoped SignalR groups.
 - [ ] Add managed account authentication and account/seat recovery before launch.

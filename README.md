@@ -8,6 +8,20 @@ Requires a .NET 10 SDK and current Node.js/npm (Node 24 is used in CI).
 
 ## Run locally
 
+On Windows, double-click **Start-Marauders.cmd** in the project folder. Or run
+this from any PowerShell directory:
+
+```powershell
+C:\Marauders\Start-Marauders.cmd
+```
+
+The launcher finds the project-local .NET SDK automatically, builds the app, and
+starts both services. Open `http://localhost:5173` when it says READY. Keep its
+window open while playing; Ctrl+C stops the services it started. Running it again
+while the game is ready reports the existing URL. It does not reset your game.
+
+For separate development terminals, use:
+
 ```powershell
 Set-Location server
 dotnet run
@@ -25,8 +39,10 @@ Open `http://localhost:5173`. Four separate browser profiles/devices claim the f
 seats. Another tab in the same browser remains the same captain. Additional visitors
 watch as spectators. The first captain hosts and chooses who drafts first.
 
-On this workspace, if `dotnet` is not on PATH, use
-`C:\Marauders\.dotnet-sdk\dotnet.exe` in place of `dotnet`.
+If an already-open terminal still says `dotnet` is not recognized, use
+`& C:\Marauders\.dotnet-sdk\dotnet.exe run` from `server`, or use the launcher
+above. The SDK has been added to this machine's user PATH; reopen the terminal
+application for it to take effect. The launcher does not depend on that change.
 
 ## Play
 
