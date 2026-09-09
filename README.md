@@ -48,9 +48,16 @@ application for it to take effect. The launcher does not depend on that change.
 
 Double-click **Play-Local-Crew.cmd**. It builds the game and opens four independent
 Edge windows with their own persistent browser profiles and prefilled captain seats.
+Windows open maximized and follow your actual monitor/window size. F11 toggles
+the browser's full-screen mode.
+After updating from the fixed 1100×850 launcher, close and reopen the crew launcher
+once. Refreshing an old window cannot remove its emulated viewport.
+To restart with a fresh match while keeping seats, close the launcher and run
+`node tools/start-marauders.mjs --crew --reset`. This uses the password-protected
+reset API and archives the previous match.
 The practice game runs on `http://localhost:5175` with separate state under
-`artifacts/local-crew/`, so your main game's save is unaffected. Practice timers are
-30 minutes per round and 15 per action, giving you time to switch windows.
+`artifacts/local-crew/`, so your main game's save is unaffected. Both launchers use
+60 seconds per round and 20 per action by default; environment settings can override these.
 Keep its launcher open; Ctrl+C closes the practice services and windows. Reopening
 it restores the four seats and practice game. Use Game controller to reset it.
 On Linux, install Playwright Chromium first; the same launcher supports `--crew`.
@@ -64,8 +71,8 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 1. Join with a name, color, and cosmetic character. Vote for Classic, The Narrows,
    or Shattered Isles; you can change or clear your vote before the draft.
 2. The host starts a snake draft. The server draws the map with one ticket per vote
-   (equal chances if nobody votes). Select a port, then confirm the pick.
-3. Select each owned port and click two highlighted harbor cells to place ships.
+   (equal chances if nobody votes) and reveals the perks. Select a port, then confirm the pick.
+3. The final pick automatically launches two ships per owned port and starts play.
 4. Roll to sail, select a ship, choose a highlighted destination, and confirm its
    route. A route stops when combat triggers. Unused movement can be split among ships.
 5. Select a ship in an enemy harbor to attack that port with an unused action.
@@ -73,9 +80,9 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
    captain chooses their casualty. Rolls remain in the captain's log.
 7. At round end, select owned ports for construction, then finish the round.
 
-Use the corner cards or personal Ports/Fleet/Shipyards tabs to inspect your crew.
-Map arrow keys move focus; Enter/Space selects. Zoom controls enlarge the map for
-touch play, and Fit returns to the whole-board view.
+The whole map fits the monitor by default, with the original corner captain cards,
+controls underneath, and personal Ports/Fleet/Shipyards tabs. Zoom is optional;
+**Fit** restores the whole map. Map arrow keys move focus; Enter/Space selects.
 
 Use **How to play** for the complete in-app guide, **About** for game context,
 and **Game controller** for password-authorized resets. Ship perks appear as sea
@@ -106,7 +113,7 @@ Browser tests use installed Edge on Windows. On Linux, first run
 
 See [.env.example](.env.example) for shell/hosting variable names. ASP.NET reads
 environment variables; this file is a reference, not an automatically loaded secret file.
-`Game__TurnSeconds` defaults to 120, `Game__ActionSeconds` to 45. Both need playtesting.
+`Game__TurnSeconds` defaults to 60, `Game__ActionSeconds` to 20. Both need playtesting.
 
 The current single match is stored in `server/data/game-state-v2.json`. Session
 bindings are private; signing keys are under `server/data/keys/`. Preserve both to

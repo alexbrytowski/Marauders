@@ -25,6 +25,7 @@ const apiUrl = `http://localhost:${apiPort}`
 const websiteUrl = `http://localhost:${clientPort}`
 const boardVersion = JSON.parse(readFileSync(path.join(serverDirectory, 'board.json'), 'utf8')).version
 const checkOnly = process.argv.includes('--check')
+const resetOnStart = process.argv.includes('--reset')
 const children = new Set()
 let crewContexts = []
 let stopping = false
@@ -90,6 +91,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
 try {
   console.log('\nMARAUDERS — starting your local game\n')
   if (await isOurGame(websiteUrl)) {
+    if (resetOnStart) throw new Error('Close the existing launcher before starting with --reset.')
     console.log(`Marauders is already running. Open ${websiteUrl}\n`)
     if (crewMode) throw new Error('The local crew game is already running. Use its four windows, or close its launcher before reopening them.')
   } else {
@@ -108,7 +110,7 @@ try {
     if (!environment.Game__ResetPassword && !checkOnly) console.log(`Local game controller password for this run: ${resetPassword}\n`)
     const api = launch(dotnet, [path.join(serverDirectory, 'bin', 'Release', 'net10.0', 'Marauders.Server.dll'), '--urls', apiUrl], serverDirectory, {
       ...environment, ASPNETCORE_ENVIRONMENT: 'Development', Game__ResetPassword: resetPassword,
-      ...(crewMode ? { Game__DataDirectory: path.join(root, 'artifacts', 'local-crew', 'data'), Game__TurnSeconds: '1800', Game__ActionSeconds: '900' } : {}),
+      ...(crewMode ? { Game__DataDirectory: path.join(root, 'artifacts', 'local-crew', 'data') } : {}),
     })
     const client = launch(process.execPath, [vite, '--host', 'localhost', '--port', String(clientPort), '--strictPort'], clientDirectory, {
       ...environment, MARAUDERS_API_URL: apiUrl,
@@ -126,6 +128,19 @@ try {
     }
     if (serviceFailure) throw serviceFailure
     if (!ready) throw new Error('The website did not become ready. See the server output above.')
+    if (resetOnStart) {
+      const sessionResponse = await fetch(`${websiteUrl}/api/session`)
+      if (!sessionResponse.ok) throw new Error('Could not create a session for the requested reset.')
+      const cookie = sessionResponse.headers.getSetCookie().map(value => value.split(';')[0]).join('; ')
+      const previous = await (await fetch(`${websiteUrl}/api/game`)).json()
+      const response = await fetch(`${websiteUrl}/api/game/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Marauders-Client': 'web', Cookie: cookie },
+        body: JSON.stringify({ password: resetPassword, gameId: previous.id, expectedRevision: previous.revision, releaseSeats: false }),
+      })
+      if (!response.ok) throw new Error(`Could not reset the match: ${(await response.json()).error}`)
+      console.log('Match reset to the lobby. Captain seats retained; the previous match was archived.\n')
+    }
     console.log(`\nREADY — open ${websiteUrl}\nKeep this window open while playing. Press Ctrl+C to stop both services.\n`)
     if (crewMode) {
       crewContexts = await openLocalCrew(root, websiteUrl, checkOnly)

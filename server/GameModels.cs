@@ -101,8 +101,8 @@ public sealed record PerkPickup(string Kind, int Q, int R);
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
 public sealed class GameOptions
 {
-    public int TurnSeconds { get; set; } = 120;
-    public int ActionSeconds { get; set; } = 45;
+    public int TurnSeconds { get; set; } = 60;
+    public int ActionSeconds { get; set; } = 20;
     public string? DataDirectory { get; set; }
     public string? ResetPassword { get; set; }
 }

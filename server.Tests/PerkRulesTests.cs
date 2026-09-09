@@ -162,7 +162,7 @@ public partial class GameRulesTests
         var layouts = new HashSet<string>();
         for (var seed = 0; seed < 40; seed++)
         {
-            var s = Playing(); if (seed % 2 == 0) for (var i = 0; i < 12; i++) s.Ports[i].OwnerId = s.Players[i % 4].Id;
+            var s = Lobby();
             var pickups = PerkPlacement.Create(s, new SeededDice(seed));
             Assert.Equal(PerkPlacement.Kinds.Order(), pickups.Select(p => p.Kind).Order());
             var hexes = pickups.Select(p => new Hex(p.Q, p.R)).ToArray();
@@ -173,8 +173,6 @@ public partial class GameRulesTests
                 Assert.True(distances[0] >= 3); Assert.InRange(distances[1] - distances[0], 0, 1);
                 Assert.All(hexes.Where(other => other != h), other => Assert.True(h.DistanceTo(other) >= 6));
             }
-            var access = s.Players.Select(p => s.Ports.Where(port => port.OwnerId == p.Id).SelectMany(port => hexes.Select(h => PerkPlacement.Distance(port.Id, h))).Min()).ToArray();
-            Assert.InRange(access.Max() - access.Min(), 0, 1);
             layouts.Add(string.Join(';', pickups));
         }
         Assert.True(layouts.Count > 30);

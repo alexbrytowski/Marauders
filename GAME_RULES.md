@@ -24,7 +24,9 @@ The players decide who goes first. They then pick ports using a snake draft. Wit
 
 Before the draft, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When the host starts the draft, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Narrows give them 75% and 25% chances; Shattered Isles has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
-For each port someone owns, they receive two ships immediately. At the start of the game, each owned port gets two ships in empty hexes in its dark-blue water. The owner chooses their placement.
+The four perk pickups appear on the selected map before the first port pick, so captains can plan their ports around them. Their locations and types stay fixed throughout the draft.
+
+When the final port is picked, the server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
 
 ## Game rules
 
@@ -98,7 +100,7 @@ If someone captures a player's final remaining port, all of that player's remain
 
 The unowned port can be captured by anyone, but it fights back like a player-owned port. Its defense weakness is not reset when ships enter its dark-blue water, because it has no allied ships.
 
-There will be a countdown for each turn and action so the game cannot take too long. If it runs out, that player's round ends. The exact durations will be decided through playtesting.
+There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 60 seconds per turn and 20 seconds per action. Port drafting is untimed.
 
 ### Perks
 

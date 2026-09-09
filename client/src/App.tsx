@@ -77,19 +77,7 @@ export default function App() {
   const plan = paths.get(key(destination ?? hover ?? { q: -999, r: -999 })) ?? []
   const encounterIndex = board && game && ship && plan.length ? firstEncounter(board, game, ship, plan) : -1
   const route = encounterIndex >= 0 ? plan.slice(0, encounterIndex + 2) : plan
-  const placement =
-    game?.phase === 'placement' &&
-    myTurn &&
-    port?.ownerId === me?.id &&
-    game.ships.filter((s) => s.portId === port.id).length < 2
-  const highlights: Set<string> =
-    placement && board
-      ? new Set(
-          board.cells
-            .filter((c) => c.harborId === port?.id && !game!.ships.some((s) => key(s) === key(c)))
-            .map(key),
-        )
-      : new Set(paths.keys())
+  const highlights: Set<string> = new Set(paths.keys())
   const inspectPort = (id: string) => {
     setSelectedPortId(id)
     setSelectedShipId(null)
@@ -101,9 +89,7 @@ export default function App() {
     setDestination(null)
   }
   const cellClick = (cell: Cell) => {
-    if (placement && highlights.has(key(cell)))
-      void act({ type: 'place', portId: port!.id, q: cell.q, r: cell.r })
-    else if (canMove && paths.has(key(cell))) setDestination(cell)
+    if (canMove && paths.has(key(cell))) setDestination(cell)
     else if (cell.harborId) inspectPort(cell.harborId)
   }
   const completeMove = async () => {
@@ -381,7 +367,7 @@ export default function App() {
                     {game.phase === 'draft'
                       ? `PORT DRAFT · PICK ${game.draftPickNumber + 1} / 12`
                       : game.phase === 'placement'
-                        ? 'DEPLOY YOUR FLEET'
+                        ? 'LAUNCHING FLEETS'
                         : `ROUND ${game.turnNumber} · ${game.isBuildPhase ? 'CONSTRUCTION' : 'THE VOYAGE'}`}
                   </span>
                   <h1>
@@ -391,9 +377,9 @@ export default function App() {
                         ? game.phase === 'draft'
                           ? 'Your pick, captain.'
                           : game.phase === 'placement'
-                            ? 'Choose your starting waters.'
+                            ? 'Your fleet is launching.'
                             : 'You have the helm.'
-                        : `${active?.name} ${game.phase === 'draft' ? 'is choosing a port' : game.phase === 'placement' ? 'is deploying ships' : 'has the helm'}`}
+                        : `${active?.name} ${game.phase === 'draft' ? 'is choosing a port' : game.phase === 'placement' ? 'is launching their fleet' : 'has the helm'}`}
                   </h1>
                 </div>
                 {game.phase === 'playing' && (
@@ -432,6 +418,7 @@ export default function App() {
                 />
                 <div className="board-center">
                   <BoardView
+                    key={`${game.id}-${game.mapId}`}
                     board={board}
                     game={game}
                     selectedShipId={selectedShipId}
@@ -472,7 +459,7 @@ export default function App() {
                           (game.phase === 'draft'
                             ? 'Choose your foothold'
                             : game.phase === 'placement'
-                              ? 'Select one of your ports'
+                              ? 'Launching all fleets'
                               : 'Chart your next move'))}
                     </h2>
                     <p>
@@ -481,9 +468,9 @@ export default function App() {
                         : port
                           ? `${game.players.find((p) => p.id === port.ownerId)?.name ?? 'Unclaimed'} · Defense ${port.defenseWeakness ? `−${port.defenseWeakness}` : 'full strength'}`
                           : game.phase === 'draft'
-                            ? 'Select an unclaimed port on the map, then confirm your pick.'
+                            ? 'Perks are marked on the chart. Choose a port with your route in mind. Each port launches two ships automatically.'
                             : game.phase === 'placement'
-                              ? 'Place two ships in the highlighted harbor cells at each port.'
+                              ? 'Two ships launch at each owned port. Play begins automatically.'
                               : me
                                 ? 'Select a ship or port to see its available actions.'
                                 : 'You are watching. All turns and dice rolls are public.'}
@@ -507,18 +494,6 @@ export default function App() {
                     >
                       Claim {port?.name ?? 'selected port'}
                     </button>
-                  )}
-                  {game.phase === 'placement' && myTurn && (
-                    <>
-                      <span className="placement-count">{ownShips.length} / 6 ships placed</span>
-                      <button
-                        className="primary"
-                        disabled={disabled || ownShips.length !== 6}
-                        onClick={() => void act({ type: 'finish-placement' })}
-                      >
-                        Fleet ready →
-                      </button>
-                    </>
                   )}
                   {game.phase === 'playing' && myTurn && !game.isBuildPhase && (
                     <>
@@ -633,8 +608,8 @@ export default function App() {
                             <span>
                               {p.name}
                               <small>
-                                {game.phase === 'placement'
-                                  ? `${game.ships.filter((s) => s.portId === p.id).length}/2 deployed`
+                                {game.phase === 'draft'
+                                  ? 'Two ships at launch'
                                   : p.defenseWeakness
                                     ? `Defense −${p.defenseWeakness}`
                                     : 'Defense ready'}

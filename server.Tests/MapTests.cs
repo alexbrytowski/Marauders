@@ -39,17 +39,18 @@ public partial class GameRulesTests
         Assert.Throws<RuleException>(() => rules.Act(captain, new("start-draft", FirstPlayerId: captain)));
         Assert.Equal(0, random.Calls);
         rules.Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: captain));
-        Assert.Equal(1, random.Calls); Assert.Equal("narrows", s.MapId);
+        var callsAfterReveal = random.Calls;
+        Assert.True(callsAfterReveal > 1); Assert.Equal(4, s.PerkPickups.Count); Assert.Equal("narrows", s.MapId);
         Assert.Equal(MapCatalog.Get("narrows").Version, s.BoardVersion);
         Assert.Equal("Westwatch", s.Ports[0].Name);
         Assert.Throws<RuleException>(() => rules.Act(captain, new("vote-map", MapId: "classic")));
         Assert.Throws<RuleException>(() => rules.Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: captain)));
-        Assert.Equal(1, random.Calls); Assert.Contains(s.Events, e => e.Kind == "map" && e.Message.Contains("ticket 1/1"));
+        Assert.Equal(callsAfterReveal, random.Calls); Assert.Contains(s.Events, e => e.Kind == "map" && e.Message.Contains("ticket 1/1"));
         s.MapVotes.Clear(); Assert.Equal(1, s.MapSelection!.Votes["narrows"]);
     }
 
     [Theory] [InlineData("classic")] [InlineData("narrows")] [InlineData("shattered-isles")]
-    public void Each_map_supports_full_draft_placement_spillover_and_fair_perk_layouts(string mapId)
+    public void Each_map_supports_automatic_fleets_spillover_and_predraft_perk_layouts(string mapId)
     {
         var map = MapCatalog.Get(mapId).Board;
         Assert.Equal(13, map.Ports.Count); Assert.Equal(13, map.Cells.Count(c => c.Terrain == "port"));
@@ -63,23 +64,21 @@ public partial class GameRulesTests
         }
         var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("vote-map", MapId: mapId));
         Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: s.HostPlayerId));
+        var revealed = s.PerkPickups.ToArray(); Assert.Equal(4, revealed.Length);
         for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
-        foreach (var owner in s.TurnOrder)
-        {
-            foreach (var port in s.Ports.Where(p => p.OwnerId == owner))
-                foreach (var h in map.Harbor(port.Id).Take(2)) Rules(s).Act(owner, new("place", PortId: port.Id, Q: h.Q, R: h.R));
-            new GameRules(s, new SeededDice(42), new(), Now).Act(owner, new("finish-placement"));
-        }
+        Assert.Equal(revealed, s.PerkPickups);
         Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(4, s.PerkPickups.Count);
         Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());
         Assert.All(s.Ships, ship => Assert.True(map.InHarbor(ship.Hex, ship.PortId)));
         for (var seed = 0; seed < 20; seed++)
         {
-            // Vary drafts as well as random choices to exercise different captain access.
+            var beforeDraft = PerkPlacement.Create(s, new SeededDice(seed));
+            // Port ownership must not influence a layout revealed before drafting.
             var owners = s.Players.SelectMany(p => Enumerable.Repeat(p.Id, 3)).ToArray();
             var shuffle = new Random(seed); shuffle.Shuffle(owners);
             for (var i = 0; i < 12; i++) s.Ports[i].OwnerId = owners[i];
             var pickups = PerkPlacement.Create(s, new SeededDice(seed)); var hexes = pickups.Select(p => new Hex(p.Q, p.R)).ToArray();
+            Assert.Equal(beforeDraft, pickups);
             foreach (var h in hexes)
             {
                 Assert.Equal("water", map.Cell(h)!.Terrain);
@@ -87,8 +86,6 @@ public partial class GameRulesTests
                 Assert.True(distances[0] >= 3); Assert.InRange(distances[1] - distances[0], 0, 1);
                 Assert.All(hexes.Where(other => other != h), other => Assert.True(h.DistanceTo(other) >= 6));
             }
-            var access = s.Players.Select(p => s.Ports.Where(port => port.OwnerId == p.Id).SelectMany(port => hexes.Select(h => PerkPlacement.Distance(port.Id, h, mapId))).Min()).ToArray();
-            Assert.InRange(access.Max() - access.Min(), 0, 1);
         }
     }
 

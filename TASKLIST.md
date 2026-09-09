@@ -15,7 +15,7 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [~] Certify the map against the original photo. Terrain was extracted and the
   overlay inspected; harbor connectivity and minimum setup capacity are tested.
   Final owner review of exact dark-blue membership and glare-obscured cells remains.
-- [x] Four corner captain cards show ports, fleet/cap, action dice, active turn,
+- [x] Original corner captain cards show ports, fleet/cap, action dice, active turn,
   character, and construction progress. Personal tabs expose ports, fleet, shipyards.
 - [x] Public battle dialog for all players and spectators: participants, helper/
   harbor dice, each public roll, results, casualty choices, and continuation.
@@ -32,11 +32,17 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
   no votes gives each map equal odds. Previews, odds, selection, and saved map
   identity synchronize across browsers. Designs and checks are in MAPS.md.
 - [~] Four-player balance playtesting for the new maps and their draft strategies.
-- [x] Owners place two ships per owned port in empty dark-blue cells before play.
-- [x] Responsive desktop/phone layouts, keyboard map navigation, accessible labels,
+- [x] Reveal all four perks before the first draft pick and preserve the layout
+  through drafting, reconnects, server restarts, and launch on all three maps.
+- [x] Final port pick automatically launches two ships per owned harbor and starts
+  play. No placement or fleet confirmation; old setup saves resume automatically.
+- [x] Restore the original UI and fit the whole board to the monitor by default.
+  Keep the native-window launcher fix; remove the 1800px page and 840px map caps.
+  Restored layout, all 13 visible ports, and optional zoom verified at 1920px and 2560px.
+- [x] Keyboard map navigation, accessible labels,
   native modal focus containment, and reduced-motion styles.
-- [~] Wider mobile/touch and screen-reader playtesting. Desktop and 390px layouts
-  have automated screenshots/overflow checks; real-device testing remains.
+- [~] Wider screen-reader playtesting. Mobile/touch refinement is deferred by the
+  owner; desktop monitors are the target for this private game.
 - [x] Replace prototype text encoding artifacts and default Vite page metadata.
 - [x] Eight configurable character profiles with JPEG support and placeholders;
   setup and private asset handling are documented in CHARACTERS.md.
@@ -73,8 +79,9 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Zero-ship captains enter construction; eliminated captains are skipped.
 - [x] Separate configurable round/action clocks, visible countdowns, immediate
   deadline validation, and normal construction completion on timeout.
-- [~] Playtest timer lengths and timeout casualty policy. Defaults are 120/45
-  seconds; deterministic automatic casualty handling is recorded in DECISIONS.md.
+- [~] Playtest timer lengths and timeout casualty policy. Owner-approved defaults
+  are now 60/20 seconds in both launchers; the four-window practice override is
+  removed. Deterministic automatic casualty handling is recorded in DECISIONS.md.
 
 ## Engineering before staging
 
@@ -82,7 +89,7 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Server unit tests for board/rules and store concurrency, private identities,
   rejected commands, immutable snapshots, and reload/persistence.
 - [x] Five-context browser test covers four-player joining, duplicate seats, draft,
-  placement, spectator restrictions, forged actor IDs, public rolls, cross-tab
+  automatic fleets, spectator restrictions, forged actor IDs, public rolls, cross-tab
   identity, reconnect, shared battle/casualty UI, and persistence across restarts.
 - [x] GitHub Actions workflow runs lint/build, server tests, and browser tests.
   Remote CI execution is not yet verified.
@@ -102,7 +109,12 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Password-protected controller reset from any browser, keep/release seats,
   archive old saves, and reject stale reset reviews; multi-browser verification passed.
 - [x] One-command four-window practice launcher with separate browser profiles,
-  independent save, and longer clocks; four independent signed sessions verified.
+  independent save, and the normal configurable clocks; four signed sessions verified.
+- [x] Remove the practice launcher's fixed 1100×850 browser viewport and start maximized.
+  Native content resizing of all four launcher windows verified at 1920px and 2560px,
+  with all ports fitting and no map scrolling in the default view.
+- [x] Explicit --reset startup option uses the authenticated reset API, archives the
+  old match, and retains seats. Owner-requested practice reset and restart completed.
 - [x] Move endpoints into controllers while keeping rule decisions in GameRules
   and atomic save/identity operations in GameStateStore.
 - [x] Document JSON backup, retention proposal, restore, and incident response in
@@ -116,7 +128,7 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
   storage, one server instance, and WebSocket support. No external deployment has been performed.
 - [ ] Add provider-specific deployment pipeline, rollback, and secret configuration.
 - [ ] Complete four-player playtests for timeout, simultaneous encounters, captures,
-  elimination, victory, mobile play, and spectator/reconnection behavior.
+  elimination, victory, desktop usability, and spectator/reconnection behavior.
 - [ ] Publish owner-approved privacy/contact information for the actual host and
   personal character photos; no analytics or managed account provider is configured.
 - [ ] Configure uptime/error alerts once hosting is chosen; the incident/recovery
@@ -125,20 +137,23 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 ## Current verification
 
 - Client lint and production build passed with the September 8 changes.
-- 56 server tests passed in Release, zero warnings.
-- All five browser scenarios passed: four-player rules and permissions, controller
-  reset/profiles/help, perks/victory history, both new maps and voting, and published
-  same-origin serving. Restart persistence is covered for ballots and selected maps.
-- Desktop/mobile screenshot review passed, including map voting and both new boards.
+- 59 server tests passed in Debug and previously in Release, including automatic setup,
+  immutable predraft pickups, legacy save continuation, and 60/20-second deadlines.
+- All seven browser scenarios passed: four-player setup/rules/permissions, native
+  launcher window resizing, live 60/20-second clocks and timeout synchronization, controller reset/profiles/help,
+  perks/victory history, both new maps and voting, and published same-origin serving.
+  Restart persistence covers ballots, selected maps, and predraft perk locations.
+- Restored-layout screenshot review passed at 1920×1080 and 2560×1440. Native
+  resizing tests cover all four actual launcher contexts, without viewport emulation.
 - Normal launcher and four-window practice launcher startup checks passed; API,
   website, browser sessions, and owned-service cleanup were verified.
-- Release build and same-origin publish passed with zero warnings/errors.
-- Debug build initially encountered the old running prototype's executable lock;
-  Release builds/tests use a separate output directory.
+- Debug build and same-origin publish passed with zero warnings/errors. The live
+  practice server locks its Release DLL, so final verification uses Debug without
+  interrupting the owner's match.
 
 ## Next work
 
-1. Four-player map/perk/timer/mobile playtesting using Play-Local-Crew.cmd or real devices.
+1. Four-player map/perk/timer/desktop playtesting using Play-Local-Crew.cmd or desktop browsers.
 2. Owner-supplied character assets and original-board review.
 3. Owner-selected hosting/domain, deployment, and hosted operational checks.
 
@@ -146,5 +161,5 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 
 - Exact dark-blue membership if any photo cells differ from the first-ring mapping.
 - Final eight character names/JPEGs; playtest feedback on perk power and quantity.
-- Playtested timer durations and acceptance of the documented timeout policy.
+- Feedback on the new 60/20-second timers and documented timeout policy.
 - Hosting/domain, privacy/contact wording, and acceptance of the proposed backup retention.

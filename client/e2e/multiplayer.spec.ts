@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Board, Game } from '../src/game'
 import { colors, directions, distance, key } from '../src/game'
+import { openLocalCrew } from '../../tools/local-crew.mjs'
 
 const root = path.resolve('..')
 let server: ChildProcess
@@ -17,8 +18,13 @@ let output = ''
 const headers = { 'X-Marauders-Client': 'web' }
 const resetPassword = randomBytes(24).toString('hex')
 
-async function startServer(published = false) {
+async function startServer(published = false, playtestTimers = false) {
   output = ''
+  const environment = { ...process.env }
+  if (playtestTimers) {
+    delete environment.Game__TurnSeconds
+    delete environment.Game__ActionSeconds
+  }
   const localDotnet = path.join(root, '.dotnet-sdk', 'dotnet.exe')
   server = spawn(
     existsSync(localDotnet) ? localDotnet : 'dotnet',
@@ -36,11 +42,10 @@ async function startServer(published = false) {
       cwd: path.join(root, published ? 'artifacts/publish' : 'server'),
       windowsHide: true,
       env: {
-        ...process.env,
+        ...environment,
         ASPNETCORE_ENVIRONMENT: 'Development',
         Game__DataDirectory: dataDirectory,
-        Game__TurnSeconds: '1800',
-        Game__ActionSeconds: '900',
+        ...(playtestTimers ? {} : { Game__TurnSeconds: '1800', Game__ActionSeconds: '900' }),
         Game__ResetPassword: resetPassword,
         DOTNET_CLI_HOME: path.join(root, '.dotnet'),
         ...(existsSync(localDotnet) ? { DOTNET_ROOT: path.dirname(localDotnet) } : {}),
@@ -100,7 +105,7 @@ test.afterEach(async () => {
   await stopServer()
 })
 
-test('four browser seats, draft, placement, permissions, reconnect, shared battles and persistence', async ({
+test('four browser seats, predraft perks, automatic launch, permissions, reconnect, shared battles and persistence', async ({
   browser,
 }, testInfo) => {
   const contexts: BrowserContext[] = [],
@@ -150,6 +155,19 @@ test('four browser seats, draft, placement, permissions, reconnect, shared battl
     ).status(),
   ).toBe(403)
   game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Begin port draft/ }).click())
+  expect(game.phase).toBe('draft')
+  expect(game.ships).toHaveLength(0)
+  const revealedPerks = game.perkPickups
+  expect(revealedPerks).toHaveLength(4)
+  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(4)
+  await stopServer()
+  await startServer()
+  for (const page of pages) {
+    await page.reload()
+    await expect(page.locator('.connection')).toHaveText('Live')
+    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(4)
+  }
+  expect((await state(spectator)).perkPickups).toEqual(revealedPerks)
   for (let pick = 0; pick < 12; pick++) {
     const actor = pages[ids.indexOf(game.activePlayerId!)],
       port = game.ports[pick]
@@ -157,20 +175,24 @@ test('four browser seats, draft, placement, permissions, reconnect, shared battl
     game = await clickAction(actor, () =>
       actor.getByRole('button', { name: `Claim ${port.name}`, exact: true }).click(),
     )
+    expect(game.perkPickups).toEqual(revealedPerks)
+    expect(game.phase).toBe(pick < 11 ? 'draft' : 'playing')
   }
   const board: Board = await (await pages[0].request.get('/api/board')).json()
-  for (let player = 0; player < 4; player++) {
-    const actor = pages[ids.indexOf(game.activePlayerId!)]
-    for (const port of game.ports.filter((p) => p.ownerId === game.activePlayerId)) {
-      await actor.locator(`[data-port="${port.id}"]`).click()
-      for (const cell of board.cells.filter((c) => c.harborId === port.id).slice(0, 2)) {
-        game = await clickAction(actor, () => actor.locator(`[data-hex="${key(cell)}"]`).click())
-        await expect(actor.locator(`[data-hex="${key(cell)}"] [class="ship-token"]`)).toBeVisible()
-      }
+  for (const port of game.ports) {
+    const ships = game.ships.filter((s) => s.portId === port.id)
+    expect(ships).toHaveLength(port.ownerId ? 2 : 0)
+    for (const ship of ships) {
+      expect(ship.ownerId).toBe(port.ownerId)
+      expect(board.cells.find((c) => key(c) === key(ship))?.harborId).toBe(port.id)
     }
-    game = await clickAction(actor, () => actor.getByRole('button', { name: /Fleet ready/ }).click())
   }
   expect(game.ships).toHaveLength(24)
+  expect(new Set(game.ships.map(key)).size).toBe(24)
+  for (const page of pages) {
+    await expect(page.locator('.sea-map [data-ship]')).toHaveCount(24)
+    await expect(page.getByRole('button', { name: /Fleet ready/ })).toHaveCount(0)
+  }
   await expect(spectator.getByRole('heading', { name: 'Anne Bonny has the helm', exact: true })).toBeVisible()
   expect(await spectator.getByRole('button', { name: 'Roll to sail' }).count()).toBe(0)
   const forged = await pages[1].request.post('/api/game/action', {
@@ -190,10 +212,36 @@ test('four browser seats, draft, placement, permissions, reconnect, shared battl
   await extraTab.goto('/')
   await expect(extraTab.locator('.identity')).toHaveText('Anne Bonny')
   await extraTab.close()
-  await pages[0].screenshot({ path: testInfo.outputPath('game-desktop.png'), fullPage: true })
-  await pages[0].setViewportSize({ width: 390, height: 844 })
-  await pages[0].screenshot({ path: testInfo.outputPath('game-mobile.png'), fullPage: true })
-  expect(await pages[0].evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await pages[0].setViewportSize(viewport)
+    await pages[0].evaluate(() => window.scrollTo(0, 0))
+    await expect(pages[0].locator('.sea-map')).toHaveClass(/fit-map/)
+    const frameBounds = (await pages[0].locator('.chart-scroll').boundingBox())!
+    expect(frameBounds.y + frameBounds.height).toBeLessThanOrEqual(viewport.height)
+    expect(
+      await pages[0]
+        .locator('.chart-scroll')
+        .evaluate(
+          (node) => node.scrollHeight <= node.clientHeight + 1 && node.scrollWidth <= node.clientWidth + 1,
+        ),
+    ).toBeTruthy()
+    const leftCard = (await pages[0].locator('.seat-0').boundingBox())!
+    const rightCard = (await pages[0].locator('.seat-1').boundingBox())!
+    expect(leftCard.x + leftCard.width).toBeLessThan(frameBounds.x)
+    expect(rightCard.x).toBeGreaterThan(frameBounds.x + frameBounds.width)
+    await expect(pages[0].locator('.personal-deck')).toBeVisible()
+    const controlBounds = await pages[0].getByRole('region', { name: 'Captain controls' }).boundingBox()
+    expect(controlBounds!.width).toBeGreaterThan(viewport.width * 0.95)
+    const footerBounds = (await pages[0].locator('.chart-footer').boundingBox())!
+    expect(footerBounds.y + footerBounds.height).toBeLessThanOrEqual(controlBounds!.y)
+    expect(await pages[0].evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
+    await pages[0].screenshot({ path: testInfo.outputPath(`game-${viewport.width}.png`), fullPage: true })
+  }
+  const frame = pages[0].locator('.chart-scroll')
+  expect(await frame.evaluate((node) => node.scrollHeight <= node.clientHeight + 1)).toBeTruthy()
   expect(
     await pages[0].locator('.chart-scroll').evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
   ).toBeTruthy()
@@ -276,6 +324,120 @@ test('four browser seats, draft, placement, permissions, reconnect, shared battl
   await expect(pages[0].locator('.identity')).toHaveText('Anne Bonny')
   expect(errors).toEqual([])
   for (const context of contexts) await context.close()
+})
+
+test('crew launcher uses native window size and the original UI fits the whole board', async ({
+  browserName,
+}, testInfo) => {
+  test.skip(browserName !== 'chromium', 'The crew launcher uses Chromium browser windows.')
+  const practiceRoot = await mkdtemp(path.join(tmpdir(), 'marauders-native-window-'))
+  const contexts: BrowserContext[] = await openLocalCrew(practiceRoot, 'http://127.0.0.1:5174', true)
+  try {
+    const pages = contexts.map((context) => context.pages()[0])
+    await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Begin port draft/ }).click())
+    for (let i = 0; i < contexts.length; i++) {
+      expect(pages[i].viewportSize()).toBeNull()
+      const nativeWindow = await contexts[i].newCDPSession(pages[i])
+      const { windowId } = await nativeWindow.send('Browser.getWindowForTarget')
+      await nativeWindow.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } })
+      for (const width of [1920, 2560]) {
+        const height = width === 1920 ? 1080 : 1440
+        // Resize the actual browser contents, without emulating a viewport.
+        await nativeWindow.send('Browser.setContentsSize', { windowId, width, height })
+        await expect.poll(() => pages[i].evaluate(() => innerWidth)).toBe(width)
+        await expect.poll(() => pages[i].evaluate(() => innerHeight)).toBe(height)
+        await expect(pages[i].locator('.sea-map')).toHaveClass(/fit-map/)
+        const frame = pages[i].locator('.chart-scroll')
+        expect(
+          await frame.evaluate(
+            (node) => node.scrollWidth <= node.clientWidth + 1 && node.scrollHeight <= node.clientHeight + 1,
+          ),
+        ).toBeTruthy()
+        const bounds = (await frame.boundingBox())!
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height)
+        for (const port of await pages[i].locator('[data-port]').all()) {
+          const cell = (await port.boundingBox())!
+          expect(cell.x).toBeGreaterThanOrEqual(bounds.x)
+          expect(cell.x + cell.width).toBeLessThanOrEqual(bounds.x + bounds.width)
+          expect(cell.y).toBeGreaterThanOrEqual(bounds.y)
+          expect(cell.y + cell.height).toBeLessThanOrEqual(bounds.y + bounds.height)
+        }
+        if (i === 0) await pages[i].screenshot({ path: testInfo.outputPath(`native-${width}.png`) })
+      }
+      await nativeWindow.detach()
+    }
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
+})
+
+test('short playtest clocks start at automatic launch and timeout synchronizes across five browsers', async ({
+  browser,
+}) => {
+  await stopServer()
+  await startServer(false, true)
+  const contexts: BrowserContext[] = []
+  const pages: Page[] = []
+  try {
+    for (let i = 0; i < 5; i++) {
+      const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } })
+      contexts.push(context)
+      const page = await context.newPage()
+      pages.push(page)
+      await page.goto('/')
+      await expect(page.locator('.connection')).toHaveText('Live')
+      if (i < 4) {
+        const joined = await page.request.post('/api/game/players', {
+          headers,
+          data: { name: `Timer captain ${i}`, color: colors[i], character: 'navigator' },
+        })
+        expect(joined.status()).toBe(200)
+      }
+    }
+    let game = await state(pages[0])
+    const ids = game.players.map((p) => p.id)
+    const started = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'start-draft', firstPlayerId: ids[0], expectedRevision: game.revision },
+    })
+    expect(started.status()).toBe(200)
+    game = await started.json()
+    expect(game.turnEndsAt).toBeNull()
+    expect(game.actionEndsAt).toBeNull()
+    for (let pick = 0; pick < 12; pick++) {
+      const result = await pages[ids.indexOf(game.activePlayerId!)].request.post('/api/game/action', {
+        headers,
+        data: { type: 'draft', portId: game.ports[pick].id, expectedRevision: game.revision },
+      })
+      expect(result.status()).toBe(200)
+      game = await result.json()
+    }
+    expect(game.phase).toBe('playing')
+    const turnStarted = new Date(game.events.findLast((event) => event.kind === 'turn')!.at).getTime()
+    expect(new Date(game.turnEndsAt!).getTime() - turnStarted).toBe(60_000)
+    expect(new Date(game.actionEndsAt!).getTime() - turnStarted).toBe(20_000)
+    for (const page of pages) {
+      await expect(page.locator('.sea-map [data-ship]')).toHaveCount(24)
+      await expect(page.locator('.countdown')).toHaveCount(2)
+    }
+    await expect.poll(async () => (await state(pages[4])).turnNumber, { timeout: 25_000 }).toBe(2)
+    game = await state(pages[4])
+    expect(game.activePlayerId).toBe(ids[1])
+    for (const page of pages) {
+      await expect(page.locator('.captains-log')).toContainText('Timer captain 0 ran out of time')
+      await expect(page.locator('.captain-card.active h2')).toContainText('Timer captain 1')
+    }
+    const stale = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'roll-movement', playerId: ids[1] },
+    })
+    expect(stale.status()).toBe(400)
+    game = await clickAction(pages[1], () => pages[1].getByRole('button', { name: 'Roll to sail' }).click())
+    expect(game.activePlayerId).toBe(ids[1])
+    expect(game.remainingMovement).toBeGreaterThan(0)
+  } finally {
+    for (const context of contexts) await context.close()
+  }
 })
 
 test('password controller, eight profiles, help pages, and reset synchronization across five browsers', async ({
@@ -649,14 +811,12 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         expect(result.status(), await result.text()).toBe(200)
         game = await result.json()
       }
+      const revealed = game.perkPickups
+      expect(revealed).toHaveLength(4)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(4)
       for (let i = 0; i < 12; i++) await act({ type: 'draft', portId: game.ports[i].id })
-      for (let i = 0; i < 4; i++) {
-        const ports = game.ports.filter((p) => p.ownerId === game.activePlayerId)
-        for (const port of ports)
-          for (const cell of board.cells.filter((c) => c.harborId === port.id).slice(0, 2))
-            await act({ type: 'place', portId: port.id, q: cell.q, r: cell.r })
-        await act({ type: 'finish-placement' })
-      }
+      expect(game.phase).toBe('playing')
+      expect(game.perkPickups).toEqual(revealed)
       expect(game.ships).toHaveLength(24)
       expect(game.perkPickups).toHaveLength(4)
       for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(4)

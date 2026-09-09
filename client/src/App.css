@@ -1,5 +1,4 @@
 .app-shell {
-  max-width: 1800px;
   margin: auto;
   padding: 0 36px;
 }
@@ -546,7 +545,7 @@
 }
 @media (min-width: 801px) {
   .game-table .fit-map {
-    max-height: clamp(320px, calc(100dvh - 430px), 840px);
+    max-height: max(260px, calc(100dvh - 430px));
   }
 }
 .hex {

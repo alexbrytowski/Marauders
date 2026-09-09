@@ -1,6 +1,6 @@
 namespace Marauders.Server;
 
-/// <summary>Terrain-based sailing distances and draft-aware randomized pickup layouts.</summary>
+/// <summary>Terrain-based sailing distances and randomized pickup layouts revealed before drafting.</summary>
 public static class PerkPlacement
 {
     public static readonly string[] Kinds = ["black-pearl", "glass-cannon", "loaded-dice", "architect"];
@@ -50,8 +50,9 @@ public static class PerkPlacement
                 layout.Add(available[random.Next(available.Length)]);
             }
             if (layout.Count != Kinds.Length) continue;
-            var access = state.Players.Select(player => state.Ports.Where(p => p.OwnerId == player.Id)
-                .SelectMany(p => layout.Select(h => Distance(p.Id, h, state.MapId))).DefaultIfEmpty(0).Min()).ToArray();
+            // Ownership is chosen after the reveal. Balance geographic access
+            // across all ports so the draft itself determines captain access.
+            var access = state.Ports.Select(p => layout.Min(h => Distance(p.Id, h, state.MapId))).ToArray();
             var score = (access.Max() - access.Min()) * 1000 + access.Sum();
             if (score >= bestScore) continue;
             bestScore = score; best = layout;

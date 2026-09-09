@@ -21,6 +21,12 @@ captain assemble a varied fleet, but concentrating all four pickups should take
 movement and expose ships to opponents. Initial distribution is one of each perk,
 without timed respawns. Dropped perks remain in play.
 
+The setup playtest now reveals pickups before the first port pick. Geographic
+placement considers all 13 ports; it does not adapt to captains' later choices.
+The draft can therefore favor ports near a desired perk. This supersedes the
+earlier balancing based on each captain's drafted ports; compare access by draft
+position during the next playtest.
+
 During four-player playtesting record: first collector and time to reach each
 pickup; exchanges won by perk holders; conversions attempted/succeeded; ships
 launched early by Architects; and which perks the winner held. Try several drafted

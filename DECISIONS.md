@@ -1,5 +1,16 @@
 # Implementation decisions
 
+## 2026-09-08: setup playtest follow-up
+
+- The follow-up report of a blank right half exposed a separate launcher problem: its browser contexts emulated an 1100×850 viewport regardless of the native window size. Remove that emulation (`viewport: null`) and open normal crew windows maximized. Verify native-window resizing through the actual crew launcher; synthetic `page.setViewportSize` tests alone missed this problem.
+- The owner also requested a match reset. Add an explicit `--reset` launcher flag that uses the normal authenticated, password-protected reset endpoint after starting the server, retains captain seats, and archives the prior match. It refuses to reset an already-running instance; the existing launcher must first be closed. Normal launcher starts never reset the game.
+
+- Final owner clarification: restore the original UI, with corner captain cards, visible personal tabs, and controls beneath the board. The whole map fits the monitor by default; zoom is optional. Keep the launcher viewport fix, remove the page's 1800px width cap, and allow the fitted map to grow with monitor height beyond the old 840px cap. The owner rejected the intervening full-width scrolling board and collapsed crew layout. Native browser F11 remains available. Desktop monitors are the target; mobile-specific refinement is no longer a release goal.
+- Reveal all four perk pickups immediately after the map draw, before the first port pick. Keep their types and locations fixed throughout the draft and into play. This supersedes post-placement spawning and draft-owner-based balancing: use terrain distances from all 13 ports to favor even geographic access, retaining the existing open-water, nearby-harbor fairness, and six-hex spacing constraints. Port choice now determines each captain's access.
+- The twelfth port pick automatically launches two ships at every owned port and begins the first captain's turn. There is no placement turn or fleet confirmation. The server chooses empty dark-blue cells in stable row/column order; no ships spawn at the unowned port. This supersedes owner-selected starting positions in the original setup rules.
+- On the next server timer tick, old draft saves without pickups receive them; old placement saves automatically fill only missing starting ships, preserving ships already placed, and begin play. Existing playing games retain their pickups and current deadlines; subsequent clocks use the configured durations.
+- The owner accepted 60 seconds per round and 20 seconds per action for the next playtest. Remove the four-window launcher's 30-minute/15-minute overrides so it uses the same defaults and explicit environment settings as the normal launcher. Setup remains untimed; timeout resolution policy is unchanged.
+
 ## 2026-09-08: owner notes and private game scope
 
 - `9-8-26.md` supersedes the earlier character-selected perk proposal and database/multiple-match launch plan. The game is for one group of friends, with one active match, server-authoritative rules, browser seats, and atomic JSON persistence. Database, lobby codes, and managed accounts are outside the current scope.

@@ -42,8 +42,6 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (command.Type == "vote-map") { VoteMap(playerId, command.MapId); return; }
         if (command.Type == "start-draft") { StartDraft(playerId, command.FirstPlayerId); return; }
         if (command.Type == "draft") { Draft(playerId, command.PortId); return; }
-        if (command.Type == "place") { Place(playerId, command); return; }
-        if (command.Type == "finish-placement") { FinishPlacement(playerId); return; }
         Require(state.Phase == "playing" || (state.Phase == "finished" && command.Type == "continue-combat"), "The game is not in play.");
         if (command.Type == "remove-ship") { RemoveLoss(playerId, command.CombatId, command.ShipId); return; }
         Require(state.ActivePlayerId == playerId, "It is another captain's turn.");
@@ -124,6 +122,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var counts = string.Join(", ", MapCatalog.All.Select(m => $"{m.Name}: {state.MapSelection.Votes[m.Id]}"));
         Log("map", $"Map draw: {selected.Name}, ticket {state.MapSelection.Ticket}/{state.MapSelection.TotalTickets}. Votes — {counts}.{(state.MapSelection.UsedEqualOdds ? " No votes: all maps had equal odds." : " Each vote was one ticket.")}");
         state.TurnOrder = Enumerable.Range(0, 4).Select(i => state.Players[(start + i) % 4].Id).ToList();
+        RevealPerks();
         state.Phase = "draft"; state.ActivePlayerId = first;
         Log("draft", $"{Name(first!)} picks first. The port draft has begun.");
     }
@@ -136,11 +135,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         port.OwnerId = actor;
         state.DraftPickNumber++;
         Log("draft", $"{Name(actor)} claimed {port.Name}.");
-        if (state.DraftPickNumber == 12)
-        {
-            state.Phase = "placement"; state.ActivePlayerId = state.TurnOrder[0];
-            Log("setup", "Place two ships in each owned port's dark-blue harbor.");
-        }
+        if (state.DraftPickNumber == 12) LaunchStartingFleets();
         else state.ActivePlayerId = DraftPlayer(state.DraftPickNumber);
     }
     private void AddShip(string ownerId, string portId, Hex hex)
@@ -148,31 +143,27 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var number = state.Ships.Select(s => s.Number).DefaultIfEmpty(0).Max() + 1;
         state.Ships.Add(new() { OwnerId = ownerId, PortId = portId, Q = hex.Q, R = hex.R, Number = number });
     }
-    private void Place(string actor, GameCommand command)
+    private void RevealPerks()
     {
-        Require(state.Phase == "placement" && state.ActivePlayerId == actor, "Wait for your fleet placement turn.");
-        var port = Port(command.PortId);
-        Require(port.OwnerId == actor, "Choose one of your own ports.");
-        Require(state.Ships.Count(s => s.PortId == port.Id) < 2, "This port already has its two starting ships.");
-        Require(command.Q.HasValue && command.R.HasValue, "Choose a harbor hex.");
-        var hex = new Hex(command.Q!.Value, command.R!.Value);
-        Require(Board.InHarbor(hex, port.Id), "Starting ships must be in that port's dark-blue water.");
-        Require(!state.Ships.Any(s => s.Hex == hex), "A ship already occupies that hex.");
-        AddShip(actor, port.Id, hex);
+        state.PerkPickups = PerkPlacement.Create(state, dice);
+        Log("perk", "Four perks are charted in open water. Plan your ports around them; sail through a pickup to collect it.");
     }
-    private void FinishPlacement(string actor)
+    private void LaunchStartingFleets()
     {
-        Require(state.Phase == "placement" && state.ActivePlayerId == actor, "Wait for your fleet placement turn.");
-        Require(state.Ports.Where(p => p.OwnerId == actor).All(p => state.Ships.Count(s => s.PortId == p.Id) == 2), "Place two ships at each of your three ports first.");
-        state.PlacementDone.Add(actor);
-        Log("setup", $"{Name(actor)} has deployed all six ships.");
-        if (state.PlacementDone.Count < 4) state.ActivePlayerId = state.TurnOrder[state.PlacementDone.Count];
-        else
+        var occupied = state.Ships.Select(s => s.Hex).ToHashSet();
+        foreach (var owner in state.TurnOrder)
         {
-            state.PerkPickups = PerkPlacement.Create(state, dice);
-            Log("perk", "Four perks appeared in open water. Each ship can carry one; sail through a pickup to collect it.");
-            state.Phase = "playing"; state.TurnNumber = 1; BeginTurn(state.TurnOrder[0]);
+            foreach (var port in state.Ports.Where(p => p.OwnerId == owner))
+            {
+                var missing = 2 - state.Ships.Count(s => s.PortId == port.Id);
+                var cells = Board.Harbor(port.Id).Where(h => !occupied.Contains(h)).OrderBy(h => h.R).ThenBy(h => h.Q).Take(missing).ToList();
+                Require(cells.Count == missing, "This port needs two empty starting harbor cells.");
+                foreach (var hex in cells) { AddShip(owner, port.Id, hex); occupied.Add(hex); }
+            }
+            Log("setup", $"{Name(owner)} launched two ships at each of their three ports.");
         }
+        state.PlacementDone.Clear();
+        state.Phase = "playing"; state.TurnNumber = 1; BeginTurn(state.TurnOrder[0]);
     }
     private void NoBattle() => Require(state.Combat is null && state.CombatChoices.Count == 0, "Resolve the pending battle first.");
     private void Ready() { NoBattle(); Require(!state.IsBuildPhase, "The round is in construction selection."); }
@@ -461,6 +452,15 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
 
     public bool Expire()
     {
+        // Resume saves from the former manual setup flow through the store's
+        // normal atomic commit and broadcast, without requiring a client action.
+        if (state.Phase == "placement")
+        {
+            if (state.PerkPickups.Count == 0) RevealPerks();
+            LaunchStartingFleets();
+            return true;
+        }
+        if (state.Phase == "draft" && state.PerkPickups.Count == 0) { RevealPerks(); return true; }
         if (state.Phase != "playing" || (state.TurnEndsAt > now && state.ActionEndsAt > now)) return false;
         Log("timeout", $"{Name(state.ActivePlayerId!)} ran out of time. The round is ending.");
         // Resolve mandatory battles with public server rolls and deterministic

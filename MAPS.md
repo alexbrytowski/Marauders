@@ -61,8 +61,8 @@ offset-to-axial conversion as Classic.
 Server tests check weighted draw ticket boundaries, vote permissions/locking,
 thirteen distinct ports, at least two harbor cells per port, routes between every
 harbor, full four-captain setup, legal movement on the selected map, construction
-spillover, and randomized perk layouts across different drafts. Browser tests
-exercise public votes, both new boards, placement, sailing, and persistence.
+spillover, and randomized perk layouts independent of draft ownership. Browser tests
+exercise public votes, both new boards, predraft perks, automatic fleets, sailing, and persistence.
 
 Playtest remaining: choke-point congestion in The Narrows, central-port strength
 in Shattered Isles, how draft position affects each layout, and perk access under

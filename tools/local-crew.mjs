@@ -16,7 +16,10 @@ export async function openLocalCrew(root, url, headless = false) {
       const context = await chromium.launchPersistentContext(directory, {
         channel: process.platform === 'win32' ? 'msedge' : undefined,
         headless,
-        viewport: { width: 1100, height: 850 },
+        // Use the native window dimensions. A fixed emulated viewport leaves
+        // blank space when a captain maximizes the window on a large monitor.
+        viewport: null,
+        args: ['--start-maximized'],
       })
       contexts.push(context)
       const page = context.pages()[0] ?? await context.newPage()

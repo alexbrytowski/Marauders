@@ -18,6 +18,41 @@ public class GameStateStoreTests
     private static GameStateStore Store(string directory, string? password = null) => new(new TestEnvironment(directory), Options.Create(new GameOptions { ResetPassword = password }), new FixedDice(), TimeProvider.System);
     private static JoinRequest Captain(int number) => new($"Captain {number}", GameRules.Colors[number], "navigator");
 
+    [Theory] [InlineData("draft")] [InlineData("placement")]
+    public async Task Legacy_setup_resumes_once_and_persists_without_replacing_existing_ships_or_seats(string phase)
+    {
+        var directory = Directory.CreateTempSubdirectory("marauders-setup-").FullName;
+        var store = Store(directory);
+        for (var i = 0; i < 4; i++) await store.JoinAsync($"browser-{i}", Captain(i));
+        var game = await store.ReadAsync();
+        game = (await store.ActAsync("browser-0", new("start-draft", FirstPlayerId: game.HostPlayerId))).State!;
+        for (var i = 0; i < (phase == "draft" ? 3 : 12); i++)
+        {
+            var browser = $"browser-{game.Players.FindIndex(p => p.Id == game.ActivePlayerId)}";
+            game = (await store.ActAsync(browser, new("draft", PortId: game.Ports[i].Id))).State!;
+        }
+        game.Phase = phase; game.PerkPickups.Clear(); game.TurnEndsAt = null; game.ActionEndsAt = null;
+        game.Ships = game.Ships.Take(5).ToList();
+        var originalShips = game.Ships.Select(s => (s.Id, s.OwnerId, s.Hex)).ToArray();
+        var seats = game.Players.Select((p, i) => (p.Id, Browser: $"browser-{i}")).ToDictionary(p => p.Browser, p => p.Id);
+        var path = Path.Combine(directory, "data", "game-state-v2.json");
+        await File.WriteAllTextAsync(path, System.Text.Json.JsonSerializer.Serialize(new SavedGame { Game = game, Seats = seats }, GameStateStore.JsonOptions));
+        store = Store(directory);
+        var resumed = await store.ExpireTurnAsync(); Assert.NotNull(resumed);
+        Assert.Equal(game.Revision + 1, resumed.Revision); Assert.Equal(game.Id, resumed.Id);
+        Assert.Equal(4, resumed.PerkPickups.Count);
+        Assert.Equal(phase == "draft" ? "draft" : "playing", resumed.Phase);
+        Assert.Equal(phase == "draft" ? 0 : 24, resumed.Ships.Count);
+        Assert.All(originalShips, original => Assert.Contains(resumed.Ships, s => (s.Id, s.OwnerId, s.Hex) == original));
+        if (phase == "placement") { Assert.Equal(game.TurnOrder[0], resumed.ActivePlayerId); Assert.Equal(1, resumed.TurnNumber); }
+        else Assert.Equal(game.ActivePlayerId, resumed.ActivePlayerId);
+        var reloaded = Store(directory); Assert.Null(await reloaded.ExpireTurnAsync());
+        var persisted = await reloaded.ReadAsync();
+        Assert.Equal(resumed.Revision, persisted.Revision); Assert.Equal(resumed.PerkPickups, persisted.PerkPickups);
+        Assert.Equal(resumed.Ships.Select(s => s.Id), persisted.Ships.Select(s => s.Id));
+        foreach (var seat in seats) Assert.Equal(seat.Value, await reloaded.PlayerIdAsync(seat.Key));
+    }
+
     [Fact] public async Task Concurrent_joins_from_one_browser_claim_exactly_one_seat()
     {
         var directory = Directory.CreateTempSubdirectory("marauders-store-").FullName;

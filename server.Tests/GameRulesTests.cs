@@ -58,24 +58,49 @@ public partial class GameRulesTests
     [InlineData(0, 0)] [InlineData(1, 1)] [InlineData(3, 1)] [InlineData(4, 2)] [InlineData(7, 2)] [InlineData(8, 3)] [InlineData(11, 3)] [InlineData(12, 4)]
     public void Dice_follow_population_bands(int ships, int expected) => Assert.Equal(expected, GameRules.ActionCount(ships));
 
-    [Fact] public void Host_selects_first_and_snake_draft_requires_owner_selected_placements()
+    [Fact] public void Host_selects_first_and_snake_draft_reveals_perks_then_launches_fleets_automatically()
     {
         var s = Lobby(); var first = s.Players[2].Id;
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("start-draft", FirstPlayerId: first)));
         Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: first));
+        Assert.Equal(4, s.PerkPickups.Count); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
+        var pickups = s.PerkPickups.ToArray();
         var picks = new List<string>();
-        for (var i = 0; i < 12; i++) { picks.Add(s.ActivePlayerId!); Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id)); }
+        for (var i = 0; i < 12; i++)
+        {
+            Assert.Throws<RuleException>(() => Rules(s).Act(s.Players.First(p => p.Id != s.ActivePlayerId).Id, new("draft", PortId: s.Ports[i].Id)));
+            picks.Add(s.ActivePlayerId!); Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
+            Assert.Equal(pickups, s.PerkPickups);
+            if (i < 11) { Assert.Equal("draft", s.Phase); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); }
+        }
         var order = s.TurnOrder;
         Assert.Equal(new[] { order[0], order[1], order[2], order[3], order[3], order[2], order[1], order[0], order[0], order[1], order[2], order[3] }, picks);
-        Assert.Single(s.Ports, p => p.OwnerId is null); Assert.Empty(s.Ships); Assert.Equal("placement", s.Phase);
-        foreach (var actor in order)
+        var unowned = Assert.Single(s.Ports, p => p.OwnerId is null);
+        Assert.DoesNotContain(s.Ships, ship => ship.PortId == unowned.Id);
+        foreach (var port in s.Ports.Where(p => p.OwnerId is not null))
         {
-            Assert.Throws<RuleException>(() => Rules(s).Act(actor, new("finish-placement")));
-            foreach (var p in s.Ports.Where(p => p.OwnerId == actor))
-                foreach (var h in BoardDefinition.Harbor(p.Id).Take(2)) Rules(s).Act(actor, new("place", PortId: p.Id, Q: h.Q, R: h.R));
-            Rules(s).Act(actor, new("finish-placement"));
+            var ships = s.Ships.Where(ship => ship.PortId == port.Id).ToArray();
+            Assert.Equal(2, ships.Length);
+            Assert.All(ships, ship => { Assert.Equal(port.OwnerId, ship.OwnerId); Assert.True(BoardDefinition.InHarbor(ship.Hex, port.Id)); });
         }
         Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(first, s.ActivePlayerId); Assert.Equal(2, s.RemainingActions);
+        Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());
+        Assert.Equal(Now.AddSeconds(60), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(20), s.ActionEndsAt);
+        Assert.Throws<RuleException>(() => Rules(s).Act(first, new("place", PortId: s.Ports[0].Id, Q: 0, R: 0)));
+        Assert.Throws<RuleException>(() => Rules(s).Act(first, new("finish-placement")));
+        Assert.False(Rules(s).Expire()); Assert.Equal(24, s.Ships.Count);
+    }
+
+    [Fact] public void Default_action_deadline_ends_the_round_and_custom_timers_are_respected()
+    {
+        var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: s.HostPlayerId));
+        for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
+        Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(19)).Expire());
+        Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(20)).Act(s.ActivePlayerId!, new("roll-movement")));
+        var configured = new GameOptions { TurnSeconds = 90, ActionSeconds = 30 };
+        Assert.True(new GameRules(s, new FixedDice(), configured, Now.AddSeconds(20)).Expire());
+        Assert.Equal(s.TurnOrder[1], s.ActivePlayerId); Assert.Equal(2, s.TurnNumber);
+        Assert.Equal(Now.AddSeconds(110), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(50), s.ActionEndsAt);
     }
     [Fact] public void Illegal_moves_and_wrong_actor_are_rejected()
     {

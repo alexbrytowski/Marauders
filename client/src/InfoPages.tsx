@@ -51,9 +51,14 @@ export function HowToPlayPage() {
       </p>
       <h2>2. Claim ports and deploy</h2>
       <p>
+        The whole map fits your monitor by default. Zoom in for closer inspection and use Fit to show the
+        whole map again. The corner captain cards and personal ports, fleet, and shipyard tabs show your crew.
+      </p>
+      <p>
         Pick ports in a snake draft: first to fourth, fourth to first, then first to fourth. Each captain gets
-        three ports; one stays unclaimed. Select each owned port and place two ships in its empty dark-blue
-        harbor cells, then choose Fleet ready.
+        three ports; one stays unclaimed. Perk pickups are visible before the first pick, so plan your ports
+        around them. After the final pick, two ships automatically launch in each owned port's dark-blue
+        harbor and the first turn begins.
       </p>
       <h2>3. Use your action dice</h2>
       <p>
@@ -130,8 +135,8 @@ export function HowToPlayPage() {
       <h2>Clocks, controls, and the final tally</h2>
       <p>
         The round and action countdowns are visible. If either expires, the server resolves pending combat
-        with automatic casualty choices and ends the round, including due construction. Default limits are 120
-        seconds per round and 45 per action.
+        with automatic casualty choices and ends the round, including due construction. Default limits are 60
+        seconds per round and 20 per action. The port draft is untimed.
       </p>
       <p>
         Use the map’s arrow keys and Enter or Space to select cells. Zoom in for touch play. Your fleet and
