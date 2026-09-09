@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { directions, key, portNumber } from './game'
+import { directions, key, perks, portNumber } from './game'
 import type { Board, Cell, Game, Hex } from './game'
 
 const size = 17
@@ -42,6 +42,7 @@ export function BoardView({
   const ports = new Map(game.ports.map((p) => [p.id, p]))
   const players = new Map(game.players.map((p) => [p.id, p]))
   const ships = new Map(game.ships.map((s) => [key(s), s]))
+  const pickups = new Map(game.perkPickups.map((p) => [key(p), p]))
   const cells = useMemo(() => new Map(board.cells.map((c) => [key(c), c])), [board])
   const coasts = useMemo(
     () =>
@@ -99,7 +100,7 @@ export function BoardView({
   return (
     <div className={`chart ${preview ? 'chart-preview' : ''}`}>
       <div className="chart-header">
-        <span>THE MARAUDER SEA</span>
+        <span>{board.name.toUpperCase()}</span>
         <span>13 ports · one victor</span>
       </div>
       <div className="chart-scroll" ref={frame}>
@@ -127,6 +128,7 @@ export function BoardView({
           {board.cells.map((cell) => {
             const p = point(cell),
               ship = ships.get(key(cell)),
+              pickup = pickups.get(key(cell)),
               port = cell.portId ? ports.get(cell.portId) : undefined
             const owner = players.get(ship?.ownerId ?? port?.ownerId ?? '')
             const isSelected = ship?.id === selectedShipId || port?.id === selectedPortId
@@ -134,10 +136,10 @@ export function BoardView({
             const harborFocus = cell.harborId && cell.harborId === focusedHarbor
             const coast = coasts.has(key(cell))
             const description = ship
-              ? `${owner?.name}'s ship ${ship.number}, hex ${key(cell)}`
+              ? `${owner?.name}'s ship ${ship.number}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
               : port
                 ? `${port.name}, port ${portNumber(port.id)}, ${owner?.name ?? 'unclaimed'}`
-                : `${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
+                : `${pickup ? `${perks[pickup.kind]?.name} pickup, ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
             return (
               <g
                 key={key(cell)}
@@ -146,6 +148,7 @@ export function BoardView({
                 data-hex={key(cell)}
                 data-port={port?.id}
                 data-ship={ship?.id}
+                data-perk={pickup?.kind}
                 role={cell.terrain !== 'land' ? 'button' : undefined}
                 aria-label={description}
                 tabIndex={!preview && cell.terrain !== 'land' ? (key(cell) === focusKey ? 0 : -1) : undefined}
@@ -165,6 +168,12 @@ export function BoardView({
                 )}
                 {cell.terrain === 'harbor' && !ship && <circle r="2" className="harbor-dot" />}
                 {highlighted && !ship && <circle r="3" className="reachable-dot" />}
+                {pickup && !ship && (
+                  <g className="perk-token">
+                    <circle r="10" />
+                    <text y="5">{perks[pickup.kind]?.symbol}</text>
+                  </g>
+                )}
                 {port && (
                   <g className="port-token" filter="url(#token-shadow)">
                     <circle r="14" fill={owner?.color ?? '#d2c9af'} stroke="#081a22" strokeWidth="2" />
@@ -187,6 +196,12 @@ export function BoardView({
                     <text y="17" className="ship-number">
                       {ship.number}
                     </text>
+                    {ship.perk && (
+                      <g className="perk-token carried" transform="translate(9 -9)">
+                        <circle r="6" />
+                        <text y="3">{perks[ship.perk]?.symbol}</text>
+                      </g>
+                    )}
                   </g>
                 )}
               </g>
@@ -237,6 +252,10 @@ export function BoardView({
           <span>
             <i className="land-key" />
             Land
+          </span>
+          <span>
+            <i className="perk-key" />
+            Perk pickup
           </span>
         </div>
         {!preview && (

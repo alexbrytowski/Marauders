@@ -1,7 +1,8 @@
 # Marauders implementation status
 
-Updated 2026-09-07 against [GAME_RULES.md](GAME_RULES.md). This is a playable local
-prototype; it is not yet ready for public hosting. See [decisions](DECISIONS.md)
+Updated 2026-09-08 against [GAME_RULES.md](GAME_RULES.md) and the owner's notes in
+[9-8-26.md](9-8-26.md). Scope is one private game for friends, retaining server
+state and JSON persistence. See [decisions](DECISIONS.md)
 and [board mapping notes](BOARD_MAPPING.md) for explicit interpretations.
 
 Legend: `[x]` implemented and locally verified; `[~]` partial or needs wider
@@ -26,15 +27,28 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
   no authority. Wrong-turn, wrong-owner, stale-revision and spectator commands fail.
 - [x] Four-seat lobby, distinct colors, generic cosmetic character choices, host
   selection of first player, twelve-pick snake draft, one unowned port.
+- [x] Three playable maps: the unchanged original named Classic, The Narrows,
+  and Shattered Isles. Lobby votes become tickets in a server-drawn lottery;
+  no votes gives each map equal odds. Previews, odds, selection, and saved map
+  identity synchronize across browsers. Designs and checks are in MAPS.md.
+- [~] Four-player balance playtesting for the new maps and their draft strategies.
 - [x] Owners place two ships per owned port in empty dark-blue cells before play.
 - [x] Responsive desktop/phone layouts, keyboard map navigation, accessible labels,
   native modal focus containment, and reduced-motion styles.
 - [~] Wider mobile/touch and screen-reader playtesting. Desktop and 390px layouts
   have automated screenshots/overflow checks; real-device testing remains.
 - [x] Replace prototype text encoding artifacts and default Vite page metadata.
-- [ ] Final character names/artwork when provided by the game owner.
-- [ ] Implement balanced perks after their exact wording is decided. Perks remain
-  disabled in the initial build, per GAME_RULES.md.
+- [x] Eight configurable character profiles with JPEG support and placeholders;
+  setup and private asset handling are documented in CHARACTERS.md.
+- [ ] Install the final eight names/JPEGs when provided by the game owner.
+- [x] Implement ship-held perks: Black Pearl conversion, Glass Cannon 0–8,
+  Loaded Dice 1/2 → 3, and a port-local Architect. One perk per ship, no fleet limit.
+- [x] Random open-water pickups with balanced sailing access and spacing; pickup
+  along movement routes, public effects, and drops on ship destruction.
+- [~] Balance playtest for perks and pickup quantity; analysis in PERK_BALANCE.md.
+- [x] About and How to play pages, verified in the browser.
+- [x] Round-by-round fleet/port snapshots and victory charts/table; server capture,
+  timeout, construction timing, persistence, and browser verification passed.
 
 ## Rules and game flow
 
@@ -82,45 +96,55 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Windows one-command launcher locates the local SDK, builds and starts the API
   and website, waits for readiness, and stops its services on Ctrl+C. User PATH
   includes the installed SDK; existing terminals can use the launcher immediately.
-- [ ] Replace local JSON storage with a database-backed match model and migrations.
-- [ ] Add multiple matches with lobby codes and match-scoped SignalR groups.
-- [ ] Add managed account authentication and account/seat recovery before launch.
-- [ ] Add database backup/retention/restore procedures and audit deployment secrets.
+- [x] Retain single-match JSON storage per the owner's revised private-game scope.
+  Database, lobby codes, multiple matches, and managed accounts are deferred and
+  are not prerequisites for this friends-only version.
+- [x] Password-protected controller reset from any browser, keep/release seats,
+  archive old saves, and reject stale reset reviews; multi-browser verification passed.
+- [x] One-command four-window practice launcher with separate browser profiles,
+  independent save, and longer clocks; four independent signed sessions verified.
+- [x] Move endpoints into controllers while keeping rule decisions in GameRules
+  and atomic save/identity operations in GameStateStore.
+- [x] Document JSON backup, retention proposal, restore, and incident response in
+  OPERATIONS.md. Reset archives and reload/failure behavior have server tests.
+- [x] Keep passwords in process configuration or generate them at local startup;
+  ignore local secret files, saves, keys, archives, and private photos in Git.
 
-## Before public launch
+## Before sharing a hosted game
 
-- [ ] Choose hosting provider/domain and deploy staging behind managed HTTPS with a
-  database and WebSocket support. No external deployment has been performed.
-- [ ] Add provider-specific deployment pipeline, migrations, rollback procedure,
-  and secret management.
+- [ ] Choose hosting provider/domain and deploy behind managed HTTPS with persistent
+  storage, one server instance, and WebSocket support. No external deployment has been performed.
+- [ ] Add provider-specific deployment pipeline, rollback, and secret configuration.
 - [ ] Complete four-player playtests for timeout, simultaneous encounters, captures,
   elimination, victory, mobile play, and spectator/reconnection behavior.
-- [ ] Publish privacy/contact information matched to final authentication/analytics.
-- [ ] Configure uptime/error monitoring and an incident/recovery runbook.
+- [ ] Publish owner-approved privacy/contact information for the actual host and
+  personal character photos; no analytics or managed account provider is configured.
+- [ ] Configure uptime/error alerts once hosting is chosen; the incident/recovery
+  runbook is in OPERATIONS.md.
 
 ## Current verification
 
-- Client lint and production build passed after final layout adjustments.
-- 25 server tests passed in Release, zero warnings.
-- Both end-to-end tests passed: the five-browser multiplayer scenario and a
-  same-origin published-build smoke test. Final desktop/phone board and battle
-  captures were inspected; fit/zoom and horizontal overflow checks passed.
+- Client lint and production build passed with the September 8 changes.
+- 56 server tests passed in Release, zero warnings.
+- All five browser scenarios passed: four-player rules and permissions, controller
+  reset/profiles/help, perks/victory history, both new maps and voting, and published
+  same-origin serving. Restart persistence is covered for ballots and selected maps.
+- Desktop/mobile screenshot review passed, including map voting and both new boards.
+- Normal launcher and four-window practice launcher startup checks passed; API,
+  website, browser sessions, and owned-service cleanup were verified.
 - Release build and same-origin publish passed with zero warnings/errors.
 - Debug build initially encountered the old running prototype's executable lock;
   Release builds/tests use a separate output directory.
 
 ## Next work
 
-1. Database-backed matches, lobby codes, and room-scoped synchronization.
-2. Managed authentication, real multiplayer playtesting, then staging/launch work.
-
-The board/UI/rules milestone is a verified stopping point. The owner requested a
-handoff here before the next major piece of work.
+1. Four-player map/perk/timer/mobile playtesting using Play-Local-Crew.cmd or real devices.
+2. Owner-supplied character assets and original-board review.
+3. Owner-selected hosting/domain, deployment, and hosted operational checks.
 
 ## Owner decisions still needed
 
 - Exact dark-blue membership if any photo cells differ from the first-ring mapping.
-- Final character roster and perk mechanics, especially Loaded Dice timing and
-  Divine Intervention limits.
+- Final eight character names/JPEGs; playtest feedback on perk power and quantity.
 - Playtested timer durations and acceptance of the documented timeout policy.
-- Hosting/domain, authentication provider, privacy expectations, and save retention.
+- Hosting/domain, privacy/contact wording, and acceptance of the proposed backup retention.

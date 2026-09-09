@@ -4,6 +4,9 @@ public sealed class GameState
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string BoardVersion { get; set; } = BoardDefinition.Version;
+    public string MapId { get; set; } = "classic";
+    public Dictionary<string, string> MapVotes { get; set; } = [];
+    public MapSelection? MapSelection { get; set; }
     public long Revision { get; set; }
     public string Phase { get; set; } = "lobby";
     public string? HostPlayerId { get; set; }
@@ -27,6 +30,8 @@ public sealed class GameState
     public CombatState? Combat { get; set; }
     public List<CombatChoice> CombatChoices { get; set; } = [];
     public List<GameEvent> Events { get; set; } = [];
+    public List<RoundSnapshot> RoundHistory { get; set; } = [];
+    public List<PerkPickup> PerkPickups { get; set; } = [];
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
@@ -46,6 +51,8 @@ public sealed class Port
 }
 public sealed class Ship
 {
+    public string? Perk { get; set; }
+    public int? ConvertedTurnNumber { get; set; }
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string OwnerId { get; set; } = "";
     public string PortId { get; set; } = "";
@@ -84,15 +91,28 @@ public sealed class CombatState
 }
 public sealed record GameEvent(string Id, DateTimeOffset At, int Turn, string Kind, string Message, Dictionary<string, List<int>>? Rolls = null);
 public sealed record GameCommand(string Type, string? PortId = null, string? ShipId = null, int? Q = null, int? R = null,
-    string? CombatId = null, string? ChoiceId = null, string? FirstPlayerId = null, long? ExpectedRevision = null);
+    string? CombatId = null, string? ChoiceId = null, string? FirstPlayerId = null, long? ExpectedRevision = null, string? MapId = null);
+public sealed record MapSelection(string MapId, int Ticket, int TotalTickets, bool UsedEqualOdds, Dictionary<string, int> Votes);
 public sealed record JoinRequest(string Name, string Color, string Character);
+public sealed record TeamSnapshot(string PlayerId, int Ships, int Ports);
+public sealed record RoundSnapshot(int Turn, string? ActivePlayerId, DateTimeOffset At, bool IsFinal, List<TeamSnapshot> Teams);
+public sealed record ResetRequest(string Password, string GameId, long ExpectedRevision, bool ReleaseSeats = false);
+public sealed record PerkPickup(string Kind, int Q, int R);
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
 public sealed class GameOptions
 {
     public int TurnSeconds { get; set; } = 120;
     public int ActionSeconds { get; set; } = 45;
     public string? DataDirectory { get; set; }
+    public string? ResetPassword { get; set; }
 }
-public interface IDice { int Roll(); }
-public sealed class ServerDice : IDice { public int Roll() => System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, 7); }
+public interface IDice
+{
+    int Roll(int sides = 6);
+    int Next(int exclusiveMax) => System.Security.Cryptography.RandomNumberGenerator.GetInt32(exclusiveMax);
+}
+public sealed class ServerDice : IDice
+{
+    public int Roll(int sides = 6) => System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, sides + 1);
+}
 public sealed class RuleException(string message) : Exception(message);

@@ -4,9 +4,10 @@ namespace Marauders.Server;
 /// operates on a private candidate state; a rejected command is never published.</summary>
 public sealed class GameRules(GameState state, IDice dice, GameOptions options, DateTimeOffset now)
 {
+    private BoardMap Board => MapCatalog.Get(state.MapId).Board;
     public static int ActionCount(int ships) => ships == 0 ? 0 : ships / 4 + 1;
     public static readonly string[] Colors = ["#ed7866", "#69c5bc", "#b19bdf", "#e6be68"];
-    public static readonly string[] Characters = ["navigator", "corsair", "privateer", "buccaneer"];
+    public static readonly string[] Characters = CharacterCatalog.Ids;
     private static void Require([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string error) { if (!condition) throw new RuleException(error); }
     private string Name(string id) => state.Players.FirstOrDefault(p => p.Id == id)?.Name ?? "Unclaimed port";
     private Ship Ship(string? id) => state.Ships.SingleOrDefault(s => s.Id == id) ?? throw new RuleException("That ship is no longer on the board.");
@@ -38,6 +39,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     {
         Require(state.Players.Any(p => p.Id == playerId), "Spectators cannot control a captain.");
         if (state.Phase == "playing") Require(state.TurnEndsAt > now && state.ActionEndsAt > now, "The clock has expired. Wait for the next round.");
+        if (command.Type == "vote-map") { VoteMap(playerId, command.MapId); return; }
         if (command.Type == "start-draft") { StartDraft(playerId, command.FirstPlayerId); return; }
         if (command.Type == "draft") { Draft(playerId, command.PortId); return; }
         if (command.Type == "place") { Place(playerId, command); return; }
@@ -95,12 +97,32 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
     }
 
+    private void VoteMap(string actor, string? mapId)
+    {
+        Require(state.Phase == "lobby", "Map voting closes when the draft begins.");
+        if (mapId is null)
+        {
+            if (state.MapVotes.Remove(actor)) Log("map", $"{Name(actor)} cleared their map vote.");
+            return;
+        }
+        var map = MapCatalog.Get(mapId);
+        if (state.MapVotes.GetValueOrDefault(actor) == mapId) return;
+        state.MapVotes[actor] = mapId;
+        Log("map", $"{Name(actor)} voted for {map.Name}.");
+    }
     private void StartDraft(string actor, string? first)
     {
         Require(state.Phase == "lobby" && state.Players.Count == 4, "Four captains must join before the draft.");
         Require(state.HostPlayerId == actor, "The host starts the draft.");
         var start = state.Players.FindIndex(p => p.Id == first);
         Require(start >= 0, "Choose which captain goes first.");
+        state.MapSelection = MapLottery.Draw(MapCatalog.All.Select(m => m.Id).ToArray(),
+            state.MapVotes.Where(v => state.Players.Any(p => p.Id == v.Key)).Select(v => v.Value), dice);
+        var selected = MapCatalog.Get(state.MapSelection.MapId);
+        state.MapId = selected.Id; state.BoardVersion = selected.Version;
+        state.Ports = selected.Board.Ports.Select(p => new Port { Id = p.Id, Name = p.Name }).ToList();
+        var counts = string.Join(", ", MapCatalog.All.Select(m => $"{m.Name}: {state.MapSelection.Votes[m.Id]}"));
+        Log("map", $"Map draw: {selected.Name}, ticket {state.MapSelection.Ticket}/{state.MapSelection.TotalTickets}. Votes — {counts}.{(state.MapSelection.UsedEqualOdds ? " No votes: all maps had equal odds." : " Each vote was one ticket.")}");
         state.TurnOrder = Enumerable.Range(0, 4).Select(i => state.Players[(start + i) % 4].Id).ToList();
         state.Phase = "draft"; state.ActivePlayerId = first;
         Log("draft", $"{Name(first!)} picks first. The port draft has begun.");
@@ -134,7 +156,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(state.Ships.Count(s => s.PortId == port.Id) < 2, "This port already has its two starting ships.");
         Require(command.Q.HasValue && command.R.HasValue, "Choose a harbor hex.");
         var hex = new Hex(command.Q!.Value, command.R!.Value);
-        Require(BoardDefinition.InHarbor(hex, port.Id), "Starting ships must be in that port's dark-blue water.");
+        Require(Board.InHarbor(hex, port.Id), "Starting ships must be in that port's dark-blue water.");
         Require(!state.Ships.Any(s => s.Hex == hex), "A ship already occupies that hex.");
         AddShip(actor, port.Id, hex);
     }
@@ -145,7 +167,12 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.PlacementDone.Add(actor);
         Log("setup", $"{Name(actor)} has deployed all six ships.");
         if (state.PlacementDone.Count < 4) state.ActivePlayerId = state.TurnOrder[state.PlacementDone.Count];
-        else { state.Phase = "playing"; state.TurnNumber = 1; BeginTurn(state.TurnOrder[0]); }
+        else
+        {
+            state.PerkPickups = PerkPlacement.Create(state, dice);
+            Log("perk", "Four perks appeared in open water. Each ship can carry one; sail through a pickup to collect it.");
+            state.Phase = "playing"; state.TurnNumber = 1; BeginTurn(state.TurnOrder[0]);
+        }
     }
     private void NoBattle() => Require(state.Combat is null && state.CombatChoices.Count == 0, "Resolve the pending battle first.");
     private void Ready() { NoBattle(); Require(!state.IsBuildPhase, "The round is in construction selection."); }
@@ -157,15 +184,22 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var ship = Ship(command.ShipId);
         Require(ship.OwnerId == actor, "That ship belongs to another captain.");
         Require(command.Q.HasValue && command.R.HasValue, "Choose a destination hex.");
-        var path = BoardDefinition.FindPath(ship.Hex, new(command.Q!.Value, command.R!.Value), state.Ships.Where(s => s.Id != ship.Id).Select(s => s.Hex).ToHashSet());
+        var path = Board.FindPath(ship.Hex, new(command.Q!.Value, command.R!.Value), state.Ships.Where(s => s.Id != ship.Id).Select(s => s.Hex).ToHashSet());
         Require(path is not null && path.Count > 1 && path.Count - 1 <= state.RemainingMovement, "Choose a reachable empty water hex within your movement.");
         var moved = 0;
         foreach (var hex in path!.Skip(1))
         {
-            var previousHarbor = BoardDefinition.Cell(ship.Hex)?.HarborId;
+            var previousHarbor = Board.Cell(ship.Hex)?.HarborId;
             ship.Q = hex.Q; ship.R = hex.R;
+            var pickup = state.PerkPickups.FirstOrDefault(p => p.Q == hex.Q && p.R == hex.R);
+            if (ship.Perk is null && pickup is not null)
+            {
+                ship.Perk = pickup.Kind;
+                state.PerkPickups.Remove(pickup);
+                Log("perk", $"{Name(actor)}'s ship {ship.Number} collected {PerkName(pickup.Kind)}.");
+            }
             state.RemainingMovement--; moved++;
-            var harbor = BoardDefinition.Cell(hex)?.HarborId;
+            var harbor = Board.Cell(hex)?.HarborId;
             if (harbor is not null && harbor != previousHarbor)
             {
                 var port = Port(harbor);
@@ -183,11 +217,12 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         SettleActions();
     }
 
-    public static bool Triggers(Ship first, Ship second)
+    public static bool Triggers(Ship first, Ship second, BoardMap? board = null)
     {
         if (first.OwnerId == second.OwnerId) return false;
-        var harbor = BoardDefinition.Cell(first.Hex)?.HarborId;
-        return first.Hex.DistanceTo(second.Hex) == 1 || (harbor is not null && BoardDefinition.InHarbor(second.Hex, harbor));
+        var map = board ?? BoardDefinition.Classic;
+        var harbor = map.Cell(first.Hex)?.HarborId;
+        return first.Hex.DistanceTo(second.Hex) == 1 || (harbor is not null && map.InHarbor(second.Hex, harbor));
     }
     private List<CombatChoice> Encounters(string? preferred = null)
     {
@@ -196,10 +231,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             for (var j = i + 1; j < state.Ships.Count; j++)
             {
                 var a = state.Ships[i]; var b = state.Ships[j];
-                if (!Triggers(a, b)) continue;
+                if (!Triggers(a, b, Board)) continue;
                 if (b.Id == preferred || (a.Id != preferred && b.OwnerId == state.ActivePlayerId)) (a, b) = (b, a);
-                var harbor = BoardDefinition.Cell(a.Hex)?.HarborId;
-                if (harbor is not null && !BoardDefinition.InHarbor(b.Hex, harbor)) harbor = null;
+                var harbor = Board.Cell(a.Hex)?.HarborId;
+                if (harbor is not null && !Board.InHarbor(b.Hex, harbor)) harbor = null;
                 choices.Add(new($"{a.Id}:{b.Id}", a.Id, b.Id, harbor));
             }
         return choices;
@@ -214,7 +249,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private void StartBattle(CombatChoice choice)
     {
         var a = Ship(choice.TriggerShipId); var b = Ship(choice.OpponentShipId);
-        Require(Triggers(a, b), "That encounter is no longer pending.");
+        Require(Triggers(a, b, Board), "That encounter is no longer pending.");
         var battle = new CombatState
         {
             TriggerShipId = a.Id, OpponentShipId = b.Id, AttackerId = a.OwnerId, DefenderId = b.OwnerId,
@@ -236,7 +271,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(state.RemainingActions > 0 && state.RemainingMovement == 0, "A port attack needs an unused action. Finish or pass movement first.");
         var ship = Ship(command.ShipId); var port = Port(command.PortId);
         Require(ship.OwnerId == actor && port.OwnerId != actor, "Choose your ship and an enemy or unclaimed port.");
-        Require(BoardDefinition.InHarbor(ship.Hex, port.Id), "Your attacking ship must be in the port's dark-blue harbor.");
+        Require(Board.InHarbor(ship.Hex, port.Id), "Your attacking ship must be in the port's dark-blue harbor.");
         Require(Encounters().Count == 0, "Ship combat must be resolved before a port attack.");
         state.RemainingActions--;
         state.Combat = new()
@@ -257,7 +292,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         foreach (var id in battle.ParticipantShipIds)
         {
             var ship = Ship(id);
-            battle.Rolls[ship.OwnerId].Add(dice.Roll());
+            var roll = ship.Perk == "glass-cannon" ? dice.Roll(9) - 1 : dice.Roll();
+            if (ship.Perk == "loaded-dice" && roll is 1 or 2) roll = 3;
+            battle.Rolls[ship.OwnerId].Add(roll);
         }
         if (battle.Kind == "port") battle.Rolls[battle.DefenderId].Add(dice.Roll());
         else foreach (var id in battle.SupportingPortIds) battle.Rolls[Port(id).OwnerId!].Add(dice.Roll());
@@ -300,12 +337,34 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(battle is not null && battle.Id == combatId && battle.Status == "choose-loss" && battle.LosingPlayerId == actor, "Only the losing captain can choose the casualty.");
         var ship = Ship(shipId);
         Require(ship.OwnerId == actor && battle!.ParticipantShipIds.Contains(ship.Id), "Choose a participating ship from your own fleet.");
-        state.Ships.Remove(ship);
+        var pearl = state.Ships.Any(s => s.OwnerId == battle!.WinnerId && s.Perk == "black-pearl" && battle.ParticipantShipIds.Contains(s.Id));
+        var converted = false;
+        if (pearl)
+        {
+            var chance = dice.Next(1000);
+            converted = chance < 75;
+            Log("perk", $"Black Pearl conversion check: {chance + 1}/1000 (1–75 recruits). {(converted ? "Ship recruited." : "No conversion.")}");
+        }
+        if (converted)
+        {
+            ship.OwnerId = battle!.WinnerId!;
+            ship.ConvertedTurnNumber = state.TurnNumber;
+            Log("perk", $"{Name(ship.OwnerId)} recruited ship {ship.Number} at its current hex. No action dice were added this round.");
+        }
+        else
+        {
+            state.Ships.Remove(ship);
+            if (ship.Perk is not null)
+            {
+                state.PerkPickups.Add(new(ship.Perk, ship.Q, ship.R));
+                Log("perk", $"{PerkName(ship.Perk)} dropped at {ship.Q}, {ship.R}.");
+            }
+            Log("casualty", $"{Name(actor)} lost ship {ship.Number}.");
+        }
         battle!.ParticipantShipIds.Remove(ship.Id);
-        Log("casualty", $"{Name(actor)} lost ship {ship.Number}.");
         var a = state.Ships.SingleOrDefault(s => s.Id == battle.TriggerShipId);
         var b = state.Ships.SingleOrDefault(s => s.Id == battle.OpponentShipId);
-        if (a is not null && b is not null && Triggers(a, b))
+        if (a is not null && b is not null && Triggers(a, b, Board))
         {
             // Helpers are fixed for this triggering pair; their assistance never chains.
             battle.Status = "awaiting-roll"; battle.LosingPlayerId = null;
@@ -335,6 +394,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             state.RemainingActions = 0; state.RemainingMovement = 0;
             state.TurnEndsAt = null; state.ActionEndsAt = null;
             Log("victory", $"{Name(capturer)} owns every port and wins Marauders!");
+            SnapshotRound(isFinal: true);
         }
     }
     private void SettleActions()
@@ -352,28 +412,40 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     }
     private void CompleteConstruction(string owner)
     {
+        // Snapshot the occupied Architect ports before any launches; bonuses never chain.
+        var architectPorts = state.Ports.Where(p => p.OwnerId == owner && state.Ships.Any(s =>
+            s.OwnerId == owner && s.Perk == "architect" && Board.InHarbor(s.Hex, p.Id))).Select(p => p.Id).ToHashSet();
         foreach (var build in state.Constructions.Where(b => b.OwnerId == owner && b.StartedTurnNumber < state.TurnNumber).ToArray())
         {
-            build.RemainingOwnerTurns = Math.Max(0, build.RemainingOwnerTurns - 1);
+            build.RemainingOwnerTurns = Math.Max(0, build.RemainingOwnerTurns - (architectPorts.Contains(build.PortId) ? 2 : 1));
             if (build.RemainingOwnerTurns > 0) continue;
-            var hex = BoardDefinition.SpawnHex(build.PortId, state.Ships.Select(s => s.Hex).ToHashSet());
+            var hex = Board.SpawnHex(build.PortId, state.Ships.Select(s => s.Hex).ToHashSet());
             // A completely full map is impossible at the 26-ship population cap,
             // but retain a completed build rather than losing it if data changes.
             if (hex is null) continue;
             AddShip(owner, build.PortId, hex.Value);
             state.Constructions.Remove(build);
-            Log("construction", $"{Name(owner)} launched a ship at {Port(build.PortId).Name}{(BoardDefinition.InHarbor(hex.Value, build.PortId) ? "" : " into nearby open water")}; it can move next round.");
+            Log("construction", $"{Name(owner)} launched a ship at {Port(build.PortId).Name}{(Board.InHarbor(hex.Value, build.PortId) ? "" : " into nearby open water")}; it can move next round.");
         }
     }
+    private static string PerkName(string kind) => kind switch
+    {
+        "black-pearl" => "The Black Pearl", "glass-cannon" => "Glass Cannon", "loaded-dice" => "Loaded Dice", "architect" => "The Architect", _ => kind
+    };
     private void FinishRound()
     {
         var owner = state.ActivePlayerId!;
         CompleteConstruction(owner);
+        SnapshotRound();
         var index = state.TurnOrder.IndexOf(owner);
         var next = Enumerable.Range(1, 4).Select(i => state.TurnOrder[(index + i) % 4]).First(id => state.Ports.Any(p => p.OwnerId == id));
         state.TurnNumber++;
         BeginTurn(next);
     }
+    private void SnapshotRound(bool isFinal = false) => state.RoundHistory.Add(new(
+        state.TurnNumber, state.ActivePlayerId, now, isFinal,
+        state.Players.Select(p => new TeamSnapshot(p.Id, state.Ships.Count(s => s.OwnerId == p.Id),
+            state.Ports.Count(port => port.OwnerId == p.Id))).ToList()));
     private void BeginTurn(string owner)
     {
         state.ActivePlayerId = owner;

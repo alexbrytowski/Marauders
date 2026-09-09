@@ -1,5 +1,6 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Options;
 
 namespace Marauders.Server;
@@ -29,7 +30,7 @@ public sealed class GameStateStore
         statePath = Path.Combine(directory, "game-state-v2.json");
         saved = File.Exists(statePath) ? JsonSerializer.Deserialize<SavedGame>(File.ReadAllText(statePath), JsonOptions)
             ?? throw new InvalidDataException("The saved game is empty.") : new();
-        if (saved.SchemaVersion != 2 || saved.Game.BoardVersion != BoardDefinition.Version)
+        if (saved.SchemaVersion != 2 || MapCatalog.Find(saved.Game.MapId)?.Version != saved.Game.BoardVersion)
             throw new InvalidDataException("The saved game uses an incompatible board or schema. Preserve it before starting a new match.");
     }
     private static T Clone<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value, JsonOptions), JsonOptions)!;
@@ -56,14 +57,29 @@ public sealed class GameStateStore
             throw new RuleException("The game changed. Review the latest state and try again.");
         Rules(candidate.Game).Act(actor, command);
     });
-    public Task<MutationResult> ResetAsync(string browserId) => ChangeAsync(candidate =>
+    public Task<MutationResult> ResetAsync(ResetRequest request)
     {
-        if (!candidate.Seats.TryGetValue(browserId, out var actor) || candidate.Game.HostPlayerId != actor)
-            throw new RuleException("Only the host can start a new local game.");
-        candidate.Game = new GameState { Players = candidate.Game.Players, HostPlayerId = actor, Revision = candidate.Game.Revision };
-    });
+        if (string.IsNullOrEmpty(options.ResetPassword))
+            return Task.FromResult(new MutationResult(false, Error: "The server owner must configure a reset password first.", StatusCode: 503));
+        if (string.IsNullOrEmpty(request.Password) || request.Password.Length > 1024 ||
+            !CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(request.Password)),
+                SHA256.HashData(Encoding.UTF8.GetBytes(options.ResetPassword))))
+            return Task.FromResult(new MutationResult(false, Error: "Incorrect reset password.", StatusCode: 403));
+        return ChangeAsync(candidate =>
+        {
+            if (request.GameId != candidate.Game.Id || request.ExpectedRevision != candidate.Game.Revision)
+                throw new RuleException("The game changed. Review the latest state before resetting.");
+            candidate.Game = new GameState
+            {
+                Players = request.ReleaseSeats ? [] : candidate.Game.Players,
+                HostPlayerId = request.ReleaseSeats ? null : candidate.Game.HostPlayerId,
+                Revision = candidate.Game.Revision
+            };
+            if (request.ReleaseSeats) candidate.Seats.Clear();
+        }, archive: true);
+    }
     private GameRules Rules(GameState state) => new(state, dice, options, clock.GetUtcNow());
-    private async Task<MutationResult> ChangeAsync(Action<SavedGame> change)
+    private async Task<MutationResult> ChangeAsync(Action<SavedGame> change, bool archive = false)
     {
         await gate.WaitAsync();
         try
@@ -71,6 +87,13 @@ public sealed class GameStateStore
             var candidate = Clone(saved);
             try { change(candidate); }
             catch (RuleException error) { return new(false, Error: error.Message); }
+            if (archive)
+            {
+                var directory = Path.Combine(Path.GetDirectoryName(statePath)!, "backups");
+                Directory.CreateDirectory(directory);
+                var backup = Path.Combine(directory, $"before-reset-{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.json");
+                await File.WriteAllTextAsync(backup, JsonSerializer.Serialize(saved, JsonOptions));
+            }
             await CommitAsync(candidate);
             return new(true, Clone(candidate.Game));
         }
@@ -98,10 +121,4 @@ public sealed class GameStateStore
         File.Move(temporary, statePath, overwrite: true);
         saved = candidate;
     }
-}
-
-public sealed class GameHub : Hub;
-public sealed class GameHubNotifier(IHubContext<GameHub> hub)
-{
-    public Task GameUpdatedAsync(GameState state) => hub.Clients.All.SendAsync("gameUpdated", state);
 }

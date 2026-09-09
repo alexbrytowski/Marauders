@@ -4,6 +4,8 @@ import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
+import { randomBytes } from 'node:crypto'
+import { openLocalCrew } from './local-crew.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const serverDirectory = path.join(root, 'server')
@@ -16,11 +18,15 @@ const environment = {
   DOTNET_NOLOGO: '1',
   ...(existsSync(localSdk) ? { DOTNET_ROOT: path.dirname(localSdk) } : {}),
 }
-const apiUrl = 'http://localhost:5133'
-const websiteUrl = 'http://localhost:5173'
+const crewMode = process.argv.includes('--crew')
+const apiPort = crewMode ? 5135 : 5133
+const clientPort = crewMode ? 5175 : 5173
+const apiUrl = `http://localhost:${apiPort}`
+const websiteUrl = `http://localhost:${clientPort}`
 const boardVersion = JSON.parse(readFileSync(path.join(serverDirectory, 'board.json'), 'utf8')).version
 const checkOnly = process.argv.includes('--check')
 const children = new Set()
+let crewContexts = []
 let stopping = false
 
 function launch(file, args, cwd, env = environment) {
@@ -48,8 +54,10 @@ async function npm(args) {
 
 async function isOurGame(origin) {
   try {
-    const response = await fetch(`${origin}/api/board`, { signal: AbortSignal.timeout(1500) })
-    return response.ok && (await response.json()).version === boardVersion
+    const response = await fetch(`${origin}/api/maps`, { signal: AbortSignal.timeout(1500) })
+    if (!response.ok) return false
+    const maps = await response.json()
+    return Array.isArray(maps) && maps.some(map => map.id === 'classic' && map.version === boardVersion)
   } catch { return false }
 }
 
@@ -65,6 +73,8 @@ async function portInUse(port) {
 
 async function stopChildren() {
   stopping = true
+  await Promise.all(crewContexts.map(context => context.close().catch(() => {})))
+  crewContexts = []
   await Promise.all([...children].map(child => new Promise(resolve => {
     if (child.exitCode !== null || child.signalCode !== null) return resolve()
     const timer = setTimeout(() => { child.kill('SIGKILL'); resolve() }, 4000)
@@ -81,10 +91,11 @@ try {
   console.log('\nMARAUDERS — starting your local game\n')
   if (await isOurGame(websiteUrl)) {
     console.log(`Marauders is already running. Open ${websiteUrl}\n`)
+    if (crewMode) throw new Error('The local crew game is already running. Use its four windows, or close its launcher before reopening them.')
   } else {
-    const [apiBusy, clientBusy] = await Promise.all([portInUse(5133), portInUse(5173)])
+    const [apiBusy, clientBusy] = await Promise.all([portInUse(apiPort), portInUse(clientPort)])
     if (apiBusy || clientBusy) {
-      throw new Error(`Port ${[apiBusy ? 5133 : null, clientBusy ? 5173 : null].filter(Boolean).join(' / ')} is already in use. Close the old server or website terminal, then run Start-Marauders.cmd again.`)
+      throw new Error(`Port ${[apiBusy ? apiPort : null, clientBusy ? clientPort : null].filter(Boolean).join(' / ')} is already in use. Close the old server or website terminal, then run the launcher again.`)
     }
     await run(dotnet, ['--version'], root)
     const vite = path.join(clientDirectory, 'node_modules', 'vite', 'bin', 'vite.js')
@@ -92,10 +103,14 @@ try {
     await npm(['run', 'build'])
     await run(dotnet, ['build', path.join(serverDirectory, 'Marauders.Server.csproj'), '--configuration', 'Release', '--nologo'], root)
 
+    const resetPassword = environment.Game__ResetPassword || randomBytes(18).toString('base64url')
+    // Print only the newly generated local password, never a configured secret.
+    if (!environment.Game__ResetPassword && !checkOnly) console.log(`Local game controller password for this run: ${resetPassword}\n`)
     const api = launch(dotnet, [path.join(serverDirectory, 'bin', 'Release', 'net10.0', 'Marauders.Server.dll'), '--urls', apiUrl], serverDirectory, {
-      ...environment, ASPNETCORE_ENVIRONMENT: 'Development',
+      ...environment, ASPNETCORE_ENVIRONMENT: 'Development', Game__ResetPassword: resetPassword,
+      ...(crewMode ? { Game__DataDirectory: path.join(root, 'artifacts', 'local-crew', 'data'), Game__TurnSeconds: '1800', Game__ActionSeconds: '900' } : {}),
     })
-    const client = launch(process.execPath, [vite, '--host', 'localhost', '--port', '5173', '--strictPort'], clientDirectory, {
+    const client = launch(process.execPath, [vite, '--host', 'localhost', '--port', String(clientPort), '--strictPort'], clientDirectory, {
       ...environment, MARAUDERS_API_URL: apiUrl,
     })
     let serviceFailure
@@ -112,6 +127,10 @@ try {
     if (serviceFailure) throw serviceFailure
     if (!ready) throw new Error('The website did not become ready. See the server output above.')
     console.log(`\nREADY — open ${websiteUrl}\nKeep this window open while playing. Press Ctrl+C to stop both services.\n`)
+    if (crewMode) {
+      crewContexts = await openLocalCrew(root, websiteUrl, checkOnly)
+      console.log('Four independent captain windows are ready. This practice game has its own save, separate from your main game.\n')
+    }
     if (checkOnly) {
       const response = await fetch(`${websiteUrl}/api/session`)
       if (!response.ok || !(await response.json()).hasOwnProperty('playerId')) throw new Error('The browser session endpoint did not respond correctly.')

@@ -1,16 +1,19 @@
 import type { CSSProperties } from 'react'
 import { actionCount, portNumber } from './game'
-import type { Game, Player } from './game'
+import type { CharacterProfile, Game, Player } from './game'
+import { CharacterPortrait } from './CharacterPortrait'
 import { Icon } from './Icons'
 
 export function PlayerCard({
   player,
+  profile,
   game,
   mine,
   index,
   inspectPort,
 }: {
   player?: Player
+  profile?: CharacterProfile
   game: Game
   mine: boolean
   index: number
@@ -39,23 +42,13 @@ export function PlayerCard({
     >
       <div className="captain-heading">
         <div className="captain-emblem">
-          <Icon
-            name={
-              player.character === 'navigator'
-                ? 'compass'
-                : player.character === 'corsair'
-                  ? 'battle'
-                  : player.character === 'privateer'
-                    ? 'flag'
-                    : 'ship'
-            }
-          />
+          <CharacterPortrait profile={profile} />
         </div>
         <div>
           <h2>
             {player.name} {mine && <span className="you-tag">YOU</span>}
           </h2>
-          <p>{player.character}</p>
+          <p>{profile?.name ?? player.character}</p>
         </div>
         {active && <span className="turn-beacon" title="Active captain" />}
       </div>

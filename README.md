@@ -44,10 +44,27 @@ If an already-open terminal still says `dotnet` is not recognized, use
 above. The SDK has been added to this machine's user PATH; reopen the terminal
 application for it to take effect. The launcher does not depend on that change.
 
+### Play all four captains on one computer
+
+Double-click **Play-Local-Crew.cmd**. It builds the game and opens four independent
+Edge windows with their own persistent browser profiles and prefilled captain seats.
+The practice game runs on `http://localhost:5175` with separate state under
+`artifacts/local-crew/`, so your main game's save is unaffected. Practice timers are
+30 minutes per round and 15 per action, giving you time to switch windows.
+Keep its launcher open; Ctrl+C closes the practice services and windows. Reopening
+it restores the four seats and practice game. Use Game controller to reset it.
+On Linux, install Playwright Chromium first; the same launcher supports `--crew`.
+
+The launcher shows a newly generated local reset password in its terminal unless
+you already supplied `Game__ResetPassword`. Passwords are never stored in Git or
+the save. See [operations](OPERATIONS.md) for configuration, backup, and recovery.
+
 ## Play
 
-1. Join with a name, color, and cosmetic character.
-2. The host starts a snake draft. Select a port on the map, then confirm the pick.
+1. Join with a name, color, and cosmetic character. Vote for Classic, The Narrows,
+   or Shattered Isles; you can change or clear your vote before the draft.
+2. The host starts a snake draft. The server draws the map with one ticket per vote
+   (equal chances if nobody votes). Select a port, then confirm the pick.
 3. Select each owned port and click two highlighted harbor cells to place ships.
 4. Roll to sail, select a ship, choose a highlighted destination, and confirm its
    route. A route stops when combat triggers. Unused movement can be split among ships.
@@ -59,6 +76,13 @@ application for it to take effect. The launcher does not depend on that change.
 Use the corner cards or personal Ports/Fleet/Shipyards tabs to inspect your crew.
 Map arrow keys move focus; Enter/Space selects. Zoom controls enlarge the map for
 touch play, and Fit returns to the whole-board view.
+
+Use **How to play** for the complete in-app guide, **About** for game context,
+and **Game controller** for password-authorized resets. Ship perks appear as sea
+pickups; each ship can hold one. The victory screen charts every team's ships and
+ports after each captain round. See [perk balance notes](PERK_BALANCE.md) and
+[personal character setup](CHARACTERS.md) for the eight profile names/JPEGs.
+Map designs, voting, and reproduction instructions are in [MAPS.md](MAPS.md).
 
 ## Verify
 
@@ -88,8 +112,9 @@ The current single match is stored in `server/data/game-state-v2.json`. Session
 bindings are private; signing keys are under `server/data/keys/`. Preserve both to
 retain browser seats across server restarts. Neither belongs in version control.
 The original `game-state.json` is preserved and is not migrated onto the new grid.
-JSON persistence and browser-only identity are local-development foundations;
-database-backed matches and managed authentication remain release requirements.
+The owner chose one private game for friends with JSON persistence and browser
+identity. Database-backed matches, lobby codes, and managed accounts are outside
+the current scope. Keep a single server process and back up its data and keys.
 
 ## Same-origin build
 
@@ -101,8 +126,8 @@ dotnet publish server/Marauders.Server.csproj --configuration Release --output a
 
 The publish target includes `client/dist` under `wwwroot` so the API, hub, and UI can
 share one origin. Production enables HTTPS/HSTS and secure cookies. Trust proxy
-headers only from your actual reverse proxy. Hosting, database, authentication,
-backups, and remote deployment are still tracked in the tasklist.
+headers only from your actual reverse proxy. Hosting, backup retention, and remote
+deployment are tracked in the tasklist and [operations guide](OPERATIONS.md).
 
 The board is derived from the reference JPEG, which is untouched. See
 [BOARD_MAPPING.md](BOARD_MAPPING.md) to reproduce and review the extraction.

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Die, Icon } from './Icons'
 import type { Command, Game } from './game'
+import { perks } from './game'
 
 export function BattleModal({
   game,
@@ -62,6 +63,7 @@ export function BattleModal({
             {ships.map((s) => (
               <span key={s.id}>
                 Ship {s.number}
+                {s.perk && ` · ${perks[s.perk]?.name}`}
                 {s.id === battle?.triggerShipId || s.id === battle?.opponentShipId
                   ? ' · trigger'
                   : ' · helper'}
@@ -80,6 +82,7 @@ export function BattleModal({
       onCancel={(e) => e.preventDefault()}
     >
       <div className="battle-topline">
+        <a href="#controller">Game controller</a>
         <span>
           <Icon name="eye" /> LIVE · ALL CAPTAINS WATCHING
         </span>

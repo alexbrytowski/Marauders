@@ -8,6 +8,7 @@ export default defineConfig({
   fullyParallel: false,
   reporter: 'list',
   use: {
+    actionTimeout: 10_000,
     baseURL: 'http://127.0.0.1:5174',
     headless: true,
     channel: process.platform === 'win32' ? 'msedge' : undefined,

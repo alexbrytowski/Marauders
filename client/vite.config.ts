@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': process.env.MARAUDERS_API_URL ?? 'http://localhost:5133',
+      '/characters': process.env.MARAUDERS_API_URL ?? 'http://localhost:5133',
       '/hubs': { target: process.env.MARAUDERS_API_URL ?? 'http://localhost:5133', ws: true },
     },
   },

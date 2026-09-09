@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { HubConnectionBuilder } from '@microsoft/signalr'
 import { getJson } from './game'
-import type { Board, Command, Game, Session } from './game'
+import type { Board, CharacterProfile, Command, Game, MapOption, Session } from './game'
 
 export function useGame() {
   const [game, setGame] = useState<Game | null>(null)
-  const [board, setBoard] = useState<Board | null>(null)
+  const [boards, setBoards] = useState<Record<string, Board>>({})
+  const [maps, setMaps] = useState<MapOption[]>([])
   const [session, setSession] = useState<Session | null>(null)
+  const [profiles, setProfiles] = useState<CharacterProfile[]>([])
   const [connection, setConnection] = useState('Connecting')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -28,7 +30,17 @@ export function useGame() {
       }
     }
     hub.on('gameUpdated', (state: Game) => {
-      if (!cancelled) accept(state)
+      if (!cancelled) {
+        accept(state)
+        // A reset can release seats in every connected browser.
+        void getJson<Session>('/api/session')
+          .then((identity) => {
+            if (!cancelled) setSession(identity)
+          })
+          .catch((e) => {
+            if (!cancelled) setError(String(e))
+          })
+      }
     })
     hub.onreconnecting(() => {
       if (!cancelled) setConnection('Reconnecting')
@@ -41,13 +53,19 @@ export function useGame() {
     })
     const connect = async () => {
       try {
-        const [identity, map] = await Promise.all([
+        const [identity, mapOptions, characters] = await Promise.all([
           getJson<Session>('/api/session'),
-          getJson<Board>('/api/board'),
+          getJson<MapOption[]>('/api/maps'),
+          getJson<CharacterProfile[]>('/api/characters'),
         ])
+        const mapBoards = await Promise.all(
+          mapOptions.map((map) => getJson<Board>(`/api/board?mapId=${encodeURIComponent(map.id)}`)),
+        )
         if (cancelled) return
         setSession(identity)
-        setBoard(map)
+        setMaps(mapOptions)
+        setBoards(Object.fromEntries(mapBoards.map((map) => [map.id, map])))
+        setProfiles(characters)
         await hub.start()
         if (cancelled) {
           await hub.stop()
@@ -100,5 +118,20 @@ export function useGame() {
     }
   }
   const act = (command: Command) => send('/api/game/action', { ...command, expectedRevision: game?.revision })
-  return { game, board, session, connection, error, busy, act, send, clearError: () => setError('') }
+  const selectedBoard = game ? boards[game.mapId] : null
+  const board = selectedBoard?.version === game?.boardVersion ? selectedBoard : null
+  return {
+    game,
+    board,
+    boards,
+    maps,
+    profiles,
+    session,
+    connection,
+    error,
+    busy,
+    act,
+    send,
+    clearError: () => setError(''),
+  }
 }

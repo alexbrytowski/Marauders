@@ -18,6 +18,13 @@ server/data/game-state.json
 .tools/
 server/data/game-state-v2.json*
 server/data/keys/
+server/data/backups/
+server/characters.local.json
+server/wwwroot/characters/
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
 artifacts/
 **/bin/
 **/obj/

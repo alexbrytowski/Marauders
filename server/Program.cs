@@ -1,14 +1,16 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Marauders.Server;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOptions<GameOptions>().BindConfiguration("Game")
-    .Validate(o => o.TurnSeconds >= 10 && o.ActionSeconds >= 5, "Game timers must be at least 10/5 seconds.").ValidateOnStart();
+    .Validate(o => o.TurnSeconds >= 10 && o.ActionSeconds >= 5, "Game timers must be at least 10/5 seconds.")
+    .Validate(o => o.ResetPassword is null || o.ResetPassword.Length is >= 12 and <= 1024, "The reset password must contain 12–1024 characters when configured.").ValidateOnStart();
+builder.Services.AddControllers();
+builder.Services.AddSingleton<CharacterCatalog>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton<IDice, ServerDice>();
 builder.Services.AddSignalR();
@@ -34,6 +36,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Key by remote IP, not disposable browser cookies, to bound password guesses.
+    options.AddPolicy("reset", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.AddPolicy("mutations", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -59,34 +65,7 @@ app.Use(async (context, next) =>
     await next();
 });
 app.MapHealthChecks("/api/health");
-app.MapGet("/api/board", () => Results.Ok(new { version = BoardDefinition.Version, cells = BoardDefinition.Cells }));
-app.MapGet("/api/game", async (GameStateStore store) => Results.Ok(await store.ReadAsync()));
-app.MapGet("/api/session", async (HttpContext context, GameStateStore store) =>
-{
-    var browser = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (browser is null)
-    {
-        browser = Guid.NewGuid().ToString("N");
-        var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, browser)], CookieAuthenticationDefaults.AuthenticationScheme);
-        await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), new AuthenticationProperties { IsPersistent = true });
-    }
-    return Results.Ok(new { playerId = await store.PlayerIdAsync(browser), canReset = app.Environment.IsDevelopment() });
-});
-static string Browser(HttpContext context) => context.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-static async Task<IResult> Publish(MutationResult result, GameHubNotifier notifier)
-{
-    if (!result.Success) return Results.Json(new { error = result.Error }, statusCode: result.StatusCode);
-    await notifier.GameUpdatedAsync(result.State!);
-    return Results.Ok(result.State);
-}
-var api = app.MapGroup("/api/game").RequireAuthorization().RequireRateLimiting("mutations");
-api.MapPost("/players", async (JoinRequest request, HttpContext context, GameStateStore store, GameHubNotifier notifier)
-    => await Publish(await store.JoinAsync(Browser(context), request), notifier));
-api.MapPost("/action", async (GameCommand request, HttpContext context, GameStateStore store, GameHubNotifier notifier)
-    => await Publish(await store.ActAsync(Browser(context), request), notifier));
-if (app.Environment.IsDevelopment())
-    api.MapPost("/reset", async (HttpContext context, GameStateStore store, GameHubNotifier notifier)
-        => await Publish(await store.ResetAsync(Browser(context)), notifier));
+app.MapControllers();
 app.MapHub<GameHub>("/hubs/game").RequireAuthorization();
 app.UseDefaultFiles();
 app.UseStaticFiles();

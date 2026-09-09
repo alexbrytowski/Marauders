@@ -4,10 +4,33 @@ export type Cell = Hex & {
   portId: string | null
   harborId: string | null
 }
-export type Board = { version: string; cells: Cell[] }
+export type Board = { id: string; name: string; version: string; cells: Cell[] }
+export type MapOption = { id: string; name: string; description: string; version: string }
+export type MapSelection = {
+  mapId: string
+  ticket: number
+  totalTickets: number
+  usedEqualOdds: boolean
+  votes: Record<string, number>
+}
 export type Player = { id: string; name: string; color: string; character: string }
+export type CharacterProfile = { id: string; name: string; imageUrl: string | null }
+export type RoundSnapshot = {
+  turn: number
+  activePlayerId: string | null
+  at: string
+  isFinal: boolean
+  teams: { playerId: string; ships: number; ports: number }[]
+}
 export type Port = { id: string; name: string; ownerId: string | null; defenseWeakness: number }
-export type Ship = Hex & { id: string; ownerId: string; portId: string; number: number }
+export type Ship = Hex & {
+  id: string
+  ownerId: string
+  portId: string
+  number: number
+  perk: string | null
+  convertedTurnNumber: number | null
+}
 export type Construction = { id: string; ownerId: string; portId: string; remainingOwnerTurns: number }
 export type Encounter = { id: string; triggerShipId: string; opponentShipId: string; harborId: string | null }
 export type Battle = {
@@ -39,6 +62,10 @@ export type GameEvent = {
 export type Game = {
   id: string
   revision: number
+  mapId: string
+  boardVersion: string
+  mapVotes: Record<string, string>
+  mapSelection: MapSelection | null
   phase: string
   hostPlayerId: string | null
   winnerId: string | null
@@ -61,6 +88,8 @@ export type Game = {
   combat: Battle | null
   combatChoices: Encounter[]
   events: GameEvent[]
+  roundHistory: RoundSnapshot[]
+  perkPickups: (Hex & { kind: string })[]
   updatedAt: string
 }
 export type Session = { playerId: string | null; canReset: boolean }
@@ -73,9 +102,23 @@ export type Command = {
   combatId?: string
   choiceId?: string
   firstPlayerId?: string
+  mapId?: string | null
 }
 export const colors = ['#ed7866', '#69c5bc', '#b19bdf', '#e6be68']
-export const characters = ['navigator', 'corsair', 'privateer', 'buccaneer']
+export const perks: Record<string, { name: string; symbol: string; description: string }> = {
+  'black-pearl': {
+    name: 'The Black Pearl',
+    symbol: '●',
+    description: '7.5% chance to recruit an enemy casualty in a winning battle.',
+  },
+  'glass-cannon': { name: 'Glass Cannon', symbol: '◇', description: 'Combat rolls range from 0 to 8.' },
+  'loaded-dice': { name: 'Loaded Dice', symbol: '⚄', description: 'Combat rolls of 1 or 2 become 3.' },
+  architect: {
+    name: 'The Architect',
+    symbol: '⚒',
+    description: 'Construction advances twice as fast at the friendly harbor where this ship is stationed.',
+  },
+}
 export const key = (h: Hex) => `${h.q},${h.r}`
 export const distance = (a: Hex, b: Hex) =>
   (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q - b.q + a.r - b.r)) / 2

@@ -1181,6 +1181,384 @@
   color: #b1bfad;
   font-size: 13px;
 }
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 0 0 18px;
+  font-size: 12px;
+}
+.map-ballot {
+  margin: 0 0 30px;
+}
+.ballot-heading {
+  display: flex;
+  gap: 24px;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.ballot-heading h2 {
+  font:
+    32px Georgia,
+    serif;
+  color: #e8d7b3;
+  margin-top: 8px;
+}
+.ballot-heading p {
+  max-width: 430px;
+  color: #a2b8b6;
+  line-height: 1.6;
+  font-size: 12px;
+}
+.map-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.map-option {
+  border: 1px solid #405951;
+  background: #132a30;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.map-option.my-map-vote {
+  border-color: #e0bd78;
+  box-shadow: 0 0 0 1px #e0bd7840;
+}
+.map-thumbnail {
+  width: 100%;
+  height: 180px;
+  background: #0b222b;
+  display: block;
+  padding: 12px;
+}
+.map-option-copy {
+  padding: 18px;
+}
+.map-option h3 {
+  font:
+    26px Georgia,
+    serif;
+  color: #ead6aa;
+}
+.map-option p {
+  font-size: 12px;
+  color: #9eb6b2;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.map-option-copy > p:first-of-type {
+  min-height: 58px;
+}
+.map-odds {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #e8cb8c;
+  margin-top: 18px;
+}
+.map-option .map-voters {
+  font-size: 10px;
+  min-height: 32px;
+}
+.map-option button {
+  width: 100%;
+  font-size: 12px;
+}
+.map-option button[aria-pressed='true'] {
+  background: #776139;
+  border-color: #d9b77c;
+  color: #fff0cf;
+}
+.ballot-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #93aaa5;
+}
+.ballot-note button {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.map-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 18px;
+  color: #9eb6b2;
+  font-size: 11px;
+  padding: 10px 0 15px;
+}
+.map-result strong {
+  color: #e2c388;
+  font:
+    22px Georgia,
+    serif;
+}
+@media (max-width: 700px) {
+  .ballot-heading {
+    display: block;
+  }
+  .ballot-heading p {
+    margin-top: 12px;
+  }
+  .map-options {
+    grid-template-columns: 1fr;
+  }
+  .map-option {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+  .map-thumbnail {
+    height: 100%;
+    min-height: 210px;
+    padding: 4px;
+  }
+  .map-option-copy {
+    padding: 13px;
+  }
+  .map-option h3 {
+    font-size: 22px;
+  }
+  .map-option p {
+    font-size: 11px;
+  }
+  .map-option-copy > p:first-of-type {
+    min-height: 0;
+  }
+  .map-option .map-voters {
+    min-height: 0;
+  }
+  .ballot-note {
+    align-items: start;
+  }
+}
+.site-nav a {
+  color: #a7bcbb;
+  text-decoration: none;
+  padding: 7px 0;
+}
+.site-nav a[aria-current] {
+  color: #edcc8b;
+  border-bottom: 1px solid;
+}
+.info-page {
+  max-width: 800px;
+  margin: 35px auto 70px;
+  line-height: 1.8;
+  color: #b8cbc7;
+}
+.info-page h1 {
+  font:
+    48px Georgia,
+    serif;
+  color: #f0dfbb;
+  margin: 14px 0 25px;
+}
+.info-page h2 {
+  font:
+    26px Georgia,
+    serif;
+  color: #e1c692;
+  margin: 32px 0 12px;
+}
+.info-page p,
+.info-page li {
+  margin: 14px 0;
+}
+.info-page a,
+.site-footer a,
+.battle-topline a {
+  color: #e1c692;
+}
+.info-page ul {
+  padding-left: 24px;
+}
+.controller-page form {
+  max-width: 560px;
+  margin-top: 25px;
+}
+.controller-page input[type='password'] {
+  width: 100%;
+  margin: 10px 0;
+}
+.controller-page .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+.controller-page input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.reset-review {
+  border: 1px solid #b08658;
+  border-radius: 8px;
+  padding: 18px;
+}
+.reset-review button {
+  margin: 6px 10px 0 0;
+}
+.profile-picker {
+  border: 0;
+  padding: 0;
+  margin: 18px 0 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.profile-picker legend {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+  color: #c7bc9a;
+}
+.profile-picker button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 7px 3px;
+  gap: 5px;
+  min-width: 0;
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+.profile-picker button[aria-pressed='true'] {
+  border-color: #dfbf7c;
+  background: #34463f;
+}
+.character-portrait,
+.character-placeholder {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 46px;
+  border-radius: 5px;
+  object-fit: cover;
+  color: #dbbf89;
+}
+.character-placeholder .icon {
+  width: 27px;
+  height: 27px;
+}
+.captain-emblem .character-portrait,
+.captain-emblem .character-placeholder {
+  width: 100%;
+  height: 100%;
+}
+.perk-token circle {
+  fill: #e2bd71;
+  stroke: #142f38;
+  stroke-width: 1.5;
+}
+.perk-token text {
+  fill: #142f38;
+  text-anchor: middle;
+  font-size: 16px;
+  font-family: sans-serif;
+}
+.perk-token.carried text {
+  font-size: 9px;
+}
+.map-legend .perk-key {
+  background: #e2bd71;
+  border-radius: 50%;
+}
+.selection-info .perk-description {
+  color: #d6c18c;
+}
+.die-numeral {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+  line-height: 1;
+  color: #172d31;
+}
+.round-history {
+  border: 1px solid #4e625b;
+  border-radius: 8px;
+  margin: 20px 0;
+  padding: 22px;
+}
+.round-history h2 {
+  font:
+    29px Georgia,
+    serif;
+  color: #dfc694;
+}
+.round-history p {
+  margin: 12px 0;
+  color: #a6b9b3;
+  font-size: 12px;
+}
+.round-history select {
+  max-width: 180px;
+  margin: 0 10px;
+}
+.history-chart {
+  width: 100%;
+  margin: 20px 0 0;
+}
+.history-chart text {
+  fill: #b3c4bc;
+  font-size: 12px;
+}
+.history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 10px 0 20px;
+  font-size: 12px;
+}
+.round-history summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #dfc694;
+}
+.history-table {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+.history-table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.history-table caption {
+  padding: 10px;
+  text-align: left;
+  color: #a6b9b3;
+}
+.history-table th,
+.history-table td {
+  padding: 12px;
+  border-bottom: 1px solid #38504f;
+  text-align: left;
+}
+@media (max-width: 520px) {
+  .site-nav {
+    gap: 14px;
+    font-size: 10px;
+  }
+  .info-page h1 {
+    font-size: 35px;
+  }
+  .info-page {
+    font-size: 14px;
+  }
+  .round-history {
+    padding: 14px;
+  }
+}
 @keyframes roll-in {
   from {
     transform: translateY(-8px) rotate(-12deg);

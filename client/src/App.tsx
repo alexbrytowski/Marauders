@@ -2,9 +2,13 @@ import { useMemo, useState, useEffect } from 'react'
 import { BoardView } from './BoardView'
 import { BattleModal } from './BattleModal'
 import { PlayerCard } from './PlayerCard'
+import { CharacterPortrait } from './CharacterPortrait'
+import { RoundHistory } from './RoundHistory'
+import { MapVotePanel } from './MapVotePanel'
+import { AboutPage, ControllerPage, HowToPlayPage } from './InfoPages'
 import { Die, Icon } from './Icons'
 import { useGame } from './useGame'
-import { characters, colors, firstEncounter, key, movementPaths, portNumber } from './game'
+import { colors, firstEncounter, key, movementPaths, perks, portNumber } from './game'
 import type { Cell } from './game'
 import './App.css'
 
@@ -28,20 +32,29 @@ function Countdown({ until, label }: { until: string | null; label: string }) {
 }
 
 export default function App() {
-  const { game, board, session, connection, error, busy, act, send, clearError } = useGame()
+  const { game, board, boards, maps, profiles, session, connection, error, busy, act, send, clearError } =
+    useGame()
+  const [page, setPage] = useState(() => window.location.hash)
+  useEffect(() => {
+    const navigate = () => setPage(window.location.hash)
+    window.addEventListener('hashchange', navigate)
+    return () => window.removeEventListener('hashchange', navigate)
+  }, [])
   const [name, setName] = useState(''),
     [color, setColor] = useState(colors[0]),
-    [character, setCharacter] = useState(characters[0])
+    [character, setCharacter] = useState('navigator')
   const [firstPlayer, setFirstPlayer] = useState('')
   const [selectedShipId, setSelectedShipId] = useState<string | null>(null)
   const [selectedPortId, setSelectedPortId] = useState<string | null>(null)
   const [hover, setHover] = useState<Cell | null>(null),
     [destination, setDestination] = useState<Cell | null>(null)
   const [tab, setTab] = useState('ports'),
-    [logExpanded, setLogExpanded] = useState(false),
-    [resetConfirm, setResetConfirm] = useState(false)
+    [logExpanded, setLogExpanded] = useState(false)
   const me = game?.players.find((p) => p.id === session?.playerId)
   const active = game?.players.find((p) => p.id === game.activePlayerId)
+  const firstPlayerChoice = game?.players.some((p) => p.id === firstPlayer)
+    ? firstPlayer
+    : (game?.players[0]?.id ?? '')
   const myTurn = !!me && active?.id === me.id
   const online = connection === 'Live'
   const disabled = busy || !online
@@ -129,6 +142,23 @@ export default function App() {
           </span>
         </div>
       </header>
+      <nav className="site-nav" aria-label="Main navigation">
+        <a
+          href="#game"
+          aria-current={!['#about', '#how-to-play', '#controller'].includes(page) ? 'page' : undefined}
+        >
+          The voyage
+        </a>
+        <a href="#how-to-play" aria-current={page === '#how-to-play' ? 'page' : undefined}>
+          How to play
+        </a>
+        <a href="#about" aria-current={page === '#about' ? 'page' : undefined}>
+          About
+        </a>
+        <a href="#controller" aria-current={page === '#controller' ? 'page' : undefined}>
+          Game controller
+        </a>
+      </nav>
       {error && (
         <div className="error" role="alert">
           {error}
@@ -137,7 +167,11 @@ export default function App() {
           </button>
         </div>
       )}
-      {!game || !board || !session ? (
+      {page === '#about' ? (
+        <AboutPage />
+      ) : page === '#how-to-play' ? (
+        <HowToPlayPage />
+      ) : !game || !board || !session ? (
         <div className="loading-screen">
           <Icon name="compass" />
           <h1>Charting the sea…</h1>
@@ -147,6 +181,8 @@ export default function App() {
               : 'Gathering the latest game state.'}
           </p>
         </div>
+      ) : page === '#controller' ? (
+        <ControllerPage game={game} enabled={session.canReset} disabled={disabled} send={send} />
       ) : (
         <>
           {game.phase === 'lobby' ? (
@@ -160,6 +196,14 @@ export default function App() {
                 </h1>
                 <p>Assemble your crew, claim your harbors, and sail for everything.</p>
               </section>
+              <MapVotePanel
+                game={game}
+                maps={maps}
+                boards={boards}
+                playerId={session.playerId}
+                busy={disabled}
+                act={act}
+              />
               <div className="lobby-layout">
                 <div className="lobby-chart">
                   <BoardView
@@ -232,15 +276,21 @@ export default function App() {
                           </button>
                         ))}
                       </div>
-                      <label htmlFor="character">YOUR CHARACTER</label>
-                      <select id="character" value={character} onChange={(e) => setCharacter(e.target.value)}>
-                        {characters.map((c) => (
-                          <option key={c} value={c}>
-                            {c[0].toUpperCase() + c.slice(1)}
-                          </option>
+                      <fieldset className="profile-picker">
+                        <legend>YOUR CHARACTER</legend>
+                        {profiles.map((profile) => (
+                          <button
+                            key={profile.id}
+                            type="button"
+                            aria-pressed={character === profile.id}
+                            onClick={() => setCharacter(profile.id)}
+                          >
+                            <CharacterPortrait profile={profile} />
+                            <span>{profile.name}</span>
+                          </button>
                         ))}
-                      </select>
-                      <p className="perk-note">Character is cosmetic. Perks are coming after playtesting.</p>
+                      </fieldset>
+                      <p className="perk-note">Characters are cosmetic. Collect ship perks at sea.</p>
                       <button
                         className="primary join-button"
                         type="submit"
@@ -277,7 +327,7 @@ export default function App() {
                       <label htmlFor="first-player">WHO PICKS FIRST?</label>
                       <select
                         id="first-player"
-                        value={firstPlayer || game.players[0]?.id}
+                        value={firstPlayerChoice}
                         onChange={(e) => setFirstPlayer(e.target.value)}
                       >
                         {game.players.map((p) => (
@@ -289,9 +339,7 @@ export default function App() {
                       <button
                         className="primary"
                         disabled={disabled || game.players.length !== 4}
-                        onClick={() =>
-                          void act({ type: 'start-draft', firstPlayerId: firstPlayer || game.players[0].id })
-                        }
+                        onClick={() => void act({ type: 'start-draft', firstPlayerId: firstPlayerChoice })}
                       >
                         Begin port draft <Icon name="flag" />
                       </button>
@@ -306,6 +354,19 @@ export default function App() {
             </>
           ) : (
             <>
+              <section className="map-result" aria-label="Selected map">
+                <strong>{board.name}</strong>
+                {game.mapSelection ? (
+                  <span>
+                    Drawn from {game.mapSelection.totalTickets} tickets · ticket {game.mapSelection.ticket}
+                    {game.mapSelection.usedEqualOdds
+                      ? ' · no votes, equal odds'
+                      : ' · weighted by captain votes'}
+                  </span>
+                ) : (
+                  <span>The original voyage</span>
+                )}
+              </section>
               {game.winnerId && (
                 <section className="victory-banner">
                   <Icon name="flag" />
@@ -313,6 +374,7 @@ export default function App() {
                   <p>All 13 ports captured. The voyage is won.</p>
                 </section>
               )}
+              {game.winnerId && <RoundHistory game={game} />}
               <section className="turn-bar" aria-label="Turn status">
                 <div className="turn-heading">
                   <span className="eyebrow">
@@ -354,6 +416,7 @@ export default function App() {
               <div className="game-table">
                 <PlayerCard
                   player={game.players[0]}
+                  profile={profiles.find((p) => p.id === game.players[0]?.character)}
                   game={game}
                   mine={game.players[0]?.id === me?.id}
                   index={0}
@@ -361,6 +424,7 @@ export default function App() {
                 />
                 <PlayerCard
                   player={game.players[1]}
+                  profile={profiles.find((p) => p.id === game.players[1]?.character)}
                   game={game}
                   mine={game.players[1]?.id === me?.id}
                   index={1}
@@ -382,6 +446,7 @@ export default function App() {
                 </div>
                 <PlayerCard
                   player={game.players[2]}
+                  profile={profiles.find((p) => p.id === game.players[2]?.character)}
                   game={game}
                   mine={game.players[2]?.id === me?.id}
                   index={2}
@@ -389,6 +454,7 @@ export default function App() {
                 />
                 <PlayerCard
                   player={game.players[3]}
+                  profile={profiles.find((p) => p.id === game.players[3]?.character)}
                   game={game}
                   mine={game.players[3]?.id === me?.id}
                   index={3}
@@ -422,6 +488,14 @@ export default function App() {
                                 ? 'Select a ship or port to see its available actions.'
                                 : 'You are watching. All turns and dice rolls are public.'}
                     </p>
+                    {ship?.perk && (
+                      <p className="perk-description">
+                        <strong>
+                          {perks[ship.perk]?.symbol} {perks[ship.perk]?.name}
+                        </strong>{' '}
+                        · {perks[ship.perk]?.description}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="command-buttons">
@@ -584,6 +658,7 @@ export default function App() {
                               Ship {s.number}
                               <small>
                                 Hex {s.q}, {s.r}
+                                {s.perk && ` · ${perks[s.perk]?.symbol} ${perks[s.perk]?.name}`}
                               </small>
                             </span>
                           </button>
@@ -654,31 +729,7 @@ export default function App() {
             <span>
               MARAUDERS <i>·</i> Claim the ports. Command the seas.
             </span>
-            {session.canReset && me?.id === game.hostPlayerId && (
-              <div>
-                {resetConfirm ? (
-                  <>
-                    <span>Start a fresh game with this crew?</span>
-                    <button
-                      onClick={() => {
-                        void send('/api/game/reset', {}).then((ok) => {
-                          if (ok) {
-                            setSelectedShipId(null)
-                            setSelectedPortId(null)
-                          }
-                        })
-                        setResetConfirm(false)
-                      }}
-                    >
-                      Confirm new game
-                    </button>
-                    <button onClick={() => setResetConfirm(false)}>Cancel</button>
-                  </>
-                ) : (
-                  <button onClick={() => setResetConfirm(true)}>New local game</button>
-                )}
-              </div>
-            )}
+            <a href="#controller">Game controller</a>
           </footer>
         </>
       )}

@@ -6,10 +6,11 @@ namespace Marauders.Server.Tests;
 public sealed class FixedDice(params int[] values) : IDice
 {
     private int index;
-    public int Roll() => values.Length == 0 ? (index++ % 2 == 0 ? 6 : 1) : values[index++ % values.Length];
+    public int Roll(int sides = 6) => values.Length == 0 ? (index++ % 2 == 0 ? 6 : 1) : values[index++ % values.Length];
+    public int Next(int exclusiveMax) => 0;
 }
 
-public class GameRulesTests
+public partial class GameRulesTests
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-09-07T12:00:00Z");
     private static GameRules Rules(GameState state, params int[] values) => new(state, new FixedDice(values), new GameOptions(), Now);

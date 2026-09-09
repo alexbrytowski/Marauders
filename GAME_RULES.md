@@ -6,7 +6,7 @@ Marauders is a turn-based board game about pirate ships capturing ports. Each pl
 
 ## The board
 
-The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`.
+The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic**. Two additional layouts, **The Narrows** and **Shattered Isles**, use the same terrain meanings and rules, each with 13 ports.
 
 - **Black:** A port, where ships are produced. There are 13 on the board.
 - **Dark blue:** Waters surrounding a port. A ship on this color can attack an enemy port or defend its own. Ships cannot attack or defend a port from any other hex.
@@ -16,11 +16,13 @@ The game board features multiple hexagons, each with its own meaning. A JPEG of 
 
 ## Setup
 
-Before the game is set up, each player enters a name, picks a character, a perk, and a color. Character names and images will be provided later; generic pirate names may be used initially.
+Before the game is set up, each player enters a name, picks one of eight cosmetic character profiles, and a color. Character names and JPEG images will be provided later; numbered placeholders may be used initially. Perks are collected at sea during play.
 
 The game is played with four players. Additional players are spectators only and cannot make moves. Players should be reliably identified by their browsers.
 
 The players decide who goes first. They then pick ports using a snake draft. With four players and 13 ports, each player picks three ports and one port remains unowned. The unowned port can be captured during the game.
+
+Before the draft, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When the host starts the draft, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Narrows give them 75% and 25% chances; Shattered Isles has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
 For each port someone owns, they receive two ships immediately. At the start of the game, each owned port gets two ships in empty hexes in its dark-blue water. The owner chooses their placement.
 
@@ -100,10 +102,11 @@ There will be a countdown for each turn and action so the game cannot take too l
 
 ### Perks
 
-Perks are new in the online version. Any player can choose any perk, and two people can have the same one. They are not part of the initial build, because their effects still need balancing.
+Updated from the owner's September 8 notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, its perk drops at its hex and can be collected again.
 
-- **Silver Tongue:** When an enemy ship is defeated and would be removed, it has a 2% chance to instead join your team.
-- **Loaded Dice:** A seven-sided die instead of a six-sided die is used at some point.
-- **Divine Intervention:** After a combat loss of any type, reset and try again.
+- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, there is a 7.5% chance to recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
+- **Glass Cannon:** This ship's combat roll is uniformly distributed from 0 through 8, including both endpoints. This replaces its normal d6 combat roll.
+- **Loaded Dice:** This ship's combat results of 1 or 2 become 3.
+- **The Architect:** While stationed in an owned port's dark-blue harbor, construction at that port finishes one owner round sooner. It does not affect other ports or stack with another Architect. It must be present when construction advances; a newly started build never launches in that same round.
 
-
+Combat perks work for participating helpers and port attackers. Shared movement rolls and port defense rolls remain normal d6s. The initial playtest uses one pickup of each type and no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
