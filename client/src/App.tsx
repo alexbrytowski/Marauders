@@ -1,17 +1,20 @@
 import { useMemo, useState, useEffect } from 'react'
 import { BoardView } from './BoardView'
 import { BattleModal } from './BattleModal'
+import { LeaveGame } from './LeaveGame'
 import { PlayerCard } from './PlayerCard'
 import { CharacterPortrait } from './CharacterPortrait'
 import { RoundHistory } from './RoundHistory'
 import { MapVotePanel } from './MapVotePanel'
+import { LobbyReady } from './LobbyReady'
 import { PortAttacks } from './PortAttacks'
 import { RollingDie } from './RollingDie'
 import { useRollPresentation } from './useRollPresentation'
-import { AboutPage, ControllerPage, HowToPlayPage } from './InfoPages'
+import { AboutPage, ControllerPage } from './InfoPages'
+import { HowToPlayPage } from './HowToPlayPage'
 import { Die, Icon } from './Icons'
 import { useGame } from './useGame'
-import { colors, firstEncounter, key, movementPaths, perks, portNumber } from './game'
+import { colors, firstEncounter, key, movementPaths, perks, portNumber, whirlpoolExit } from './game'
 import type { Cell } from './game'
 import './App.css'
 
@@ -59,18 +62,14 @@ export default function App() {
   const [name, setName] = useState(''),
     [color, setColor] = useState(colors[0]),
     [character, setCharacter] = useState('navigator')
-  const [firstPlayer, setFirstPlayer] = useState('')
   const [selectedShipId, setSelectedShipId] = useState<string | null>(null)
   const [selectedPortId, setSelectedPortId] = useState<string | null>(null)
   const [hover, setHover] = useState<Cell | null>(null),
     [destination, setDestination] = useState<Cell | null>(null)
   const [tab, setTab] = useState('ports'),
     [logExpanded, setLogExpanded] = useState(false)
-  const me = game?.players.find((p) => p.id === session?.playerId)
+  const me = game?.players.find((p) => p.id === session?.playerId && !p.hasForfeited)
   const active = game?.players.find((p) => p.id === game.activePlayerId)
-  const firstPlayerChoice = game?.players.some((p) => p.id === firstPlayer)
-    ? firstPlayer
-    : (game?.players[0]?.id ?? '')
   const myTurn = !!me && active?.id === me.id
   const online = connection === 'Live'
   const disabled = busy || !online || !!rolling
@@ -144,13 +143,18 @@ export default function App() {
         </div>
       </header>
       <nav className="site-nav" aria-label="Main navigation">
+        {game && session && !game.combat && !game.combatChoices.length && (
+          <LeaveGame game={game} playerId={session.playerId} disabled={disabled} act={act} />
+        )}
         <a
           href="#game"
-          aria-current={!['#about', '#how-to-play', '#controller'].includes(page) ? 'page' : undefined}
+          aria-current={
+            !['#about', '#controller'].includes(page) && !page.startsWith('#how-to-play') ? 'page' : undefined
+          }
         >
           The voyage
         </a>
-        <a href="#how-to-play" aria-current={page === '#how-to-play' ? 'page' : undefined}>
+        <a href="#how-to-play" aria-current={page.startsWith('#how-to-play') ? 'page' : undefined}>
           How to play
         </a>
         <a href="#about" aria-current={page === '#about' ? 'page' : undefined}>
@@ -170,8 +174,8 @@ export default function App() {
       )}
       {page === '#about' ? (
         <AboutPage />
-      ) : page === '#how-to-play' ? (
-        <HowToPlayPage />
+      ) : page.startsWith('#how-to-play') ? (
+        <HowToPlayPage page={page} board={boards.classic} />
       ) : !game || !board || !session ? (
         <div className="loading-screen">
           <Icon name="compass" />
@@ -318,34 +322,16 @@ export default function App() {
                             0{i + 1}
                           </span>
                           <span>{p?.name ?? 'Open seat'}</span>
-                          <small>{p ? (p.id === me?.id ? 'YOU' : 'READY') : 'AWAITING CAPTAIN'}</small>
+                          <small className={p?.isReady ? 'captain-is-ready' : ''}>
+                            {p
+                              ? `${p.id === me?.id ? 'YOU · ' : ''}${p.isReady ? 'READY' : 'NOT READY'}`
+                              : 'AWAITING CAPTAIN'}
+                          </small>
                         </div>
                       )
                     })}
                   </div>
-                  {me?.id === game.hostPlayerId && (
-                    <div className="host-start">
-                      <label htmlFor="first-player">WHO PICKS FIRST?</label>
-                      <select
-                        id="first-player"
-                        value={firstPlayerChoice}
-                        onChange={(e) => setFirstPlayer(e.target.value)}
-                      >
-                        {game.players.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        className="primary"
-                        disabled={disabled || game.players.length !== 4}
-                        onClick={() => void act({ type: 'start-draft', firstPlayerId: firstPlayerChoice })}
-                      >
-                        Begin port draft <Icon name="flag" />
-                      </button>
-                    </div>
-                  )}
+                  <LobbyReady game={game} me={me} disabled={disabled} act={act} />
                   <p className="seat-note">
                     <Icon name="eye" />
                     One captain per browser profile. Extra visitors watch.
@@ -374,7 +360,11 @@ export default function App() {
                 <section className="victory-banner">
                   <Icon name="flag" />
                   <h1>{game.players.find((p) => p.id === game.winnerId)?.name} rules the sea.</h1>
-                  <p>All 13 ports captured. The voyage is won.</p>
+                  <p>
+                    {game.ports.every((port) => port.ownerId === game.winnerId)
+                      ? `All ${game.ports.length} remaining ports captured. The voyage is won.`
+                      : 'The last captain sailing. The voyage is won.'}
+                  </p>
                 </section>
               )}
               {game.winnerId && <RoundHistory game={game} />}
@@ -531,6 +521,9 @@ export default function App() {
                         <button className="primary" disabled={disabled} onClick={() => void completeMove()}>
                           Sail {route.length - 1} hex{route.length === 2 ? '' : 'es'}
                           {encounterIndex >= 0 ? ' · battle ahead' : ''}
+                          {route.length > 1 && whirlpoolExit(game, route[route.length - 1])
+                            ? ' · teleport, then chart again'
+                            : ''}
                         </button>
                       )}
                       {game.remainingMovement > 0 ? (

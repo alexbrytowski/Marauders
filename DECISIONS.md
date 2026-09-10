@@ -1,5 +1,78 @@
 # Implementation decisions
 
+## 2026-09-10: guided rules and captain readiness
+
+- The owner requested a short, paged rules guide with game visuals and practice
+  examples. Teach board/goal, setup, movement, ship battles, port attacks,
+  construction, perks, then whirlpools and other advanced rules. Examples are
+  local teaching scenarios and never send game commands.
+- Replace the host's start button with four explicit captain ready states. The
+  fourth ready atomically draws the map and starts the untimed port draft. The
+  host still selects the first captain, defaulting to the first seated captain;
+  this selection is public and persisted. Spectators cannot ready or select.
+- Captains may unready in the lobby. Changing a map vote clears that captain's
+  ready state. Changing the first captain or the seated crew clears all ready
+  states so everyone can review the new setup. A rematch clears readiness.
+  Disconnecting does not release a seat or readiness; browser refresh and server
+  restart restore them. Existing saves default to unready and the host first.
+- Ready commands set an explicit boolean, never toggle. They use a persisted
+  lobby setup version, rather than the whole game revision, so simultaneous ready
+  clicks succeed but clicks from a previous setup or match are rejected. The old
+  start-draft command cannot bypass readiness.
+
+## 2026-09-10: map review refinements
+
+- The owner approved The Choke's two bays and central crossing, and requested
+  ports distributed around each bay. Arrange the five western and six eastern
+  bay ports along an oval around their basin, including the inner shore and
+  northern/southern ends. Keep both gate ports and the three-hex crossing.
+- The owner found Serpent's Heart too sheltered. Add a two-hex-wide northern
+  cut through the inner coil, opening a second approach close to the center.
+  Keep the eastern outer breach and the longer winding route. This is ordinary
+  sailable water, with normal movement, harbor, and combat rules.
+- Save these layouts as v4, preserving v3 alongside v2 for existing matches.
+  New drafts use the revised layouts. Four-player balance still needs playtesting.
+
+## 2026-09-10: overnight playtest changes
+
+- The owner's overnight notes supersede Architect and the 7.5% Pearl threshold.
+  Mouth to Feed adds one population capacity per ship carrying it, anywhere at
+  sea. Bonuses stack across holders and follow recruitment/ownership; losing one
+  never deletes existing ships or cancels builds. Normal two-owner-round building
+  applies everywhere. Saved Architect pickups/holders become Mouth to Feed.
+  Black Pearl now recruits on exactly 100 of 1,000 outcomes (10%).
+- Forfeit requires an explicit confirmation and a revision-checked authenticated
+  command. During play/drafting, remove that captain's ships, held perks, builds,
+  and owned ports; keep their identity in history but release their browser seat.
+  Former port hexes remain impassable land; their surrounding water loses harbor
+  bonuses. Skip the captain's remaining draft picks/turns. The last remaining
+  captain wins even if a neutral port remains; otherwise victory requires all
+  remaining ports. Lobby leave releases the seat/vote and transfers hosting.
+  Leaving a finished match only releases the seat, preserving the result.
+- Whirlpools: after each completed captain turn (including timeout/active forfeit),
+  make one 5% server draw if no pair exists. Place two empty ordinary-water hexes
+  at least ten hexes apart by hex distance, avoiding pickups as well as ships and
+  harbors. One pair at most. A pair lasts two full cycles of the living captains:
+  snapshot twice their count as remaining turns at spawn; never age it on its
+  spawn boundary, and do not respawn on its expiry boundary. This supplies four
+  independent opportunities per normal four-captain cycle, not a combined 20% roll.
+  Entering costs one movement, teleports instantly, stops route charting, and
+  retains unused movement. Resolve combat at the exit. An occupied exit blocks
+  entry; teleport arrival does not bounce back. Ships can sail out normally.
+  Construction never launches onto an active endpoint. Pair/timer persist.
+- Replace The Narrows, renamed **The Choke** by the owner, with two broad basins and one central passage exactly
+  three hexes wide, with a gate port on each bank. Replace the third layout with
+  Serpent's Coil: a spiral peninsula dividing an outer ring from a winding inner
+  approach and prize port. Preserve old alternate geometries for saved matches;
+  new drafts receive the new versions. Classic and the source JPEG stay intact.
+- The owner clarified the new PNG: landing ship 10 produced multiple choices for
+  the same fight against ships 21/22. Collapse encounter options with identical
+  teams, participating ships, and supporting ports. Distinct assistance remains
+  a meaningful choice. Keep nonchaining assistance for the chosen trigger pair.
+- Show construction badges and detailed port/ship hover inspection. The owner
+  will handle both the old video and personal photos. The owner confirmed the
+  forfeit, population, and two-full-cycle whirlpool interpretations above.
+
 ## 2026-09-09: Classic playtest follow-up
 
 - The owner's Thoughts.txt supersedes the 60/20-second playtest clocks: use

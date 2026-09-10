@@ -13,7 +13,14 @@ export type MapSelection = {
   usedEqualOdds: boolean
   votes: Record<string, number>
 }
-export type Player = { id: string; name: string; color: string; character: string }
+export type Player = {
+  id: string
+  name: string
+  color: string
+  character: string
+  hasForfeited?: boolean
+  isReady: boolean
+}
 export type CharacterProfile = { id: string; name: string; imageUrl: string | null }
 export type RoundSnapshot = {
   turn: number
@@ -69,6 +76,8 @@ export type Game = {
   mapSelection: MapSelection | null
   phase: string
   hostPlayerId: string | null
+  firstPlayerId: string | null
+  lobbyVersion: string
   winnerId: string | null
   players: Player[]
   ports: Port[]
@@ -91,6 +100,7 @@ export type Game = {
   events: GameEvent[]
   roundHistory: RoundSnapshot[]
   perkPickups: (Hex & { kind: string })[]
+  whirlpool?: { first: Hex; second: Hex; remainingTurns: number } | null
   updatedAt: string
 }
 export type Session = { playerId: string | null; canReset: boolean }
@@ -104,20 +114,23 @@ export type Command = {
   choiceId?: string
   firstPlayerId?: string
   mapId?: string | null
+  expectedRevision?: number
+  isReady?: boolean
+  lobbyVersion?: string
 }
 export const colors = ['#ed7866', '#69c5bc', '#b19bdf', '#e6be68']
 export const perks: Record<string, { name: string; symbol: string; description: string }> = {
   'black-pearl': {
     name: 'The Black Pearl',
     symbol: '●',
-    description: '7.5% chance to recruit an enemy casualty in a winning battle.',
+    description: '10% chance to recruit an enemy casualty in a winning battle.',
   },
   'glass-cannon': { name: 'Glass Cannon', symbol: '◇', description: 'Combat rolls range from 0 to 8.' },
   'loaded-dice': { name: 'Loaded Dice', symbol: '⚄', description: 'Combat rolls of 1 or 2 become 3.' },
-  architect: {
-    name: 'The Architect',
-    symbol: '⚒',
-    description: 'Construction advances twice as fast at the friendly harbor where this ship is stationed.',
+  'mouth-to-feed': {
+    name: 'Mouth to Feed',
+    symbol: '+1',
+    description: 'Adds one population slot to this ship’s captain while carried, anywhere at sea.',
   },
 }
 export const key = (h: Hex) => `${h.q},${h.r}`
@@ -133,6 +146,32 @@ export const directions = [
 ]
 export const actionCount = (ships: number) => (ships === 0 ? 0 : Math.floor(ships / 4) + 1)
 export const portNumber = (id: string) => id.replace('port-', '')
+export const capacity = (game: Game, ownerId: string) =>
+  game.ports.filter((p) => p.ownerId === ownerId).length * 2 +
+  game.ships.filter((s) => s.ownerId === ownerId && s.perk === 'mouth-to-feed').length
+export const whirlpoolExit = (game: Game, hex: Hex): Hex | null => {
+  const pair = game.whirlpool
+  return !pair
+    ? null
+    : key(hex) === key(pair.first)
+      ? pair.second
+      : key(hex) === key(pair.second)
+        ? pair.first
+        : null
+}
+export function effectiveBoard(board: Board, game: Game): Board {
+  const ports = new Set(game.ports.map((p) => p.id))
+  return {
+    ...board,
+    cells: board.cells.map((cell) =>
+      cell.portId && !ports.has(cell.portId)
+        ? { ...cell, terrain: 'land', portId: null }
+        : cell.harborId && !ports.has(cell.harborId)
+          ? { ...cell, terrain: 'water', harborId: null }
+          : cell,
+    ),
+  }
+}
 
 export async function getJson<T>(url: string, body?: object): Promise<T> {
   const response = await fetch(
@@ -162,12 +201,17 @@ export async function getJson<T>(url: string, body?: object): Promise<T> {
 export function movementPaths(board: Board, game: Game, ship: Ship): Map<string, Hex[]> {
   const cells = new Map(board.cells.map((c) => [key(c), c]))
   const blocked = new Set(game.ships.filter((s) => s.id !== ship.id).map(key))
+  if (game.whirlpool) {
+    if (blocked.has(key(game.whirlpool.first))) blocked.add(key(game.whirlpool.second))
+    if (blocked.has(key(game.whirlpool.second))) blocked.add(key(game.whirlpool.first))
+  }
   const paths = new Map<string, Hex[]>([[key(ship), [ship]]])
   const queue: Hex[] = [ship]
   for (let i = 0; i < queue.length; i++) {
     const current = queue[i],
       route = paths.get(key(current))!
     if (route.length - 1 >= game.remainingMovement) continue
+    if (i > 0 && whirlpoolExit(game, current)) continue
     for (const d of directions) {
       const next = { q: current.q + d.q, r: current.r + d.r },
         k = key(next),
@@ -183,14 +227,13 @@ export function movementPaths(board: Board, game: Game, ship: Ship): Map<string,
 }
 export function firstEncounter(board: Board, game: Game, ship: Ship, path: Hex[]) {
   const cells = new Map(board.cells.map((c) => [key(c), c]))
-  return path
-    .slice(1)
-    .findIndex((h) =>
-      game.ships.some(
-        (other) =>
-          other.ownerId !== ship.ownerId &&
-          (distance(h, other) === 1 ||
-            (cells.get(key(h))?.harborId && cells.get(key(h))?.harborId === cells.get(key(other))?.harborId)),
-      ),
+  return path.slice(1).findIndex((step) => {
+    const h = whirlpoolExit(game, step) ?? step
+    return game.ships.some(
+      (other) =>
+        other.ownerId !== ship.ownerId &&
+        (distance(h, other) === 1 ||
+          (cells.get(key(h))?.harborId && cells.get(key(h))?.harborId === cells.get(key(other))?.harborId)),
     )
+  })
 }

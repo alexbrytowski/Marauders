@@ -1,6 +1,6 @@
 # Marauders implementation status
 
-Updated 2026-09-09 against [GAME_RULES.md](GAME_RULES.md) and the owner's notes in
+Updated 2026-09-10 against [GAME_RULES.md](GAME_RULES.md), the owner's overnight notes, and earlier notes in
 [9-8-26.md](9-8-26.md) and [Thoughts.txt](Thoughts.txt). Scope is one private game for friends, retaining server
 state and JSON persistence. See [decisions](DECISIONS.md)
 and [board mapping notes](BOARD_MAPPING.md) for explicit interpretations.
@@ -9,6 +9,37 @@ Legend: `[x]` implemented and locally verified; `[~]` partial or needs wider
 verification; `[ ]` not done. CI configuration is present but has not run remotely.
 
 ## Board and player experience
+
+- [x] September 10 handbook: eight chapters from basic pieces to advanced rules,
+  direct links and previous/next navigation, actual Classic terrain and shared
+  ship/port/dice artwork, interactive draft/movement/battle/port/build/perk/whirlpool
+  examples, and keyboard-accessible controls. Desktop and narrow layouts reviewed.
+- [x] Every captain readies in the lobby; the fourth ready draws the map and
+  starts the draft automatically. Public persisted first captain and ready states,
+  undo ready, vote/crew/order invalidation, concurrent clicks, spectator rejection,
+  restart restoration, and reset clearing. Server and full multi-browser checks pass.
+
+- [x] September 10: confirmed forfeit/leave in the lobby, draft, and play,
+  including from a battle. Remove the captain's ports, fleet, perks, and builds;
+  release their browser identity, skip their picks/turns, and handle final victory.
+- [x] Replace Architect with Mouth to Feed (+1 fleet capacity per holder anywhere
+  at sea), migrate saved perks, and raise Black Pearl recruitment to exactly 10%.
+- [x] Port construction badges and hover/focus details list ships and remaining
+  owner rounds. Ship hover/focus displays the carried perk and effect.
+- [x] The Choke replaces The Narrows: two broad seas and one three-hex crossing,
+  with ports on both banks. Serpent's Coil replaces the third map with a winding
+  inner approach and an eastern shortcut. Preserve v2/v3 terrain for existing saves.
+- [x] September 10 map review: arrange The Choke's bay ports in circles, including
+  inner shores and north/south ends. Add a two-hex-wide northern shortcut near
+  Serpent's Heart, keeping the eastern breach and winding route. Fresh drafts use v4.
+- [x] Whirlpools: one 5% server check after each captain turn, empty open-water
+  endpoints at least ten hexes apart, one pair lasting two full captain cycles.
+  Teleport for one movement; stop charting, retain movement, check exit combat,
+  block occupied exits, synchronize appearance/expiry, and persist the lifetime.
+- [x] Fix the supplied PNG's duplicate choices: equivalent forces/support form
+  one battle. Keep choices when assistance differs; resume older duplicate saves.
+- [ ] Owner handles the old Marauders video and personal photos; install the
+  approved assets when supplied.
 
 - [x] September 9 Classic playtest: replace the unused dice faces with an explicit
   text count; show actual movement results separately for every viewer.
@@ -47,15 +78,15 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
   no authority. Wrong-turn, wrong-owner, stale-revision and spectator commands fail.
 - [x] Four-seat lobby, distinct colors, generic cosmetic character choices, host
   selection of first player, twelve-pick snake draft, one unowned port.
-- [x] Three playable maps: the unchanged original named Classic, The Narrows,
-  and Shattered Isles. Lobby votes become tickets in a server-drawn lottery;
+- [x] Three playable maps: the unchanged original named Classic, The Choke,
+  and Serpent's Coil. Lobby votes become tickets in a server-drawn lottery;
   no votes gives each map equal odds. Previews, odds, selection, and saved map
   identity synchronize across browsers. Designs and checks are in MAPS.md.
 - [~] Four-player balance playtesting for the new maps and their draft strategies.
 - [x] September 9 geography pass: replace alternate-map symmetry and repeated
   islands with uneven coastlines, varied harbor exposure, unequal crossings, and
-  local port clusters. Both layouts are v2; Classic is unchanged. Reproducible
-  labeled previews and geographic tradeoffs are documented in MAPS.md.
+  local port clusters. These v2 layouts are preserved for legacy saves; the
+  September 10 concepts and v4 refinements supersede them for new games. See MAPS.md.
 - [x] Reveal all four perks before the first draft pick and preserve the layout
   through drafting, reconnects, server restarts, and launch on all three maps.
 - [x] Final port pick automatically launches two ships per owned harbor and starts
@@ -71,8 +102,8 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Eight configurable character profiles with JPEG support and placeholders;
   setup and private asset handling are documented in CHARACTERS.md.
 - [ ] Install the final eight names/JPEGs when provided by the game owner.
-- [x] Implement ship-held perks: Black Pearl conversion, Glass Cannon 0–8,
-  Loaded Dice 1/2 → 3, and a port-local Architect. One perk per ship, no fleet limit.
+- [x] Implement ship-held perks: Black Pearl conversion at 10%, Glass Cannon 0–8,
+  Loaded Dice 1/2 → 3, and Mouth to Feed +1 population. One perk per ship, no fleet limit.
 - [x] Random open-water pickups with balanced sailing access and spacing; pickup
   along movement routes, public effects, and drops on ship destruction.
 - [~] Balance playtest for perks and pickup quantity; analysis in PERK_BALANCE.md.
@@ -96,7 +127,7 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Defense wins weaken the port indefinitely without destroying attackers;
   allied harbor entry resets weakness; unowned ports retain it.
 - [x] Capture transfers ownership, voids construction, converts remaining ships
-  after final-port loss, and declares victory at all 13 ports. Further play stops.
+  after final-port loss, and declares victory at every remaining port. Further play stops.
 - [x] Construction obeys fleet plus in-progress population cap, stays at its chosen
   port, completes after two future owner rounds, and cannot move on launch turn.
 - [x] Spawning prefers empty owning-harbor cells, then nearest reachable open sea.
@@ -159,6 +190,47 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
   runbook is in OPERATIONS.md.
 
 ## Current verification
+
+- September 10 handbook/readiness: client lint/build, Debug solution build,
+  all 100 server tests, and all 11 browser scenarios pass. Same-origin publish
+  succeeds. New coverage verifies four-captain readiness, undo, simultaneous final
+  clicks, authenticated identity, stale setup rejection, public first captain,
+  map vote invalidation, cross-tab/restart restoration, one automatic draft,
+  automatic fleets, and rematch clearing. Legacy lobbies load unready.
+  Guide coverage exercises all eight chapters, deep links/history/refresh,
+  keyboard map inspection, shared movement, helper loss, ties, port capture,
+  construction, perks, and whirlpools without mutating the live game. Guide and
+  lobby screenshots reviewed at desktop and narrow sizes; previews retained in
+  ignored artifacts/handbook-ready-2026-09-10. Existing working-tree changes and
+  the original board JPEG were preserved.
+
+- September 10 map review: the v4 map build passes client lint/build, Debug
+  solution build, and all 95 server tests. Both revised layouts pass the
+  five-browser map scenario: voting, drafting, launch, sailing, synchronization,
+  restart persistence, and loading all four v2/v3 legacy layouts. The source
+  browser run encountered concurrent guided-rules/readiness work importing an
+  unfinished HowToPlayPage module. Map verification therefore used a snapshot
+  of the just-tested client/server build, served together on isolated port 5136.
+  Snapshot, test output, and screenshots are in ignored artifacts/map-review/;
+  the passing log is artifacts/map-review-e2e.log. Both labeled v4 map previews
+  and actual browser boards were visually reviewed. Publish and its same-origin
+  smoke check also pass; combined-source verification belongs to the ongoing
+  guided-rules/readiness change. Existing matches and live services were untouched.
+
+- September 10 overnight changes: client lint/build, Debug solution build, and
+  all 90 server tests pass. Same-origin publish succeeds without warnings.
+  The new five-browser scenario verifies hover details, population display,
+  whirlpool travel/expiry/restart, equivalent battles, cancel/stale confirmation,
+  spectator rejection, seat release, active-turn skipping, and forfeit victory.
+  Both new maps pass setup/sailing/restart checks; five browsers also load each
+  legacy v2 layout and its perks correctly. The full browser pass found a
+  1366x768 controls overflow; reduced navigation spacing fixed it. Targeted
+  reruns pass at 1366x768, 1536x864, 1920x1080, and 2560x1440. Screenshots of
+  the maps, hover inspection, and shared battle were reviewed. Nine browser
+  scenarios are covered across the regression pass and targeted reruns; logs
+  and previews remain under ignored artifacts/ and client/test-results/.
+  Fresh launchers load the revised rules; existing saves retain their map version.
+  Four-player balance playtesting of the new geography and perks remains open.
 
 - September 9 Classic playtest follow-up: client lint/build and 66 server tests
   pass. The new five-browser scenario verifies shared roll presentation, reduced

@@ -2,11 +2,11 @@
 
 ## Summary
 
-Marauders is a turn-based board game about pirate ships capturing ports. Each player takes turns rolling dice to move ships and attack ports. The game is won when one player owns every port.
+Marauders is a turn-based board game about pirate ships capturing ports. Each player takes turns rolling dice to move ships and attack ports. Win by owning every remaining port or by being the last captain after others forfeit.
 
 ## The board
 
-The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic**. Two additional layouts, **The Narrows** and **Shattered Isles**, use the same terrain meanings and rules, each with 13 ports.
+The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic**. Two additional layouts, **The Choke** and **Serpent’s Coil**, use the same terrain meanings and rules, each with 13 ports.
 
 - **Black:** A port, where ships are produced. There are 13 on the board.
 - **Dark blue:** Waters surrounding a port. A ship on this color can attack an enemy port or defend its own. Ships cannot attack or defend a port from any other hex.
@@ -20,9 +20,11 @@ Before the game is set up, each player enters a name, picks one of eight cosmeti
 
 The game is played with four players. Additional players are spectators only and cannot make moves. Players should be reliably identified by their browsers.
 
-The players decide who goes first. They then pick ports using a snake draft. With four players and 13 ports, each player picks three ports and one port remains unowned. The unowned port can be captured during the game.
+The players decide who goes first; the host selects that captain in the lobby (the first seated captain is the default). Each of the four captains must press **Ready**. The fourth ready automatically starts the port draft. Captains may undo readiness before then. Changing your map vote clears your readiness; changing the first captain or the seated crew clears everyone's readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
 
-Before the draft, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When the host starts the draft, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Narrows give them 75% and 25% chances; Shattered Isles has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
+Captains then pick ports using a snake draft. With four players and 13 ports, each player picks three ports and one port remains unowned. The unowned port can be captured during the game.
+
+Before the draft, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Serpent’s Coil has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
 The four perk pickups appear on the selected map before the first port pick, so captains can plan their ports around them. Their locations and types stay fixed throughout the draft.
 
@@ -41,7 +43,7 @@ Each die is one action. With an action, a player may choose one of the following
 
 Once a player is out of actions or ships, their round ends.
 
-Each port supports two ships, so a player's population cap is two ships per port they own. A player may not begin building a ship if doing so would exceed this cap. Existing ships are not removed if the player later loses ports, but they cannot begin further construction until they are below their current cap.
+Each port supports two ships. A player’s population cap is two ships per owned port, plus one per ship carrying Mouth to Feed. A player may not begin building a ship if doing so would exceed this cap. Existing ships are not removed if the player later loses ports, but they cannot begin further construction until they are below their current cap.
 
 Ports make ships. At the end of their round, a player may choose a port to begin rebuilding each ship they are below their population cap. Starting construction does not cost a die or action. A port can build multiple ships at once, but once a ship has started building at a port, its build cannot be transferred to another port. A ship finishes at the end of the turn two turns later, is placed in an empty hex of its port's dark-blue water, and is ready to move on the following turn. If no dark-blue placement hex is available, the ship spills over to the nearest legal empty blue-water hex, so construction never removes a ship from the player's available actions.
 
@@ -60,7 +62,7 @@ Combat is automatically triggered when one of the following happens:
 
 Other ships automatically assist their team's ship in combat if they are within two hexes of the ship that triggered combat. This does not chain. For example, if ship 1 is two hexes from ship 2 and ship 2 is two hexes from ship 3, ship 3 cannot assist ship 1's combat when ship 1 triggered it, because ship 3 is four hexes away. However, ships 1 and 3 can assist ship 2's combat if ship 2 triggered it.
 
-If a player creates more than one possible combat, they choose through the UI which combat to resolve first.
+If a player creates multiple combats with different participating ships or port support, they choose which to resolve first. Trigger pairs involving the same forces and port support are one battle, with no duplicate choice.
 
 Each participating ship rolls one die for its team. The server rolls every die publicly and displays the results to all players. The highest die for each team is compared; the higher result wins. On a tie, reroll.
 
@@ -104,11 +106,38 @@ There is a countdown for each turn and action so the game cannot take too long. 
 
 ### Perks
 
-Updated from the owner's September 8 notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, its perk drops at its hex and can be collected again.
+Updated from the owner's September 10 notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, its perk drops at its hex and can be collected again, including on arrival at a whirlpool exit.
 
-- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, there is a 7.5% chance to recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
+- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, there is a 10% chance to recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
 - **Glass Cannon:** This ship's combat roll is uniformly distributed from 0 through 8, including both endpoints. This replaces its normal d6 combat roll.
 - **Loaded Dice:** This ship's combat results of 1 or 2 become 3.
-- **The Architect:** While stationed in an owned port's dark-blue harbor, construction at that port finishes one owner round sooner. It does not affect other ports or stack with another Architect. It must be present when construction advances; a newly started build never launches in that same round.
+- **Mouth to Feed:** Adds one population slot to the captain of the ship carrying it, anywhere at sea. Each holder adds one slot. The bonus follows the ship’s owner; losing the perk never removes existing ships or cancels construction.
 
 Combat perks work for participating helpers and port attackers. Shared movement rolls and port defense rolls remain normal d6s. The initial playtest uses one pickup of each type and no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
+
+### Forfeit and leave
+
+A captain may forfeit during drafting or play after confirming. Their ports,
+ships, carried perks, and construction vanish. Former port hexes become
+impassable land and their harbor water becomes ordinary water without port
+support. Their remaining draft picks and turns are skipped; they watch as a
+spectator and cannot rejoin that match. The last remaining captain wins, even
+if a neutral port remains. Otherwise, victory requires owning every remaining
+port. Leaving the lobby releases the seat and vote; leaving a finished game
+preserves its result.
+
+### Whirlpools
+
+After each completed captain turn, including a timeout, there is a 5% chance
+to spawn one pair of whirlpools if none exists. That is four independent chances
+per full four-player cycle. They appear in two empty ordinary-blue water hexes
+at least ten hexes apart, never in a port’s dark-blue water or on ships/pickups.
+Only one pair exists at a time. It lasts two full cycles: eight subsequent
+captain turns with four living captains, or twice the living captain count at
+spawn. It fades after that many turns without moving any ship resting there.
+
+Entering costs one movement and immediately teleports the ship to the other
+hex. Charting stops there; unused movement is retained for a new route.
+Combat triggers at the exit normally. An occupied exit prevents entry. Arrival
+does not teleport back; the ship can sail away normally. The pair is public,
+with its remaining lifetime shown on the map, and survives a server restart.

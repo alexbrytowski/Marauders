@@ -7,10 +7,16 @@ namespace Marauders.Server.Controllers;
 public sealed class BoardController(GameStateStore store) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Read([FromQuery] string? mapId = null)
+    public async Task<IActionResult> Read([FromQuery] string? mapId = null, [FromQuery] string? version = null)
     {
-        var map = MapCatalog.Find(mapId ?? (await store.ReadAsync()).MapId);
-        return map is null ? NotFound(new { error = "That map is unavailable." })
-            : Ok(new { id = map.Id, name = map.Name, version = map.Version, cells = map.Board.Cells });
+        var game = await store.ReadAsync();
+        var map = MapCatalog.Find(mapId ?? game.MapId);
+        if (map is null) return NotFound(new { error = "That map is unavailable." });
+        try
+        {
+            var board = MapCatalog.Resolve(map.Id, version ?? (mapId is null ? game.BoardVersion : map.Version));
+            return Ok(new { id = map.Id, name = MapCatalog.Name(map.Id, board.Version), version = board.Version, cells = board.Cells });
+        }
+        catch (RuleException error) { return NotFound(new { error = error.Message }); }
     }
 }

@@ -10,6 +10,8 @@ public sealed class GameState
     public long Revision { get; set; }
     public string Phase { get; set; } = "lobby";
     public string? HostPlayerId { get; set; }
+    public string? FirstPlayerId { get; set; }
+    public string LobbyVersion { get; set; } = Guid.NewGuid().ToString("N");
     public string? WinnerId { get; set; }
     public List<Player> Players { get; set; } = [];
     public List<Port> Ports { get; set; } = BoardDefinition.Ports.Select(p => new Port { Id = p.Id, Name = p.Name }).ToList();
@@ -32,11 +34,14 @@ public sealed class GameState
     public List<GameEvent> Events { get; set; } = [];
     public List<RoundSnapshot> RoundHistory { get; set; } = [];
     public List<PerkPickup> PerkPickups { get; set; } = [];
+    public WhirlpoolPair? Whirlpool { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public sealed class Player
 {
+    public bool IsReady { get; set; }
+    public bool HasForfeited { get; set; }
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
     public string Color { get; set; } = "#ed7866";
@@ -93,13 +98,21 @@ public sealed class CombatState
 }
 public sealed record GameEvent(string Id, DateTimeOffset At, int Turn, string Kind, string Message, Dictionary<string, List<int>>? Rolls = null);
 public sealed record GameCommand(string Type, string? PortId = null, string? ShipId = null, int? Q = null, int? R = null,
-    string? CombatId = null, string? ChoiceId = null, string? FirstPlayerId = null, long? ExpectedRevision = null, string? MapId = null);
+    string? CombatId = null, string? ChoiceId = null, string? FirstPlayerId = null, long? ExpectedRevision = null, string? MapId = null,
+    bool? IsReady = null, string? LobbyVersion = null);
 public sealed record MapSelection(string MapId, int Ticket, int TotalTickets, bool UsedEqualOdds, Dictionary<string, int> Votes);
 public sealed record JoinRequest(string Name, string Color, string Character);
 public sealed record TeamSnapshot(string PlayerId, int Ships, int Ports);
 public sealed record RoundSnapshot(int Turn, string? ActivePlayerId, DateTimeOffset At, bool IsFinal, List<TeamSnapshot> Teams);
 public sealed record ResetRequest(string Password, string GameId, long ExpectedRevision, bool ReleaseSeats = false);
 public sealed record PerkPickup(string Kind, int Q, int R);
+public sealed class WhirlpoolPair
+{
+    public Hex First { get; set; }
+    public Hex Second { get; set; }
+    public int RemainingTurns { get; set; }
+    public Hex? Exit(Hex entry) => entry == First ? Second : entry == Second ? First : null;
+}
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
 public sealed class GameOptions
 {

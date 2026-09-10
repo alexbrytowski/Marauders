@@ -10,7 +10,7 @@ export function RoundHistory({ game }: { game: Game }) {
   return (
     <section className="round-history" aria-label="Voyage history">
       <h2>The voyage, round by round</h2>
-      <p>Fleet and ports after each captain’s round, plus the final capture.</p>
+      <p>Fleet and ports after each captain’s round, plus the final result.</p>
       {!history.length ? (
         <p>History begins with the next completed round.</p>
       ) : (

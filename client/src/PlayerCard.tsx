@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { actionCount, portNumber } from './game'
+import { actionCount, capacity, portNumber } from './game'
 import type { CharacterProfile, Game, Player } from './game'
 import { CharacterPortrait } from './CharacterPortrait'
 import { Icon } from './Icons'
@@ -62,7 +62,7 @@ export function PlayerCard({
           <Icon name="ship" />
           <strong>
             {fleet.length}
-            <em>/{ports.length * 2}</em>
+            <em>/{capacity(game, player.id)}</em>
           </strong>
           <small>fleet / cap</small>
         </div>
@@ -86,17 +86,19 @@ export function PlayerCard({
       </div>
       <div className="captain-foot">
         <span className={active ? 'crew-text' : ''}>
-          {eliminated
-            ? 'Eliminated · watching'
-            : active
-              ? game.isBuildPhase
-                ? 'Choosing construction'
-                : game.phase === 'placement'
-                  ? 'Deploying fleet'
-                  : game.phase === 'draft'
-                    ? 'Choosing a port'
-                    : 'At the helm'
-              : 'Standing by'}
+          {player.hasForfeited
+            ? 'Forfeited · left'
+            : eliminated
+              ? 'Eliminated · watching'
+              : active
+                ? game.isBuildPhase
+                  ? 'Choosing construction'
+                  : game.phase === 'placement'
+                    ? 'Deploying fleet'
+                    : game.phase === 'draft'
+                      ? 'Choosing a port'
+                      : 'At the helm'
+                : 'Standing by'}
         </span>
         <span title="Ships under construction">
           <Icon name="hammer" /> {builds.length}

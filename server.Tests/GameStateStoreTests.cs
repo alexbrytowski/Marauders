@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Marauders.Server.Tests;
 
-public class GameStateStoreTests
+public partial class GameStateStoreTests
 {
     private sealed class TestEnvironment(string directory) : IHostEnvironment
     {
@@ -17,6 +17,70 @@ public class GameStateStoreTests
     }
     private static GameStateStore Store(string directory, string? password = null) => new(new TestEnvironment(directory), Options.Create(new GameOptions { ResetPassword = password }), new FixedDice(), TimeProvider.System);
     private static JoinRequest Captain(int number) => new($"Captain {number}", GameRules.Colors[number], "navigator");
+    private static async Task<GameState> ReadyCrewAsync(GameStateStore store, string? first = null, string prefix = "browser-")
+    {
+        var lobby = await store.ReadAsync();
+        Assert.True((await store.ActAsync(prefix + "0", new("set-first-player", FirstPlayerId: first ?? lobby.HostPlayerId))).Success);
+        lobby = await store.ReadAsync();
+        foreach (var i in Enumerable.Range(0, 4))
+            Assert.True((await store.ActAsync(prefix + i, new("set-ready", IsReady: true, LobbyVersion: lobby.LobbyVersion))).Success);
+        return await store.ReadAsync();
+    }
+
+    [Fact] public async Task Forfeit_is_revision_checked_releases_identity_and_persists_across_restart()
+    {
+        var directory = Directory.CreateTempSubdirectory("marauders-forfeit-").FullName;
+        var store = Store(directory);
+        for (var i = 0; i < 4; i++) await store.JoinAsync($"browser-{i}", Captain(i));
+        var game = await store.ReadAsync();
+        Assert.False((await store.ActAsync("spectator", new("forfeit", ExpectedRevision: game.Revision))).Success);
+        Assert.False((await store.ActAsync("browser-0", new("forfeit"))).Success);
+        Assert.False((await store.ActAsync("browser-0", new("forfeit", ExpectedRevision: game.Revision - 1))).Success);
+        Assert.Equal(4, (await store.ReadAsync()).Players.Count);
+        Assert.True((await store.ActAsync("browser-0", new("forfeit", ExpectedRevision: game.Revision))).Success);
+        store = Store(directory); Assert.Null(await store.PlayerIdAsync("browser-0"));
+        Assert.Equal(3, (await store.ReadAsync()).Players.Count);
+        Assert.False((await store.ActAsync("browser-0", new("start-draft", FirstPlayerId: game.Players[1].Id))).Success);
+        Assert.True((await store.JoinAsync("browser-0", Captain(0))).Success);
+    }
+
+    [Theory] [InlineData("classic", "original-map-v2")] [InlineData("narrows", "narrows-v2")]
+    [InlineData("shattered-isles", "shattered-isles-v2")] [InlineData("narrows", "narrows-v3")]
+    [InlineData("shattered-isles", "shattered-isles-v3")]
+    public async Task Legacy_geometry_and_architect_migration_preserve_saved_ships_and_whirlpool_timer(string mapId, string version)
+    {
+        var directory = Directory.CreateTempSubdirectory("marauders-legacy-").FullName;
+        var data = Path.Combine(directory, "data"); Directory.CreateDirectory(data);
+        var board = MapCatalog.Resolve(mapId, version);
+        var saved = new SavedGame(); saved.Game.MapId = mapId; saved.Game.BoardVersion = version;
+        saved.Game.Ships.Add(new() { OwnerId = "captain", Perk = "architect", Q = 4, R = 8 });
+        saved.Game.IsBuildPhase = true; saved.Game.ActivePlayerId = "captain"; saved.Game.Ports[0].OwnerId = "captain";
+        saved.Game.PerkPickups.Add(new("architect", 6, 10));
+        saved.Game.Whirlpool = new() { First = new(5, 3), Second = new(5, 20), RemainingTurns = 3 };
+        await File.WriteAllTextAsync(Path.Combine(data, "game-state-v2.json"), System.Text.Json.JsonSerializer.Serialize(saved, GameStateStore.JsonOptions));
+        var game = await Store(directory).ReadAsync();
+        Assert.Equal(version, game.BoardVersion); Assert.Same(board, MapCatalog.Resolve(game.MapId, game.BoardVersion));
+        Assert.Equal("mouth-to-feed", Assert.Single(game.Ships).Perk); Assert.Equal(new(4, 8), game.Ships[0].Hex);
+        Assert.Equal("mouth-to-feed", Assert.Single(game.PerkPickups).Kind);
+        Assert.Equal(2, game.AvailableBuilds);
+        Assert.Equal(3, game.Whirlpool!.RemainingTurns); Assert.Equal(new(5, 20), game.Whirlpool.Second);
+    }
+
+    [Fact] public async Task Leaving_finished_match_preserves_result_and_rematch_only_retains_bound_captains()
+    {
+        var directory = Directory.CreateTempSubdirectory("marauders-finished-leave-").FullName;
+        var password = Guid.NewGuid().ToString("N"); var store = Store(directory, password);
+        for (var i = 0; i < 4; i++) await store.JoinAsync($"browser-{i}", Captain(i));
+        var game = await store.ReadAsync(); game.Phase = "finished"; game.WinnerId = game.Players[0].Id;
+        var saved = new SavedGame { Game = game, Seats = game.Players.Select((p, i) => (p.Id, Browser: $"browser-{i}")).ToDictionary(p => p.Browser, p => p.Id) };
+        await File.WriteAllTextAsync(Path.Combine(directory, "data", "game-state-v2.json"), System.Text.Json.JsonSerializer.Serialize(saved, GameStateStore.JsonOptions));
+        store = Store(directory, password);
+        var left = (await store.ActAsync("browser-0", new("forfeit", ExpectedRevision: game.Revision))).State!;
+        Assert.Equal(game.WinnerId, left.WinnerId); Assert.Equal(4, left.Players.Count); Assert.Null(await store.PlayerIdAsync("browser-0"));
+        var reset = (await store.ResetAsync(new(password, left.Id, left.Revision))).State!;
+        Assert.Equal(3, reset.Players.Count); Assert.Equal(game.Players[1].Id, reset.HostPlayerId);
+        Assert.True((await store.JoinAsync("browser-0", Captain(0))).Success);
+    }
 
     [Theory] [InlineData("draft")] [InlineData("placement")]
     public async Task Legacy_setup_resumes_once_and_persists_without_replacing_existing_ships_or_seats(string phase)
@@ -25,7 +89,7 @@ public class GameStateStoreTests
         var store = Store(directory);
         for (var i = 0; i < 4; i++) await store.JoinAsync($"browser-{i}", Captain(i));
         var game = await store.ReadAsync();
-        game = (await store.ActAsync("browser-0", new("start-draft", FirstPlayerId: game.HostPlayerId))).State!;
+        game = await ReadyCrewAsync(store);
         for (var i = 0; i < (phase == "draft" ? 3 : 12); i++)
         {
             var browser = $"browser-{game.Players.FindIndex(p => p.Id == game.ActivePlayerId)}";
@@ -69,7 +133,7 @@ public class GameStateStoreTests
         var store = Store(directory);
         for (var i = 0; i < 4; i++) Assert.True((await store.JoinAsync($"browser-{i}", Captain(i))).Success);
         var before = await store.ReadAsync();
-        Assert.True((await store.ActAsync("browser-0", new("start-draft", FirstPlayerId: before.Players[2].Id))).Success);
+        await ReadyCrewAsync(store, before.Players[2].Id);
         var restored = Store(directory); var after = await restored.ReadAsync();
         Assert.Equal("draft", after.Phase); Assert.Equal(before.Players[2].Id, after.ActivePlayerId);
         Assert.Equal(before.Players[0].Id, await restored.PlayerIdAsync("browser-0"));
@@ -87,7 +151,7 @@ public class GameStateStoreTests
         Assert.False((await store.ActAsync("browser-0", new("start-draft", FirstPlayerId: before.Players[0].Id, ExpectedRevision: before.Revision - 1))).Success);
         Assert.False((await store.ResetAsync(new("wrong", before.Id, before.Revision))).Success);
         Assert.Equal(before.Revision, (await store.ReadAsync()).Revision);
-        Assert.True((await store.ActAsync("browser-0", new("start-draft", FirstPlayerId: before.Players[0].Id))).Success);
+        await ReadyCrewAsync(store);
         var started = await store.ReadAsync();
         Assert.False((await store.ActAsync("browser-0", new("draft", PortId: "not-a-port"))).Success);
         Assert.Equal(started.Revision, (await store.ReadAsync()).Revision);
@@ -139,12 +203,12 @@ public class GameStateStoreTests
         var data = Path.Combine(directory, "data"); Directory.CreateDirectory(data);
         var saved = new SavedGame(); saved.Seats.Add("private-browser", "captain");
         saved.Game.Ships.Add(new() { OwnerId = "captain", Perk = "glass-cannon", ConvertedTurnNumber = 2 });
-        saved.Game.PerkPickups.Add(new("architect", 5, 5));
+        saved.Game.PerkPickups.Add(new("mouth-to-feed", 5, 5));
         saved.Game.RoundHistory.Add(new(2, "captain", DateTimeOffset.UtcNow, false, [new("captain", 1, 3)]));
         await File.WriteAllTextAsync(Path.Combine(data, "game-state-v2.json"), System.Text.Json.JsonSerializer.Serialize(saved, GameStateStore.JsonOptions));
         var store = Store(directory); var state = await store.ReadAsync();
         Assert.Equal("glass-cannon", Assert.Single(state.Ships).Perk);
-        Assert.Equal("architect", Assert.Single(state.PerkPickups).Kind); Assert.Equal(3, Assert.Single(state.RoundHistory).Teams[0].Ports);
+        Assert.Equal("mouth-to-feed", Assert.Single(state.PerkPickups).Kind); Assert.Equal(3, Assert.Single(state.RoundHistory).Teams[0].Ports);
         Assert.DoesNotContain("private-browser", System.Text.Json.JsonSerializer.Serialize(state, GameStateStore.JsonOptions));
         state.RoundHistory[0].Teams.Clear(); Assert.Single((await store.ReadAsync()).RoundHistory[0].Teams);
     }
@@ -159,9 +223,9 @@ public class GameStateStoreTests
         Assert.True((await store.ActAsync("private-browser-1", new("vote-map", MapId: "narrows"))).Success);
         store = Store(directory, password);
         Assert.Equal("narrows", (await store.ReadAsync()).MapVotes[lobby.Players[1].Id]);
-        Assert.True((await store.ActAsync("private-browser-0", new("start-draft", FirstPlayerId: lobby.Players[0].Id))).Success);
+        await ReadyCrewAsync(store, prefix: "private-browser-");
         var selected = await Store(directory, password).ReadAsync();
-        Assert.Equal("narrows", selected.MapId); Assert.Equal("narrows-v2", selected.BoardVersion);
+        Assert.Equal("narrows", selected.MapId); Assert.Equal("narrows-v4", selected.BoardVersion);
         Assert.Equal("Westwatch", selected.Ports[0].Name); Assert.Equal("narrows", selected.MapSelection!.MapId);
         Assert.DoesNotContain("private-browser", System.Text.Json.JsonSerializer.Serialize(selected, GameStateStore.JsonOptions));
         Assert.True((await store.ResetAsync(new(password, selected.Id, selected.Revision))).Success);

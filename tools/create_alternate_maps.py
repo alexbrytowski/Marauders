@@ -57,7 +57,7 @@ def write(name, rows, points, names):
     assert reached == water, f"Isolated water: {water - reached}"
     target = ROOT / "server" / "maps" / f"{name}.json"
     target.parent.mkdir(exist_ok=True)
-    target.write_text(json.dumps(dict(version=f"{name}-v2", rows=["".join(r) for r in rows], ports=ports), indent=2) + "\n", encoding="utf-8")
+    target.write_text(json.dumps(dict(version=f"{name}-v4", rows=["".join(r) for r in rows], ports=ports), indent=2) + "\n", encoding="utf-8")
     print(f"{name}: {len(water)} sailing hexes; harbor sizes {list(map(len, harbors))}")
 
 
@@ -66,50 +66,47 @@ def narrows():
         [32, 8, 6, 4, 5, 3, 5, 6, 5, 3, 1, 1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 4, 5, 6, 5, 3, 2, 2, 3, 5, 32],
         [0, 25, 27, 28, 28, 30, 30, 29, 27, 26, 27, 29, 30, 31, 30, 28, 29, 30, 30, 29, 28, 29, 31, 31, 30, 29, 29, 30, 29, 27, 0],
     )
-    # Crooked northern headland ends at a tight cut above the long central island.
-    land(rows, 1, [(14, 23), (15, 22), (15, 21), (14, 20), (14, 18),
-                   (13, 18), (12, 16), (13, 15), (13, 14)])
-    # The spine bends east, leaving unequal basins and different harbor faces.
-    land(rows, 12, [(13, 14), (12, 16), (11, 16), (12, 16), (12, 17),
-                    (13, 19), (14, 20), (16, 20), (17, 19), (18, 19)])
-    # Offset southern headland opens a broad diagonal route around the spine.
-    land(rows, 25, [(14, 15), (13, 16), (12, 19), (10, 18), (10, 20)])
-    land(rows, 16, [(7, 8), (7, 9), (8, 9), (8, 8)])
-    land(rows, 8, [(23, 24), (22, 24), (23, 23)])
-    land(rows, 19, [(24, 25), (23, 25), (24, 24)])
-    points = [(5, 4), (13, 9), (4, 14), (9, 18), (6, 23), (10, 28),
-              (24, 1), (23, 10), (29, 19), (25, 20), (29, 26), (19, 27), (17, 15)]
-    write("narrows", rows, points, ["Westwatch", "Northgate", "Saltmarket", "Low Lantern", "Copper Quay", "Southwatch",
-          "Eastwatch", "Highgate", "Moonmarket", "Bright Lantern", "Silver Quay", "Stormwatch", "Gatewatch"])
+    # One boundary-to-boundary divide: the ONLY crossing is rows 14, 15, 16.
+    # At column 16 these are exactly three sailable hexes; three ships can seal it.
+    for r in range(1, HEIGHT - 1):
+        if r not in (14, 15, 16):
+            land(rows, r, [(15 if r % 4 else 14, 17 if r % 5 else 18)])
+    # Ring each bay: north/south, outer shore, and both inner-shore shoulders.
+    points = [(5, 14), (9, 4), (14, 9), (14, 23), (8, 28),
+              (24, 4), (18, 8), (29, 14), (28, 22), (24, 28), (18, 23),
+              (16, 13), (16, 17)]
+    write("narrows", rows, points, ["Westwatch", "Saltmarket", "Low Lantern", "Copper Quay", "Southwatch",
+          "Eastwatch", "Highgate", "Moonmarket", "Bright Lantern", "Silver Quay", "Stormwatch",
+          "Northgate", "Southgate"])
 
 
 def shattered_isles():
     rows = coast(
-        [32, 9, 7, 5, 3, 2, 2, 1, 2, 3, 4, 5, 4, 2, 1, 1, 2, 3, 4, 4, 3, 3, 2, 1, 2, 3, 4, 5, 7, 9, 32],
-        [0, 24, 25, 27, 29, 30, 31, 31, 30, 29, 28, 29, 29, 30, 31, 31, 30, 30, 31, 31, 30, 29, 28, 29, 30, 31, 30, 29, 28, 26, 0],
+        [32, 5, 3, 2, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 2, 3, 5, 32],
+        [0, 27, 29, 30, 30, 31, 31, 30, 31, 31, 30, 31, 31, 30, 31, 31, 31, 30, 31, 31, 30, 31, 31, 30, 31, 31, 30, 30, 29, 27, 0],
     )
-    land(rows, 1, [(16, 20), (17, 20), (18, 19)])
-    # Forked northwestern island: its two ports face different seas.
-    land(rows, 5, [(8, 10), (7, 11), (7, 12), (8, 14), (8, 13),
-                   (9, 11), (10, 12), (11, 12)])
-    land(rows, 8, [(15, 15), (14, 15)])
-    # Smaller northeastern crescent, with a bay open to the south.
-    land(rows, 5, [(24, 26), (23, 26), (23, 25), (24, 24)])
-    # Broad eastern island with three port faces and an indentation on the east.
-    land(rows, 13, [(21, 22), (19, 23), (18, 24), (19, 24), (20, 24),
-                    (20, 26), (21, 25), (20, 24), (20, 23), (21, 24), (21, 22)])
-    # Southwest island is long, thin, and hooked rather than a stamped cay.
-    land(rows, 20, [(9, 10), (8, 11), (8, 10), (9, 12), (10, 12), (9, 11), (10, 10)])
-    land(rows, 28, [(15, 17), (14, 19)])
-    # Off-center hub: five harbor cells give fast access and little land cover.
-    land(rows, 16, [(13, 13)])
-    # Rocks create local forks without another complete barrier.
-    land(rows, 15, [(7, 8), (8, 8)])
-    land(rows, 25, [(24, 25), (25, 25)])
-    points = [(8, 5), (19, 3), (26, 6), (29, 12), (25, 17), (21, 23), (15, 28),
-              (11, 25), (3, 21), (4, 12), (12, 12), (19, 14), (13, 17)]
-    write("shattered-isles", rows, points, ["Dawn Cay", "North Star", "Pearl Key", "Eastwind", "Broken Anchor",
-          "Sunset Cay", "South Star", "Turtle Key", "Westwind", "Driftwood", "Whisper Isle", "Ember Isle", "Compass Crown"])
+    # A square spiral, two hexes thick, curling into the prize harbor. The
+    # eastern outer breach and northern inner cut open two distinct shortcuts.
+    land(rows, 1, [(14, 15)] * 5)
+    land(rows, 5, [(14, 25)] * 2)
+    land(rows, 6, [(24, 25)] * 19)
+    land(rows, 23, [(7, 25)] * 2)
+    land(rows, 10, [(7, 8)] * 14)
+    land(rows, 10, [(7, 20)] * 2)
+    land(rows, 11, [(19, 20)] * 9)
+    land(rows, 18, [(12, 20)] * 2)
+    land(rows, 15, [(12, 13)] * 4)
+    land(rows, 15, [(12, 16)])
+    for r in (14, 15):
+        rows[r][24] = rows[r][25] = "."
+    # A second entrance near the heart makes the inner harbor contestable from
+    # the north as well as by sailing around the coil's southern arm.
+    for r in (10, 11):
+        rows[r][14] = rows[r][15] = "."
+    points = [(3, 3), (26, 2), (30, 10), (30, 21), (25, 28), (7, 28), (2, 19),
+              (14, 6), (23, 9), (23, 21), (9, 14), (18, 12), (16, 15)]
+    write("shattered-isles", rows, points, ["Dawn Watch", "North Star", "Eastwind", "Last Light", "South Star",
+          "Turtle Quay", "Westwind", "Serpent's Jaw", "Breachwatch", "Scalehaven", "Coil's Reach", "Fang Harbor", "Serpent's Heart"])
 
 
 if __name__ == "__main__":

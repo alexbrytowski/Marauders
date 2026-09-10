@@ -58,7 +58,7 @@ public sealed class BoardMap
         return result.ToArray();
     }
 
-    public IReadOnlyList<Hex>? FindPath(Hex start, Hex destination, ISet<Hex> blocked)
+    public IReadOnlyList<Hex>? FindPath(Hex start, Hex destination, ISet<Hex> blocked, ISet<Hex>? stops = null)
     {
         if (!IsSailable(start) || !IsSailable(destination) || blocked.Contains(destination)) return null;
         var queue = new Queue<Hex>();
@@ -67,6 +67,7 @@ public sealed class BoardMap
         while (queue.TryDequeue(out var current))
         {
             if (current == destination) break;
+            if (current != start && stops?.Contains(current) == true) continue;
             foreach (var neighbor in Neighbors(current))
                 if (!blocked.Contains(neighbor) && previous.TryAdd(neighbor, current)) queue.Enqueue(neighbor);
         }

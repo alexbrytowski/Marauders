@@ -1,8 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { directions, distance, key, perks, portNumber } from './game'
+import { directions, distance, key, perks, portNumber, whirlpoolExit } from './game'
 import type { Board, Cell, Game, Hex } from './game'
 import { outline, point } from './boardGeometry'
+import { ShipPiece, PortPiece } from './BoardPieces'
 
 export function BoardView({
   board,
@@ -30,6 +31,7 @@ export function BoardView({
   preview?: boolean
 }) {
   const [zoom, setZoom] = useState(1)
+  const [inspected, setInspected] = useState<Cell | null>(null)
   const [focusKey, setFocusKey] = useState('9,0')
   const frame = useRef<HTMLDivElement>(null)
   const [fitWidth, setFitWidth] = useState(1032)
@@ -74,7 +76,27 @@ export function BoardView({
   const players = new Map(game.players.map((p) => [p.id, p]))
   const ships = new Map(game.ships.map((s) => [key(s), s]))
   const pickups = new Map(game.perkPickups.map((p) => [key(p), p]))
+  const inspect = (cell: Cell | null) => {
+    setInspected(cell)
+    onHover(cell)
+  }
+  const inspectedShip = inspected ? ships.get(key(inspected)) : undefined
+  const inspectedPort = inspected?.portId ? ports.get(inspected.portId) : undefined
+  const inspectedPerk = inspectedShip?.perk ? perks[inspectedShip.perk] : undefined
+  const inspectedExit = inspected ? whirlpoolExit(game, inspected) : null
+  const buildsAt = (portId: string) => game.constructions.filter((build) => build.portId === portId)
+  const buildDescription = (portId: string) =>
+    buildsAt(portId)
+      .map(
+        (build, i) =>
+          `Ship ${i + 1}: ${build.remainingOwnerTurns === 0 ? 'ready, awaiting space' : `${build.remainingOwnerTurns} owner round${build.remainingOwnerTurns === 1 ? '' : 's'} until launch`}`,
+      )
+      .join('; ')
   const cells = useMemo(() => new Map(board.cells.map((c) => [key(c), c])), [board])
+  const tabStop =
+    cells.get(focusKey)?.terrain && cells.get(focusKey)?.terrain !== 'land'
+      ? focusKey
+      : key(board.cells.find((cell) => cell.terrain !== 'land') ?? board.cells[0])
   const portLabels = useMemo(() => {
     const used = new Set<string>()
     return board.cells
@@ -145,7 +167,7 @@ export function BoardView({
     <div className={`chart ${preview ? 'chart-preview' : ''}`}>
       <div className="chart-header">
         <span>{board.name.toUpperCase()}</span>
-        <span>13 ports · one victor</span>
+        <span>{game.ports.length} ports · one victor</span>
       </div>
       <div className="chart-scroll" ref={frame}>
         <svg
@@ -174,6 +196,8 @@ export function BoardView({
               ship = ships.get(key(cell)),
               pickup = pickups.get(key(cell)),
               port = cell.portId ? ports.get(cell.portId) : undefined
+            const exit = whirlpoolExit(game, cell)
+            const builds = port ? buildsAt(port.id) : []
             const owner = players.get(ship?.ownerId ?? port?.ownerId ?? '')
             const isSelected = ship?.id === selectedShipId || port?.id === selectedPortId
             const highlighted = highlights.has(key(cell))
@@ -182,8 +206,8 @@ export function BoardView({
             const description = ship
               ? `${owner?.name}'s ship ${ship.number}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
               : port
-                ? `${port.name}, port ${portNumber(port.id)}, ${owner?.name ?? 'unclaimed'}`
-                : `${pickup ? `${perks[pickup.kind]?.name} pickup, ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
+                ? `${port.name}, port ${portNumber(port.id)}, ${owner?.name ?? 'unclaimed'}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
+                : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup, ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
             return (
               <g
                 key={key(cell)}
@@ -193,20 +217,29 @@ export function BoardView({
                 data-port={port?.id}
                 data-ship={ship?.id}
                 data-perk={pickup?.kind}
+                data-whirlpool={exit ? key(exit) : undefined}
+                data-building={builds.length || undefined}
                 role={cell.terrain !== 'land' ? 'button' : undefined}
                 aria-label={description}
-                tabIndex={!preview && cell.terrain !== 'land' ? (key(cell) === focusKey ? 0 : -1) : undefined}
+                tabIndex={!preview && cell.terrain !== 'land' ? (key(cell) === tabStop ? 0 : -1) : undefined}
                 onKeyDown={(e) => handleKeys(e, cell)}
                 onFocus={() => {
                   setFocusKey(key(cell))
-                  onHover(cell)
+                  inspect(cell)
                 }}
-                onMouseEnter={() => onHover(cell)}
-                onMouseLeave={() => onHover(null)}
+                onBlur={() => inspect(null)}
+                onMouseEnter={() => inspect(cell)}
+                onMouseLeave={() => inspect(null)}
                 onClick={() => activate(cell)}
               >
                 <title>{description}</title>
                 <polygon points={outline} />
+                {exit && (
+                  <g className="whirlpool-token" aria-hidden="true">
+                    <circle r="13" />
+                    <path d="M-11 2C-15-11 4-17 11-6C18 5 4 16-6 10C-15 4-7-8 2-6C10-4 8 7 1 6C-4 5-4-1 0-2" />
+                  </g>
+                )}
                 {cell.terrain === 'land' && !coast && (cell.q + cell.r) % 3 === 0 && (
                   <path className="mountain" d="m-8 5 6-11 7 11m-4 0 4-7 5 7" />
                 )}
@@ -219,33 +252,27 @@ export function BoardView({
                   </g>
                 )}
                 {port && (
-                  <g className="port-token" filter="url(#token-shadow)">
-                    <circle r="14" fill={owner?.color ?? '#d2c9af'} stroke="#081a22" strokeWidth="2" />
-                    <path d="M-7 6V-3h3v3h3v-5h4v5h3v-3h3v9z" fill="#14262b" />
-                    <rect x="-7" y="-17" width="22" height="14" rx="3" fill="#0c1c22" />
-                    <text x="4" y="-6">
-                      {portNumber(port.id)}
+                  <g filter="url(#token-shadow)">
+                    <PortPiece color={owner?.color} number={portNumber(port.id)} />
+                  </g>
+                )}
+                {builds.length > 0 && (
+                  <g className="building-badge" transform="translate(-11 11)" aria-hidden="true">
+                    <circle r="10" />
+                    <path d="m-5 4 6-7m-3-1 2-2 5 4-2 2z" />
+                    <text x="12" y="5">
+                      {builds.length}
                     </text>
                   </g>
                 )}
                 {ship && (
-                  <g className="ship-token" filter="url(#token-shadow)">
-                    <circle
-                      r="12.5"
-                      fill={owner?.color}
-                      stroke={isSelected ? '#fff5ce' : '#112a31'}
-                      strokeWidth={isSelected ? 2.5 : 1.5}
+                  <g filter="url(#token-shadow)">
+                    <ShipPiece
+                      color={owner?.color}
+                      number={ship.number}
+                      selected={isSelected}
+                      perk={ship.perk}
                     />
-                    <path d="M-8 5H8l-3 4H-4zM0-10V3H-7zM2-7l6 10H2z" fill="#122830" />
-                    <text y="17" className="ship-number">
-                      {ship.number}
-                    </text>
-                    {ship.perk && (
-                      <g className="perk-token carried" transform="translate(9 -9)">
-                        <circle r="6" />
-                        <text y="3">{perks[ship.perk]?.symbol}</text>
-                      </g>
-                    )}
                   </g>
                 )}
               </g>
@@ -304,12 +331,46 @@ export function BoardView({
           </g>
         </svg>
       </div>
+      {!preview && (inspectedShip || inspectedPort || inspectedExit) && (
+        <aside className="board-inspection" role="tooltip">
+          <strong>
+            {inspectedShip
+              ? `Ship ${inspectedShip.number} · ${players.get(inspectedShip.ownerId)?.name}`
+              : (inspectedPort?.name ?? 'Whirlpool passage')}
+          </strong>
+          {inspectedShip && (
+            <span>
+              {inspectedPerk ? `${inspectedPerk.name} — ${inspectedPerk.description}` : 'No perk aboard.'}
+            </span>
+          )}
+          {inspectedPort && (
+            <span>
+              {buildsAt(inspectedPort.id).length
+                ? `Building ${buildsAt(inspectedPort.id).length} ship(s). ${buildDescription(inspectedPort.id)}`
+                : 'No ships under construction.'}
+            </span>
+          )}
+          {inspectedExit && (
+            <span>
+              Teleports to hex {key(inspectedExit)}. {game.whirlpool!.remainingTurns} captain turns left.{' '}
+              {game.ships.some((s) => key(s) === key(inspectedExit))
+                ? 'Exit occupied: entry blocked.'
+                : 'Chart a new route after arriving; unused movement remains.'}
+            </span>
+          )}
+        </aside>
+      )}
       <div className="chart-footer">
         <div className="map-legend">
           <span>
             <i className="water-key" />
             Open sea
           </span>
+          {game.whirlpool && (
+            <span className="whirlpool-status">
+              ↻ Whirlpools · {game.whirlpool.remainingTurns} turns left
+            </span>
+          )}
           <span>
             <i className="harbor-key" />
             Harbor

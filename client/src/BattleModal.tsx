@@ -4,6 +4,7 @@ import { BattleMap } from './BattleMap'
 import { RollingDie } from './RollingDie'
 import type { Board, Command, Game } from './game'
 import { perks } from './game'
+import { LeaveGame } from './LeaveGame'
 
 export function BattleModal({
   game,
@@ -115,6 +116,7 @@ export function BattleModal({
       onCancel={(e) => e.preventDefault()}
     >
       <div className="battle-topline">
+        <LeaveGame game={game} playerId={playerId} disabled={busy} act={act} />
         <a href="#controller">Game controller</a>
         <span>
           <Icon name="eye" /> LIVE · ALL CAPTAINS WATCHING

@@ -30,8 +30,15 @@ public sealed class GameStateStore
         statePath = Path.Combine(directory, "game-state-v2.json");
         saved = File.Exists(statePath) ? JsonSerializer.Deserialize<SavedGame>(File.ReadAllText(statePath), JsonOptions)
             ?? throw new InvalidDataException("The saved game is empty.") : new();
-        if (saved.SchemaVersion != 2 || MapCatalog.Find(saved.Game.MapId)?.Version != saved.Game.BoardVersion)
+        if (saved.SchemaVersion != 2)
             throw new InvalidDataException("The saved game uses an incompatible board or schema. Preserve it before starting a new match.");
+        try { MapCatalog.Resolve(saved.Game.MapId, saved.Game.BoardVersion); }
+        catch (RuleException error) { throw new InvalidDataException(error.Message); }
+        foreach (var ship in saved.Game.Ships.Where(s => s.Perk == "architect")) ship.Perk = "mouth-to-feed";
+        saved.Game.PerkPickups = saved.Game.PerkPickups.Select(p => p.Kind == "architect" ? p with { Kind = "mouth-to-feed" } : p).ToList();
+        if (saved.Game.Combat is { } battle)
+            battle.Ships = battle.Ships.Select(s => s.Perk == "architect" ? s with { Perk = "mouth-to-feed" } : s).ToList();
+        Rules(saved.Game).RefreshBuildCapacity();
     }
     private static T Clone<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value, JsonOptions), JsonOptions)!;
     public async Task<GameState> ReadAsync()
@@ -53,9 +60,13 @@ public sealed class GameStateStore
     public Task<MutationResult> ActAsync(string browserId, GameCommand command) => ChangeAsync(candidate =>
     {
         if (!candidate.Seats.TryGetValue(browserId, out var actor)) throw new RuleException("You are watching as a spectator.");
+        if (command.Type == "forfeit" && !command.ExpectedRevision.HasValue)
+            throw new RuleException("Review and confirm leaving the current game first.");
         if (command.ExpectedRevision.HasValue && command.ExpectedRevision != candidate.Game.Revision)
             throw new RuleException("The game changed. Review the latest state and try again.");
         Rules(candidate.Game).Act(actor, command);
+        if (command.Type == "forfeit")
+            foreach (var browser in candidate.Seats.Where(s => s.Value == actor).Select(s => s.Key).ToArray()) candidate.Seats.Remove(browser);
     });
     public Task<MutationResult> ResetAsync(ResetRequest request)
     {
@@ -71,11 +82,13 @@ public sealed class GameStateStore
                 throw new RuleException("The game changed. Review the latest state before resetting.");
             candidate.Game = new GameState
             {
-                Players = request.ReleaseSeats ? [] : candidate.Game.Players,
-                HostPlayerId = request.ReleaseSeats ? null : candidate.Game.HostPlayerId,
+                Players = request.ReleaseSeats ? [] : candidate.Game.Players.Where(p => !p.HasForfeited && candidate.Seats.ContainsValue(p.Id)).ToList(),
+                HostPlayerId = request.ReleaseSeats ? null : candidate.Game.Players.FirstOrDefault(p => !p.HasForfeited && candidate.Seats.ContainsValue(p.Id))?.Id,
                 Revision = candidate.Game.Revision
             };
             if (request.ReleaseSeats) candidate.Seats.Clear();
+            candidate.Game.FirstPlayerId = candidate.Game.HostPlayerId;
+            foreach (var player in candidate.Game.Players) player.IsReady = false;
         }, archive: true);
     }
     private GameRules Rules(GameState state) => new(state, dice, options, clock.GetUtcNow());

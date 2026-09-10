@@ -7,7 +7,7 @@ public sealed class FixedDice(params int[] values) : IDice
 {
     private int index;
     public int Roll(int sides = 6) => values.Length == 0 ? (index++ % 2 == 0 ? 6 : 1) : values[index++ % values.Length];
-    public int Next(int exclusiveMax) => 0;
+    public int Next(int exclusiveMax) => exclusiveMax == 1000 ? 999 : 0;
 }
 
 public partial class GameRulesTests
@@ -27,6 +27,13 @@ public partial class GameRulesTests
         s.TurnEndsAt = Now.AddMinutes(2); s.ActionEndsAt = Now.AddSeconds(45);
         for (var i = 0; i < 12; i++) s.Ports[i].OwnerId = s.Players[i / 3].Id;
         return s;
+    }
+    private static void ReadyCrew(GameState state, string? first = null, GameRules? rules = null)
+    {
+        rules ??= Rules(state);
+        rules.Act(state.HostPlayerId!, new("set-first-player", FirstPlayerId: first ?? state.HostPlayerId));
+        foreach (var player in state.Players)
+            rules.Act(player.Id, new("set-ready", IsReady: true, LobbyVersion: state.LobbyVersion));
     }
     private static Hex Offset(Hex h, int q, int r = 0) => new(h.Q + q, h.R + r);
     private static readonly Hex Open = BoardDefinition.Cells.First(c => c.Terrain == "water" &&
@@ -62,7 +69,7 @@ public partial class GameRulesTests
     {
         var s = Lobby(); var first = s.Players[2].Id;
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("start-draft", FirstPlayerId: first)));
-        Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: first));
+        ReadyCrew(s, first);
         Assert.Equal(4, s.PerkPickups.Count); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
         var pickups = s.PerkPickups.ToArray();
         var picks = new List<string>();
@@ -93,7 +100,7 @@ public partial class GameRulesTests
 
     [Fact] public void Default_action_deadline_ends_the_round_and_custom_timers_are_respected()
     {
-        var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: s.HostPlayerId));
+        var s = Lobby(); ReadyCrew(s);
         for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
         Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(29)).Expire());
         Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(30)).Act(s.ActivePlayerId!, new("roll-movement")));

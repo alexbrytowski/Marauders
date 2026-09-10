@@ -1,14 +1,14 @@
-# Perk playtest notes — September 8, 2026
+# Perk playtest notes — September 10, 2026
 
 The owner approved one perk per ship, no limit per fleet, and Glass Cannon results
 from 0 through 8. Keep the requested effects for the first playtest.
 
 | Perk | Initial assessment | What to watch |
 | --- | --- | --- |
-| The Black Pearl | Rare, dramatic, medium power | A conversion swings the fleet count by two relative to destruction. One 7.5% check per casualty avoids multiplicative checks from helpers. |
+| The Black Pearl | Rare, dramatic, medium power | The owner increased recruitment to 10%. One check per casualty avoids multiplying the chance with helpers. Recruiting preserves an enemy ship and changes its owner instead of destroying it. |
 | Glass Cannon | Strong combat advantage, with risk | A 0–8 holder wins 56.25% of decisive one-on-one exchanges against d6. A 7 or 8 beats any number of unmodified d6 ships; friendly helpers soften its zero-roll downside. |
 | Loaded Dice | Consistent, moderate power | Wins 60% of decisive one-on-one exchanges against d6. Its value falls in large battles because only the highest allied roll matters. |
-| The Architect | Potentially strongest economic perk | Speeds that port from two future owner rounds to one. Parking a ship, exposing that port to capture, and the population cap constrain the benefit. |
+| Mouth to Feed | A small persistent population bonus | Replaces Architect. Each holder adds one fleet-capacity slot anywhere at sea. Losing or recruiting the holder transfers that economic advantage; construction still takes two future owner rounds. |
 
 These percentages enumerate every equally likely pair of rolls and exclude ties,
 which reroll. They describe one exchange, not the chance to win an entire battle
@@ -29,8 +29,8 @@ position during the next playtest.
 
 During four-player playtesting record: first collector and time to reach each
 pickup; exchanges won by perk holders; conversions attempted/succeeded; ships
-launched early by Architects; and which perks the winner held. Try several drafted
+enabled by Mouth to Feed; and which perks the winner held. Try several drafted
 port layouts. Spawn-distance tests establish fair access by terrain, but real
 movement, dice luck, and contested waters still matter.
 
-No further balance changes have been made without playtest evidence.
+The September 10 changes are owner-directed; comparative balance still needs playtesting.

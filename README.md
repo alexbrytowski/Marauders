@@ -69,9 +69,10 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 
 ## Play
 
-1. Join with a name, color, and cosmetic character. Vote for Classic, The Narrows,
-   or Shattered Isles; you can change or clear your vote before the draft.
-2. The host starts a snake draft. The server draws the map with one ticket per vote
+1. Join with a name, color, and cosmetic character. Vote for Classic, The Choke,
+   or Serpent's Coil; you can change or clear your vote before the draft.
+2. The host chooses who picks first, then all four captains press **Ready to sail**.
+   The fourth ready starts the snake draft. The server draws the map with one ticket per vote
    (equal chances if nobody votes) and reveals the perks. Select a port, then confirm the pick.
 3. The final pick automatically launches two ships per owned port and starts play.
 4. Roll to sail, select a ship, choose a highlighted destination, and confirm its
@@ -80,12 +81,21 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 6. Everyone watches the battle dialog. The active captain rolls; only the losing
    captain chooses their casualty. Rolls remain in the captain's log.
 7. At round end, select owned ports for construction, then finish the round.
+8. Whirlpools may appear after a captain turn. Enter one to teleport, then chart
+   again with unused movement. Each pair lasts two full cycles.
+
+Hover ports to inspect shipbuilding and ships to read their perks. Black Pearl
+now recruits at 10%; Mouth to Feed replaces Architect and adds one population
+slot. **Forfeit and leave** asks for confirmation, removes your ports and fleet,
+and releases your browser seat. The last remaining captain wins.
 
 The whole map fits the monitor by default, with the original corner captain cards,
 controls underneath, and personal Ports/Fleet/Shipyards tabs. Zoom is optional;
 **Fit** restores the whole map. Map arrow keys move focus; Enter/Space selects.
 
-Use **How to play** for the complete in-app guide, **About** for game context,
+Use **How to play** for eight short chapters, from board basics to advanced rules,
+with interactive examples using the actual map and pieces. Each chapter has a
+direct link, previous/next navigation, and expandable details. Use **About** for game context,
 and **Game controller** for password-authorized resets. Ship perks appear as sea
 pickups; each ship can hold one. The victory screen charts every team's ships and
 ports after each captain round. See [perk balance notes](PERK_BALANCE.md) and

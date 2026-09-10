@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HubConnectionBuilder } from '@microsoft/signalr'
-import { getJson } from './game'
+import { effectiveBoard, getJson } from './game'
 import type { Board, CharacterProfile, Command, Game, MapOption, Session } from './game'
 
 export function useGame() {
@@ -117,9 +117,40 @@ export function useGame() {
       setBusy(false)
     }
   }
-  const act = (command: Command) => send('/api/game/action', { ...command, expectedRevision: game?.revision })
+  const act = (command: Command) =>
+    send(
+      '/api/game/action',
+      command.type === 'set-ready'
+        ? { ...command, lobbyVersion: game?.lobbyVersion }
+        : { ...command, expectedRevision: command.expectedRevision ?? game?.revision },
+    )
   const selectedBoard = game ? boards[game.mapId] : null
-  const board = selectedBoard?.version === game?.boardVersion ? selectedBoard : null
+  const [legacyBoard, setLegacyBoard] = useState<Board | null>(null)
+  const mapId = game?.mapId,
+    version = game?.boardVersion
+  useEffect(() => {
+    if (!mapId || !version || selectedBoard?.version === version) return
+    let cancelled = false
+    void getJson<Board>(
+      `/api/board?mapId=${encodeURIComponent(mapId)}&version=${encodeURIComponent(version)}`,
+    )
+      .then((value) => {
+        if (!cancelled) setLegacyBoard(value)
+      })
+      .catch((e) => {
+        if (!cancelled) setError(String(e))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mapId, version, selectedBoard?.version])
+  const source =
+    selectedBoard?.version === version
+      ? selectedBoard
+      : legacyBoard?.id === mapId && legacyBoard?.version === version
+        ? legacyBoard
+        : null
+  const board = useMemo(() => (source && game ? effectiveBoard(source, game) : null), [source, game])
   return {
     game,
     board,

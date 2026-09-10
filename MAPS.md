@@ -1,103 +1,78 @@
-﻿# Marauders maps
+# Marauders maps
 
-All three maps have thirteen ports, snake-draft setup, two starting ships per port,
-and the same combat, population, perk, and construction rules. Map choice is
-independent of first-player selection. A reset starts a fresh ballot.
+New matches offer **Classic**, **The Choke**, and **Serpent's Coil**. All start
+with thirteen ports, the same snake draft, two ships per owned port, and the same
+rules. Captains vote before the draft; each vote is one
+ticket in a server-drawn lottery. With no votes, all three maps have equal odds.
 
 ## Classic
 
-The unchanged original layout, in `server/board.json`, with board version
-`original-map-v2`. Its coastal classification still awaits final owner review
-against the physical board. See BOARD_MAPPING.md. Existing saves default here.
+The original `server/board.json`, version `original-map-v2`, is unchanged. The
+source JPEG is untouched. See BOARD_MAPPING.md for the remaining owner review
+of photo-derived harbor membership.
 
-## September 9 design pass
+## The Choke
 
-The owner found the first alternatives too symmetrical and uniform. Version 2
-replaces mirrored ports and repeated island shapes with authored coastlines,
-uneven port spacing, bays, headlands, and different harbor exposures. The useful
-lesson from Classic is that proximity on the chart need not mean easy access by
-sea. These are geographic tradeoffs for the snake draft, not claims of equal
-port strength or certified four-player balance.
+The owner's September 10 concept and name replace The Narrows. Two large bodies
+of water fill the western and eastern halves of the board. A continuous land
+divide reaches both boundaries; the **only crossing is three hexes wide** at
+the center. Three ships can seal it, while any one open lane permits passage.
+Northgate (12) and Southgate (13) occupy opposite banks of the passage with two
+harbor hexes each. The other eleven ports form an oval around each bay, with
+five in the west and six in the east. Ports occupy the inner shores and the
+northern and southern ends as well as the outer shores.
 
-## The Narrows
+Drafting both sides protects access if a rival blocks the crossing. Drafting
+near a gate gives direct pressure on it, at the cost of a small harbor and
+potential contact with enemy ships coming through. Whirlpools can temporarily
+change access across the land divide.
 
-`server/maps/narrows.json` · `narrows-v2`
+The playable file is `server/maps/narrows.json`, version `narrows-v4`; its stable
+internal ID remains `narrows` for saved ballots. It has 600 sailable hexes.
 
-A crooked northern headland, a large island bending southeast, and an offset
-southern peninsula divide unequal basins. The northern crossing has two rows of
-water; the southern passage has three clear rows and a wider diagonal approach.
-Both remain independently usable if ships block the other crossing.
+## Serpent's Coil
 
-- Northgate (2) faces the northern crossing with four harbor hexes. It can reach
-  the shortcut quickly, but has more room for enemy ships to enter its harbor.
-- Eastwatch (7) sits deep in the northern bay with only two harbor hexes. Its
-  shelter comes with a long trip to the ports around the southern passage.
-- Gatewatch (13) has a two-hex berth on the east of the large island. Its central
-  position does not provide a direct crossing to the west: ships must round the
-  island, and it no longer has disconnected harbors in opposite basins.
-- Moonmarket (9) and Bright Lantern (10) are close neighbors in the southeast,
-  creating local pressure; the western ports are more spread out. Silver Quay
-  (11) offers a smaller harbor farther down the coast.
+The third map replaces Shattered Isles with a distinct route concept. A spiral
+peninsula wraps around a winding inner sea. Outer ports face open sailing
+water; inner ports sit deeper in the coil. A two-hex-wide breach in the eastern
+arm offers a shortcut to the middle passage. A second, two-hex-wide northern
+cut through the inner arm opens another approach close to Serpent's Heart (13),
+so its owner must defend more than the winding route.
 
-The sea contains 542 sailable hexes. Harbors vary from two to five hexes.
+Breachwatch (9) and Scalehaven (10) sit inside the outer arm. Coil's Reach (11)
+and Fang Harbor (12) contest the approach to the heart. Distance across land
+can be small even when sailing distance is long, so nearby ports need not be
+easy to reinforce. Blocking the eastern breach lengthens the tested crossing
+by more than twenty movement points. The northern cut independently shortens
+one approach to the heart's harbor from 36 steps to six; closing the eastern
+breach does not close that approach. The longer winding route remains available.
 
-## Shattered Isles
+The playable file is `server/maps/shattered-isles.json`, version
+`shattered-isles-v4`; its internal ID remains `shattered-isles`. It has 604
+sailable hexes. These strategic tradeoffs still need four-player balance play.
 
-`server/maps/shattered-isles.json` · `shattered-isles-v2`
+## Existing matches
 
-An unequal archipelago replaces the ring of identical cays. A forked northwest
-island, a small northeast island, a broad eastern island, and a hooked southwest
-island create different route lengths. Coastal pockets and isolated rocks break
-up the outer route without sealing the interior sea.
-
-- Dawn Cay (1) and Whisper Isle (11) face opposite sides of the northwest island.
-  Ships must sail around the coastline to reinforce one another.
-- Ember Isle (12), Broken Anchor (5), and Sunset Cay (6) share the large eastern
-  island but have different access. Broken Anchor occupies a two-hex cove on its
-  east; Ember faces northwest, separated from it by land.
-- Eastwind (4), Westwind (9), and Turtle Key (8) also have two-hex harbors. They
-  offer limited harbor entry space at the expense of immediate central access.
-- Compass Crown (13) is off-center in open water. Its five-hex harbor and access
-  to several nearby routes come with little land cover.
-
-The sea contains 564 sailable hexes. Harbors vary from two to five hexes.
-
-## Votes and map integrity
-
-Each signed captain owns one public vote. The server validates map IDs, derives
-the voter from the browser seat, and draws once when the host starts the draft.
-Every vote contributes one ticket; with no votes, every map gets one ticket.
-The selected map, counts, draw ticket, and map version persist through restarts.
-
-The client preloads all three immutable boards for previews and immediate map
-switching. Actual play renders the board matching the saved map ID and version.
-All server movement, harbor, construction, and combat checks use that map instance;
-there is no mutable process-global "current board." Perk candidate distances are
-cached separately for each map. Unknown IDs and incompatible versions are rejected.
-
-The v2 terrain requires a fresh match. A v1 alternate-map save is intentionally
-rejected by the existing version guard; ships cannot silently move onto revised
-terrain. Finish or archive/reset that match using the old build before upgrading.
-Classic saves are unaffected. This revision does not reset or migrate live saves.
+Version 2 and 3 geometry is preserved in `narrows-v2.json`, `narrows-v3.json`,
+`shattered-isles-v2.json`, and `shattered-isles-v3.json`. Saved matches keep
+their exact terrain, with a legacy label. Version 2 retains the names The
+Narrows and Shattered Isles; version 3 retains The Choke and Serpent's Coil.
+They can continue without moving ships or resetting saves. New drafts use
+version 4. Unknown versions and versions belonging to another map fail
+explicitly. The API and client load the version saved in the match;
+perk-placement caches are also version-specific. No live save is reset.
 
 ## Reproduce and verify
 
-Run `python tools/create_alternate_maps.py` to reproduce the two designs. It
-writes only their JSON files, and checks connected water, thirteen distinct ports,
-nonoverlapping harbors, and capacity for at least two starting ships at every port.
-Rows use `#` for land, `.` for water, and `P` for ports. First-ring water around
-ports becomes dark-blue harbor water. Coordinates follow Classic's even-row grid.
+Run `python tools/create_alternate_maps.py`, then `python tools/render_maps.py`
+(Pillow required). They reproduce the current JSON and labeled PNG previews in
+`artifacts/maps/`. The generator leaves Classic, the source photo, and legacy
+JSON untouched. Coordinates use Classic's even-row hex grid; first-ring water
+around ports forms their harbors.
 
-Run `python tools/render_maps.py` with Pillow installed to export labeled PNGs to
-`artifacts/maps/`. They are drawn from the playable JSON, with the same terrain
-and harbor membership. The original JPEG is never edited.
-
-Server tests cover lottery/vote rules, all harbors and water connected, contiguous
-alternate-map harbors, independent Narrows crossings, automatic fleets,
-construction spillover, legal movement/combat, randomized predraft perks, and
-saved map identity. The five-browser map scenario covers ballots, both layouts,
-automatic setup, sailing, synchronization, and persistence through restarts.
-
-Playtest remaining: northern passage congestion, the cost of secluded harbors,
-the southeast cluster in The Narrows, Compass Crown's access, coordinated drafts
-around multi-port islands, and perk access under contested movement.
+Checks cover connected water and harbors, thirteen distinct ports, at least
+two launch hexes each, automatic fleets, spillover, perk access, lottery rules,
+and saved versions. The Choke has an explicit three-cell cut test; the Coil has
+distance tests for its two independent shortcuts. The five-browser map scenario
+covers voting, drafting, sailing, shared state, and restart persistence on both
+maps, plus loading all four legacy layouts.

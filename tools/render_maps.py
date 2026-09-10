@@ -13,15 +13,15 @@ from create_alternate_maps import ROOT, axial, neighbors
 PALETTE = {"water": "#2d6890", "harbor": "#153657", "port": "#111a1b",
            "land": "#526d50", "coast": "#c3b58d"}
 COPY = {
-    "narrows": ("THE NARROWS", "A crooked divide. Two very different ways through.", [
-        "Northgate: short northern crossing, exposed harbor.",
-        "Gatewatch: sheltered eastern berth; the island blocks a direct trip west.",
-        "Southern passage: more room to maneuver, a longer trip from the north.",
+    "narrows": ("THE CHOKE", "Two great seas. One crossing. Three ships wide.", [
+        "Northgate & Southgate: the two banks of the only crossing.",
+        "Bay ports form a ring: outer shore, inner shore, and northern/southern ends.",
+        "Whirlpools can temporarily change access across the divide.",
     ]),
-    "shattered-isles": ("SHATTERED ISLES", "Unequal islands. Sheltered coves. Exposed shortcuts.", [
-        "Eastwind & Westwind: small coastal harbors, away from the inner routes.",
-        "Ember Isle & Broken Anchor: close on the chart, separated by a large island.",
-        "Compass Crown: five harbor hexes and fast access, with little land cover.",
+    "shattered-isles": ("SERPENT'S COIL", "Two shortcuts. A contested heart. More than one way in.", [
+        "The northern inner cut opens a second approach close to Serpent's Heart.",
+        "The eastern breach cuts across the outer arm into the middle circuit.",
+        "The winding southern approach remains open if the northern cut is blocked.",
     ]),
 }
 
@@ -40,7 +40,7 @@ def render(map_id):
     draw = ImageDraw.Draw(image)
     draw.text((54, 24), title, font=font(43, serif=True), fill="#f2ddad")
     draw.text((56, 82), subtitle, font=font(23), fill="#bfd0d2")
-    draw.text((1384, 44), "13 PORTS / V2", font=font(19, bold=True), fill="#c3b58d", anchor="ra")
+    draw.text((1384, 44), f"13 PORTS / {source['version'].rsplit('-', 1)[-1].upper()}", font=font(19, bold=True), fill="#c3b58d", anchor="ra")
     rows = source["rows"]
     ports = {(p["col"], p["row"]): i for i, p in enumerate(source["ports"], 1)}
     water = {(c, r) for r, row in enumerate(rows) for c, value in enumerate(row) if value == "."}
@@ -75,7 +75,7 @@ def render(map_id):
         draw.text((56, 1455 + i * 30), note, font=font(20), fill="#bfcfcf")
     output = ROOT / "artifacts" / "maps"
     output.mkdir(parents=True, exist_ok=True)
-    target = output / f"{map_id}-v2.png"
+    target = output / f"{source['version']}.png"
     image.save(target)
     print(target)
 

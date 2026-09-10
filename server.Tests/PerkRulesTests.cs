@@ -30,11 +30,11 @@ public partial class GameRulesTests
     [Fact] public void Perks_are_collected_along_routes_one_per_ship_with_no_fleet_limit()
     {
         var s = Playing(); var a = Add(s, 0, Open); var b = Add(s, 0, Offset(Open, -2)); s.RemainingMovement = 6;
-        s.PerkPickups = [new("glass-cannon", Open.Q + 1, Open.R), new("loaded-dice", Open.Q + 2, Open.R), new("architect", Open.Q - 1, Open.R)];
+        s.PerkPickups = [new("glass-cannon", Open.Q + 1, Open.R), new("loaded-dice", Open.Q + 2, Open.R), new("mouth-to-feed", Open.Q - 1, Open.R)];
         Rules(s).Act(s.ActivePlayerId!, new("move", ShipId: a.Id, Q: Open.Q + 3, R: Open.R));
         Assert.Equal("glass-cannon", a.Perk); Assert.Contains(s.PerkPickups, p => p.Kind == "loaded-dice");
         Rules(s).Act(s.ActivePlayerId!, new("move", ShipId: b.Id, Q: Open.Q - 1, R: Open.R));
-        Assert.Equal("architect", b.Perk); Assert.Single(s.PerkPickups);
+        Assert.Equal("mouth-to-feed", b.Perk); Assert.Single(s.PerkPickups);
     }
 
     [Theory] [InlineData(1, 0)] [InlineData(8, 7)] [InlineData(9, 8)]
@@ -61,27 +61,27 @@ public partial class GameRulesTests
         Assert.Equal(1, s.RemainingMovement); Assert.Equal(6, Assert.Single(dice.Sides));
     }
 
-    [Theory] [InlineData(0, true)] [InlineData(74, true)] [InlineData(75, false)] [InlineData(999, false)]
+    [Theory] [InlineData(0, true)] [InlineData(99, true)] [InlineData(100, false)] [InlineData(999, false)]
     public void Pearl_conversion_has_exact_threshold_retains_position_and_perk_and_adds_no_actions(int chance, bool converts)
     {
-        var (s, a, b) = Duel("black-pearl", "architect"); var originalHex = b.Hex; var actions = s.RemainingActions;
+        var (s, a, b) = Duel("black-pearl", "mouth-to-feed"); var originalHex = b.Hex; var actions = s.RemainingActions;
         var dice = new ControlledDice([6, 1], chance); var rules = new GameRules(s, dice, new(), Now);
         rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
         Assert.Equal(1, dice.ChanceChecks); Assert.Equal(actions, s.RemainingActions);
         Assert.Contains("automatically", s.Combat!.Message);
         var snapshot = Assert.Single(s.Combat.Ships, ship => ship.Id == b.Id);
-        Assert.Equal("architect", snapshot.Perk); Assert.Equal(originalHex, new(snapshot.Q, snapshot.R));
+        Assert.Equal("mouth-to-feed", snapshot.Perk); Assert.Equal(originalHex, new(snapshot.Q, snapshot.R));
         Assert.NotEqual(a.OwnerId, snapshot.OwnerId);
         Assert.DoesNotContain(b.Id, s.Combat.ParticipantShipIds); Assert.Equal("resolved", s.Combat.Status);
         if (converts)
         {
             Assert.Contains(b, s.Ships); Assert.Equal(a.OwnerId, b.OwnerId); Assert.Equal(originalHex, b.Hex);
-            Assert.Equal("architect", b.Perk); Assert.Equal(s.TurnNumber, b.ConvertedTurnNumber); Assert.Empty(s.PerkPickups);
+            Assert.Equal("mouth-to-feed", b.Perk); Assert.Equal(s.TurnNumber, b.ConvertedTurnNumber); Assert.Empty(s.PerkPickups);
         }
         else
         {
             Assert.DoesNotContain(b, s.Ships); var drop = Assert.Single(s.PerkPickups);
-            Assert.Equal("architect", drop.Kind); Assert.Equal(originalHex, new(drop.Q, drop.R));
+            Assert.Equal("mouth-to-feed", drop.Kind); Assert.Equal(originalHex, new(drop.Q, drop.R));
         }
     }
 
@@ -120,24 +120,24 @@ public partial class GameRulesTests
         Assert.Equal(a.OwnerId, port.OwnerId);
     }
 
-    [Fact] public void Architect_advances_only_current_owned_port_without_stacking_or_same_round_launch()
+    [Fact] public void Mouth_to_feed_does_not_speed_construction_or_launch_fresh_builds()
     {
         var s = Playing(); var owner = s.ActivePlayerId!; var port = s.Ports[0]; var otherPort = s.Ports[1];
-        foreach (var cell in BoardDefinition.Harbor(port.Id).Take(2)) Add(s, 0, cell).Perk = "architect";
+        foreach (var cell in BoardDefinition.Harbor(port.Id).Take(2)) Add(s, 0, cell).Perk = "mouth-to-feed";
         var fast = new Construction { OwnerId = owner, PortId = port.Id, StartedTurnNumber = 1, RemainingOwnerTurns = 3 };
         var normal = new Construction { OwnerId = owner, PortId = otherPort.Id, StartedTurnNumber = 1 };
         var fresh = new Construction { OwnerId = owner, PortId = port.Id, StartedTurnNumber = s.TurnNumber };
         s.Constructions = [fast, normal, fresh]; s.IsBuildPhase = true;
         Rules(s).Act(owner, new("end-turn"));
-        Assert.Equal(1, fast.RemainingOwnerTurns); Assert.Equal(1, normal.RemainingOwnerTurns); Assert.Equal(2, fresh.RemainingOwnerTurns);
+        Assert.Equal(2, fast.RemainingOwnerTurns); Assert.Equal(1, normal.RemainingOwnerTurns); Assert.Equal(2, fresh.RemainingOwnerTurns);
         var snapshot = Assert.Single(s.RoundHistory); Assert.Equal(2, snapshot.Teams.Single(t => t.PlayerId == owner).Ships);
         Assert.Equal(3, snapshot.Teams.Single(t => t.PlayerId == owner).Ports);
     }
 
-    [Fact] public void Architect_cannot_speed_an_enemy_port_and_launch_is_in_round_snapshot()
+    [Fact] public void Mouth_to_feed_at_an_enemy_port_does_not_change_construction_timing()
     {
         var s = Playing(); var owner = s.ActivePlayerId!; var port = s.Ports[0];
-        Add(s, 1, BoardDefinition.Harbor(port.Id)[0]).Perk = "architect";
+        Add(s, 1, BoardDefinition.Harbor(port.Id)[0]).Perk = "mouth-to-feed";
         s.Constructions.Add(new() { OwnerId = owner, PortId = port.Id, StartedTurnNumber = 1 }); s.IsBuildPhase = true;
         Rules(s).Act(owner, new("end-turn"));
         Assert.Equal(1, Assert.Single(s.Constructions).RemainingOwnerTurns);

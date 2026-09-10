@@ -2212,8 +2212,12 @@
     margin-bottom: 8px;
   }
   .in-game .site-nav {
-    padding: 5px 0;
+    padding: 3px 0;
     margin-bottom: 8px;
+    align-items: center;
+  }
+  .in-game .site-nav a {
+    padding: 3px 0;
   }
   .in-game .turn-bar {
     margin: 12px 0 16px;
@@ -2279,5 +2283,118 @@
   }
   .public-movement-roll > span:last-child {
     display: none;
+  }
+}
+.chart {
+  position: relative;
+}
+.board-inspection {
+  position: absolute;
+  bottom: 52px;
+  left: 12px;
+  z-index: 3;
+  width: min(340px, 85%);
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid #63898a;
+  background: #102b34f5;
+  color: #e8e2ce;
+  box-shadow: 0 5px 20px #0006;
+  pointer-events: none;
+  font-size: 13px;
+}
+.board-inspection strong,
+.board-inspection span {
+  display: block;
+}
+.board-inspection span {
+  margin-top: 6px;
+  line-height: 1.5;
+  color: #c6d8d7;
+}
+.whirlpool-token circle {
+  fill: #124a88;
+  stroke: #64caff;
+  stroke-width: 1.5;
+}
+.hex[data-whirlpool] > polygon {
+  fill: #155582;
+  stroke: #62bdeb;
+  stroke-width: 1.5;
+}
+.whirlpool-token path {
+  fill: none;
+  stroke: #9de6ff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transform-origin: center;
+  animation: whirlpool-spin 7s linear infinite;
+}
+@keyframes whirlpool-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.whirlpool-status {
+  color: #86d5ff;
+}
+.building-badge circle {
+  fill: #e6be68;
+  stroke: #142b32;
+  stroke-width: 1.5;
+}
+.building-badge path {
+  fill: none;
+  stroke: #142b32;
+  stroke-width: 1.8;
+}
+.building-badge text {
+  fill: #fff0b9;
+  stroke: #142b32;
+  stroke-width: 3px;
+  paint-order: stroke;
+  font-size: 13px;
+  font-weight: 800;
+}
+.leave-game {
+  color: #efb2a4;
+  background: transparent;
+  border: 1px solid #7f5753;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.site-nav .leave-game {
+  margin-left: auto;
+  order: 2;
+  padding-block: 2px;
+  line-height: 16px;
+}
+.leave-dialog {
+  max-width: 460px;
+  padding: 26px;
+  color: #eee2c6;
+  background: #122e36;
+  border: 1px solid #a38c66;
+  border-radius: 12px;
+}
+.leave-dialog::backdrop {
+  background: #031117bb;
+}
+.leave-dialog h2 {
+  margin-top: 0;
+}
+.leave-dialog p {
+  line-height: 1.6;
+}
+.leave-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .whirlpool-token path {
+    animation: none;
   }
 }

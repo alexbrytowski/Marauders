@@ -31,7 +31,7 @@ export function MapVotePanel({
           <span className="eyebrow">CHOOSE YOUR WATERS</span>
           <h2>Where shall we sail?</h2>
         </div>
-        <p>One vote per captain. Each vote is a ticket in the draw when the host starts the draft.</p>
+        <p>One vote per captain. Each vote is a ticket in the draw when all four captains are ready.</p>
       </div>
       <div className="map-options">
         {maps.map((map) => {
@@ -94,7 +94,7 @@ export function MapVotePanel({
       <div className="ballot-note">
         <p>
           {total
-            ? `${total} of 4 captains have voted. You can change your vote until the draft begins.`
+            ? `${total} of 4 captains have voted. Changing your vote clears your ready status.`
             : 'No votes yet: all three maps have equal chances.'}
           {!playerId && ' Join the crew to vote; spectators can watch the draw.'}
         </p>

@@ -11,9 +11,26 @@ public static class MapCatalog
 {
     public static IReadOnlyList<MapOption> All { get; } = [
         new("classic", "Classic", "The original Marauder Sea: familiar coastlines, sheltered harbors, and open crossings.", BoardDefinition.Classic),
-        new("narrows", "The Narrows", "Unequal basins, a tight northern cut, and a broad southern passage. Shelter costs sailing distance.", BoardMap.Load("maps/narrows.json")),
-        new("shattered-isles", "Shattered Isles", "Uneven island groups, tucked-away coves, and an exposed inner hub. Choose shelter or quicker access.", BoardMap.Load("maps/shattered-isles.json"))
+        new("narrows", "The Choke", "Ports circle two great seas. One passage, three ships wide, links the bays between two gate ports.", BoardMap.Load("maps/narrows.json")),
+        new("shattered-isles", "Serpent's Coil", "A winding inner sea with two shortcuts: an eastern breach and a northern cut close to the heart.", BoardMap.Load("maps/shattered-isles.json"))
     ];
+    private static readonly IReadOnlyDictionary<string, BoardMap> Legacy = new Dictionary<string, BoardMap>
+    {
+        ["narrows-v2"] = BoardMap.Load("maps/narrows-v2.json"),
+        ["shattered-isles-v2"] = BoardMap.Load("maps/shattered-isles-v2.json"),
+        ["narrows-v3"] = BoardMap.Load("maps/narrows-v3.json"),
+        ["shattered-isles-v3"] = BoardMap.Load("maps/shattered-isles-v3.json")
+    };
+    public static BoardMap Resolve(string id, string version)
+    {
+        var map = Get(id);
+        if (map.Version == version) return map.Board;
+        if (version.StartsWith(id + "-v", StringComparison.Ordinal) && Legacy.TryGetValue(version, out var legacy)) return legacy;
+        throw new RuleException("The saved map version is unavailable. Preserve the save before starting a new match.");
+    }
+    public static string Name(string id, string version) => version == "narrows-v2" ? "The Narrows (legacy)"
+        : version == "shattered-isles-v2" ? "Shattered Isles (legacy)"
+        : Get(id).Name + (version == Get(id).Version ? "" : " (legacy)");
     public static MapOption? Find(string? id) => All.FirstOrDefault(m => m.Id == id);
     public static MapOption Get(string id) => Find(id) ?? throw new RuleException("Choose a map from the lobby.");
 }

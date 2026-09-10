@@ -38,7 +38,7 @@ public partial class GameRulesTests
         var random = new TicketRandom(0); var rules = new GameRules(s, random, new(), Now);
         Assert.Throws<RuleException>(() => rules.Act(captain, new("start-draft", FirstPlayerId: captain)));
         Assert.Equal(0, random.Calls);
-        rules.Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: captain));
+        ReadyCrew(s, captain, rules);
         var callsAfterReveal = random.Calls;
         Assert.True(callsAfterReveal > 1); Assert.Equal(4, s.PerkPickups.Count); Assert.Equal("narrows", s.MapId);
         Assert.Equal(MapCatalog.Get("narrows").Version, s.BoardVersion);
@@ -63,11 +63,12 @@ public partial class GameRulesTests
             Assert.NotNull(spill); Assert.Equal("water", map.Cell(spill!.Value)!.Terrain); Assert.DoesNotContain(spill.Value, occupied);
         }
         var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("vote-map", MapId: mapId));
-        Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: s.HostPlayerId));
+        ReadyCrew(s);
         var revealed = s.PerkPickups.ToArray(); Assert.Equal(4, revealed.Length);
         for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
         Assert.Equal(revealed, s.PerkPickups);
         Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(4, s.PerkPickups.Count);
+        Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
         Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());
         Assert.All(s.Ships, ship => Assert.True(map.InHarbor(ship.Hex, ship.PortId)));
         for (var seed = 0; seed < 20; seed++)
@@ -108,18 +109,42 @@ public partial class GameRulesTests
         }
     }
 
-    [Fact] public void Narrows_crossings_provide_independent_routes_around_the_spine()
+    [Fact] public void Choke_has_exactly_three_crossing_hexes_and_both_seas_need_them()
     {
         var map = MapCatalog.Get("narrows").Board;
         var west = BoardMap.Offset(10, 15); var east = BoardMap.Offset(22, 15);
-        var north = (from r in Enumerable.Range(10, 2) from c in Enumerable.Range(11, 11)
-                     select BoardMap.Offset(c, r)).ToHashSet();
-        var south = (from r in Enumerable.Range(22, 4) from c in Enumerable.Range(12, 9)
-                     select BoardMap.Offset(c, r)).ToHashSet();
-        Assert.NotNull(map.FindPath(west, east, north));
-        Assert.NotNull(map.FindPath(west, east, south));
-        Assert.Null(map.FindPath(west, east, north.Union(south).ToHashSet()));
+        var crossing = Enumerable.Range(0, 31).Select(r => BoardMap.Offset(16, r)).Where(map.IsSailable).ToHashSet();
+        Assert.Equal(3, crossing.Count);
+        Assert.Null(map.FindPath(west, east, crossing));
+        foreach (var gap in crossing) Assert.NotNull(map.FindPath(west, east, crossing.Where(h => h != gap).ToHashSet()));
+        Assert.Equal("The Choke", MapCatalog.Get("narrows").Name);
     }
+
+    [Fact] public void Coil_outer_breach_shortens_the_crossing_and_inner_cut_opens_another_approach()
+    {
+        var map = MapCatalog.Get("shattered-isles").Board;
+        var start = BoardMap.Offset(28, 15); var middle = BoardMap.Offset(22, 15);
+        var breach = (from r in new[] { 14, 15 } from c in new[] { 24, 25 } select BoardMap.Offset(c, r)).ToHashSet();
+        var shortcut = map.FindPath(start, middle, new HashSet<Hex>())!;
+        var longRoute = map.FindPath(start, middle, breach)!;
+        Assert.True(longRoute.Count > shortcut.Count + 20);
+        var north = BoardMap.Offset(15, 8); var heart = map.Harbor("port-13")[0];
+        var innerCut = (from r in new[] { 10, 11 } from c in new[] { 14, 15 } select BoardMap.Offset(c, r)).ToHashSet();
+        Assert.All(innerCut, hex => Assert.True(map.IsSailable(hex)));
+        var direct = map.FindPath(north, heart, new HashSet<Hex>())!;
+        var winding = map.FindPath(north, heart, innerCut)!;
+        Assert.NotNull(direct); Assert.NotNull(winding);
+        Assert.Contains(direct, hex => innerCut.Contains(hex));
+        Assert.True(winding.Count > direct.Count + 10, $"Northern cut: {direct.Count - 1} movement; winding route: {winding.Count - 1}.");
+        // Both shortcuts are usable independently; closing the outer breach
+        // does not seal the northern approach to the heart.
+        Assert.Equal(direct.Count, map.FindPath(north, heart, breach)!.Count);
+    }
+
+    [Theory] [InlineData("narrows", "shattered-isles-v3")] [InlineData("classic", "narrows-v3")]
+    [InlineData("narrows", "narrows-v999")]
+    public void Map_versions_cannot_select_another_maps_terrain_or_unknown_data(string id, string version)
+        => Assert.Throws<RuleException>(() => MapCatalog.Resolve(id, version));
 
     [Theory] [InlineData("narrows")] [InlineData("shattered-isles")]
     public void Alternate_map_movement_and_port_combat_use_its_own_terrain(string mapId)
