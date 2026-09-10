@@ -252,6 +252,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             var port = Port(choice.HarborId);
             if (port.OwnerId == a.OwnerId || port.OwnerId == b.OwnerId) battle.SupportingPortIds.Add(port.Id);
         }
+        SnapshotBattleShips(battle);
         state.Combat = battle; state.CombatChoices = [];
         ActionClock();
         Log("combat", $"Battle: {Name(a.OwnerId)} versus {Name(b.OwnerId)}{(choice.HarborId is null ? " at sea" : $" at {Port(choice.HarborId).Name}")}.");
@@ -271,13 +272,20 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             DefenderId = port.OwnerId ?? port.Id, ParticipantShipIds = Helpers(ship).Select(s => s.Id).ToList(),
             DefenseModifier = -port.DefenseWeakness
         };
+        SnapshotBattleShips(state.Combat);
         ActionClock();
         Log("combat", $"{Name(actor)} spent an action to attack {port.Name}.");
     }
+    private void SnapshotBattleShips(CombatState battle) => battle.Ships = state.Ships
+        .Where(s => battle.ParticipantShipIds.Contains(s.Id))
+        .Select(s => new BattleShip(s.Id, s.OwnerId, s.Number, s.Q, s.R, s.Perk)).ToList();
+
     private void RollBattle(string? combatId)
     {
         var battle = state.Combat;
         Require(battle is not null && battle.Id == combatId && battle.Status == "awaiting-roll", "That battle is not awaiting a roll.");
+        // Older saved battles did not retain their participant positions.
+        if (battle!.Ships.Count == 0) SnapshotBattleShips(battle);
         battle!.Round++;
         battle.Rolls = new() { [battle.AttackerId] = [], [battle.DefenderId] = [] };
         foreach (var id in battle.ParticipantShipIds)
@@ -317,10 +325,28 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         {
             battle.LosingPlayerId = a > b ? battle.DefenderId : battle.AttackerId;
             battle.Status = "choose-loss";
-            battle.Message = $"{Name(battle.WinnerId)} wins {Math.Max(a, b)} to {Math.Min(a, b)}. {Name(battle.LosingPlayerId)} must choose a participating ship to lose.";
+            var onlyCasualty = state.Ships.Count(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id)) == 1;
+            battle.Message = $"{Name(battle.WinnerId)} wins {Math.Max(a, b)} to {Math.Min(a, b)}. " +
+                (onlyCasualty ? "The only eligible casualty will be resolved automatically." : $"{Name(battle.LosingPlayerId)} must choose a participating ship to lose.");
         }
         Log("roll", battle.Message, battle.Rolls);
         ActionClock();
+        ResolveOnlyLoss($"{Name(battle.WinnerId!)} wins {Math.Max(a, b)} to {Math.Min(a, b)}.");
+    }
+    private bool ResolveOnlyLoss(string? result = null)
+    {
+        var battle = state.Combat;
+        if (battle?.Status != "choose-loss") return false;
+        var casualties = state.Ships.Where(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id)).ToArray();
+        if (casualties.Length != 1) return false;
+        if (battle.Ships.Count == 0) SnapshotBattleShips(battle);
+        var casualty = casualties[0];
+        result ??= $"{Name(battle.WinnerId!)} won the exchange.";
+        Log("casualty", $"Ship {casualty.Number} is the only eligible casualty; resolving automatically.");
+        RemoveLoss(casualty.OwnerId, battle.Id, casualty.Id);
+        var outcome = state.Ships.Contains(casualty) ? "was recruited by the Black Pearl" : "was lost";
+        battle.Message = $"{result} Ship {casualty.Number} {outcome} automatically. {battle.Message}";
+        return true;
     }
     private void RemoveLoss(string actor, string? combatId, string? shipId)
     {
@@ -461,6 +487,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             return true;
         }
         if (state.Phase == "draft" && state.PerkPickups.Count == 0) { RevealPerks(); return true; }
+        // Resume an older saved single-casualty choice without waiting for a captain.
+        // Already expired rounds continue through the normal timeout path below.
+        if (state.Phase == "playing" && state.TurnEndsAt > now && state.ActionEndsAt > now && ResolveOnlyLoss()) return true;
         if (state.Phase != "playing" || (state.TurnEndsAt > now && state.ActionEndsAt > now)) return false;
         Log("timeout", $"{Name(state.ActivePlayerId!)} ran out of time. The round is ending.");
         // Resolve mandatory battles with public server rolls and deterministic

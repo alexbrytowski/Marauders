@@ -161,7 +161,7 @@ public class GameStateStoreTests
         Assert.Equal("narrows", (await store.ReadAsync()).MapVotes[lobby.Players[1].Id]);
         Assert.True((await store.ActAsync("private-browser-0", new("start-draft", FirstPlayerId: lobby.Players[0].Id))).Success);
         var selected = await Store(directory, password).ReadAsync();
-        Assert.Equal("narrows", selected.MapId); Assert.Equal("narrows-v1", selected.BoardVersion);
+        Assert.Equal("narrows", selected.MapId); Assert.Equal("narrows-v2", selected.BoardVersion);
         Assert.Equal("Westwatch", selected.Ports[0].Name); Assert.Equal("narrows", selected.MapSelection!.MapId);
         Assert.DoesNotContain("private-browser", System.Text.Json.JsonSerializer.Serialize(selected, GameStateStore.JsonOptions));
         Assert.True((await store.ResetAsync(new(password, selected.Id, selected.Revision))).Success);

@@ -85,7 +85,7 @@ public partial class GameRulesTests
         }
         Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(first, s.ActivePlayerId); Assert.Equal(2, s.RemainingActions);
         Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());
-        Assert.Equal(Now.AddSeconds(60), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(20), s.ActionEndsAt);
+        Assert.Equal(Now.AddSeconds(90), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(30), s.ActionEndsAt);
         Assert.Throws<RuleException>(() => Rules(s).Act(first, new("place", PortId: s.Ports[0].Id, Q: 0, R: 0)));
         Assert.Throws<RuleException>(() => Rules(s).Act(first, new("finish-placement")));
         Assert.False(Rules(s).Expire()); Assert.Equal(24, s.Ships.Count);
@@ -95,12 +95,12 @@ public partial class GameRulesTests
     {
         var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("start-draft", FirstPlayerId: s.HostPlayerId));
         for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
-        Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(19)).Expire());
-        Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(20)).Act(s.ActivePlayerId!, new("roll-movement")));
-        var configured = new GameOptions { TurnSeconds = 90, ActionSeconds = 30 };
-        Assert.True(new GameRules(s, new FixedDice(), configured, Now.AddSeconds(20)).Expire());
+        Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(29)).Expire());
+        Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(30)).Act(s.ActivePlayerId!, new("roll-movement")));
+        var configured = new GameOptions { TurnSeconds = 150, ActionSeconds = 45 };
+        Assert.True(new GameRules(s, new FixedDice(), configured, Now.AddSeconds(30)).Expire());
         Assert.Equal(s.TurnOrder[1], s.ActivePlayerId); Assert.Equal(2, s.TurnNumber);
-        Assert.Equal(Now.AddSeconds(110), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(50), s.ActionEndsAt);
+        Assert.Equal(Now.AddSeconds(180), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(75), s.ActionEndsAt);
     }
     [Fact] public void Illegal_moves_and_wrong_actor_are_rejected()
     {
@@ -118,7 +118,7 @@ public partial class GameRulesTests
         Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("end-turn")));
         Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("roll-movement")));
     }
-    [Fact] public void Helpers_do_not_chain_and_losing_helpers_must_be_removed_before_reroll()
+    [Fact] public void Remote_ships_do_not_prevent_automatic_single_participant_casualty()
     {
         var s = Playing(); var trigger = Add(s, 0, Open); var helper = Add(s, 0, Offset(Open, -2)); var remote = Add(s, 0, Offset(Open, -4));
         Add(s, 1, Offset(Open, 2)); s.RemainingMovement = 2;
@@ -126,10 +126,12 @@ public partial class GameRulesTests
         // helper is now 3 away; a second helper is added within two of the new trigger.
         Assert.DoesNotContain(remote.Id, s.Combat!.ParticipantShipIds); Assert.DoesNotContain(helper.Id, s.Combat.ParticipantShipIds);
         Rules(s, 1, 6).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat.Id));
-        Assert.Equal("choose-loss", s.Combat.Status);
+        Assert.Equal("resolved", s.Combat.Status);
+        Assert.DoesNotContain(trigger, s.Ships); Assert.Contains(helper, s.Ships); Assert.Contains(remote, s.Ships);
+        Assert.Contains("automatically", s.Combat.Message);
         Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat.Id)));
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("remove-ship", CombatId: s.Combat.Id, ShipId: trigger.Id)));
-        Rules(s).Act(s.ActivePlayerId!, new("remove-ship", CombatId: s.Combat.Id, ShipId: trigger.Id));
+        Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("remove-ship", CombatId: s.Combat.Id, ShipId: trigger.Id)));
         Assert.Equal("resolved", s.Combat.Status);
     }
     [Fact] public void Same_harbor_triggers_nonadjacent_combat_with_owner_port_die()
@@ -143,6 +145,8 @@ public partial class GameRulesTests
         Assert.NotNull(s.Combat); Assert.Contains(p.Id, s.Combat.SupportingPortIds);
         Rules(s, 6, 1, 2).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat.Id));
         Assert.Equal(2, s.Combat.Rolls[s.Players[1].Id].Count);
+        Assert.Equal("resolved", s.Combat.Status); // A supporting port is never a casualty option.
+        Assert.Single(s.Ships); Assert.Equal(s.Players[1].Id, p.OwnerId);
     }
     [Fact] public void Removing_a_helper_keeps_triggering_ships_fighting_without_chained_assistance()
     {
@@ -151,6 +155,9 @@ public partial class GameRulesTests
         Rules(s).Act(s.ActivePlayerId!, new("move", ShipId: trigger.Id, Q: Open.Q + 1, R: Open.R));
         Assert.Contains(helper.Id, s.Combat!.ParticipantShipIds); Assert.DoesNotContain(chain.Id, s.Combat.ParticipantShipIds);
         Rules(s, 1, 1, 6).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat.Id));
+        Assert.Equal("choose-loss", s.Combat.Status);
+        Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("remove-ship", CombatId: s.Combat.Id, ShipId: helper.Id)));
+        Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("remove-ship", CombatId: s.Combat.Id, ShipId: chain.Id)));
         Rules(s).Act(s.ActivePlayerId!, new("remove-ship", CombatId: s.Combat.Id, ShipId: helper.Id));
         Assert.Equal("awaiting-roll", s.Combat.Status); Assert.DoesNotContain(helper, s.Ships); Assert.Contains(trigger, s.Ships);
         Assert.Equal(3, s.RemainingMovement);

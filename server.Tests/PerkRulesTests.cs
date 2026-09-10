@@ -67,8 +67,11 @@ public partial class GameRulesTests
         var (s, a, b) = Duel("black-pearl", "architect"); var originalHex = b.Hex; var actions = s.RemainingActions;
         var dice = new ControlledDice([6, 1], chance); var rules = new GameRules(s, dice, new(), Now);
         rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
-        rules.Act(b.OwnerId, new("remove-ship", CombatId: s.Combat.Id, ShipId: b.Id));
         Assert.Equal(1, dice.ChanceChecks); Assert.Equal(actions, s.RemainingActions);
+        Assert.Contains("automatically", s.Combat!.Message);
+        var snapshot = Assert.Single(s.Combat.Ships, ship => ship.Id == b.Id);
+        Assert.Equal("architect", snapshot.Perk); Assert.Equal(originalHex, new(snapshot.Q, snapshot.R));
+        Assert.NotEqual(a.OwnerId, snapshot.OwnerId);
         Assert.DoesNotContain(b.Id, s.Combat.ParticipantShipIds); Assert.Equal("resolved", s.Combat.Status);
         if (converts)
         {
@@ -100,7 +103,6 @@ public partial class GameRulesTests
     {
         var (s, a, b) = Duel("black-pearl"); var dice = new ControlledDice([1, 6]); var rules = new GameRules(s, dice, new(), Now);
         rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
-        rules.Act(a.OwnerId, new("remove-ship", CombatId: s.Combat.Id, ShipId: a.Id));
         Assert.Equal(0, dice.ChanceChecks); Assert.Equal("black-pearl", Assert.Single(s.PerkPickups).Kind);
         s.Combat = null; s.ActivePlayerId = b.OwnerId; s.RemainingMovement = 1;
         rules.Act(b.OwnerId, new("move", ShipId: b.Id, Q: a.Q, R: a.R));

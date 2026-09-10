@@ -46,18 +46,19 @@ application for it to take effect. The launcher does not depend on that change.
 
 ### Play all four captains on one computer
 
-Double-click **Play-Local-Crew.cmd**. It builds the game and opens four independent
+Double-click **Play-Local-Crew.cmd**. It resets the practice game, releases any old
+seat bindings, builds the game, and opens four independent
 Edge windows with their own persistent browser profiles and prefilled captain seats.
 Windows open maximized and follow your actual monitor/window size. F11 toggles
 the browser's full-screen mode.
 After updating from the fixed 1100×850 launcher, close and reopen the crew launcher
 once. Refreshing an old window cannot remove its emulated viewport.
-To restart with a fresh match while keeping seats, close the launcher and run
-`node tools/start-marauders.mjs --crew --reset`. This uses the password-protected
-reset API and archives the previous match.
+Each launch starts a fresh practice match and archives the previous match. The
+practice launcher releases old seat bindings before opening the four windows, so
+stale browser profiles do not become spectators.
 The practice game runs on `http://localhost:5175` with separate state under
 `artifacts/local-crew/`, so your main game's save is unaffected. Both launchers use
-60 seconds per round and 20 per action by default; environment settings can override these.
+90 seconds per round and 30 per action by default; environment settings can override these.
 Keep its launcher open; Ctrl+C closes the practice services and windows. Reopening
 it restores the four seats and practice game. Use Game controller to reset it.
 On Linux, install Playwright Chromium first; the same launcher supports `--crew`.
@@ -113,7 +114,7 @@ Browser tests use installed Edge on Windows. On Linux, first run
 
 See [.env.example](.env.example) for shell/hosting variable names. ASP.NET reads
 environment variables; this file is a reference, not an automatically loaded secret file.
-`Game__TurnSeconds` defaults to 60, `Game__ActionSeconds` to 20. Both need playtesting.
+`Game__TurnSeconds` defaults to 90, `Game__ActionSeconds` to 30. Both need playtesting.
 
 The current single match is stored in `server/data/game-state-v2.json`. Session
 bindings are private; signing keys are under `server/data/keys/`. Preserve both to

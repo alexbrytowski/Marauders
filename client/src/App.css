@@ -256,6 +256,22 @@
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
+  align-items: baseline;
+  color: #efd5a1;
+  font-size: 22px;
+}
+.action-dice small {
+  font-size: 11px;
+}
+.public-movement-roll {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  color: #c4bb9d;
+}
+.rolling-die {
+  display: inline-flex;
 }
 .die {
   display: inline-grid;
@@ -617,11 +633,12 @@
 .port-token text {
   fill: #f5e2b6;
   text-anchor: middle;
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 700;
 }
 .ship-number {
-  font-size: 6.5px;
+  font-size: 9px;
+  font-weight: 700;
   fill: #eef1d6;
   stroke: #0b2630;
   stroke-width: 2;
@@ -1089,6 +1106,124 @@
   background: #061e2644;
   padding: 4px 6px;
   border-radius: 3px;
+}
+.battle-fleet > button {
+  font-size: 11px;
+  padding: 6px 8px;
+  color: #d4dfdb;
+}
+.battle-fleet > button:disabled {
+  opacity: 1;
+  cursor: default;
+  background: #10262c;
+}
+.battle-fleet > button[aria-pressed='true'] {
+  border-color: #f4d087;
+  background: #4d4735;
+}
+.battle-map-panel {
+  margin: 0 30px 14px;
+  border: 1px solid #435c60;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0b222c;
+}
+.battle-map {
+  display: block;
+  width: 100%;
+  height: clamp(170px, 26vh, 270px);
+}
+.battle-map-panel p {
+  padding: 8px 12px;
+  color: #b2c3be;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.battle-map .hex {
+  cursor: default;
+}
+.battle-map .hex:hover polygon {
+  stroke-width: 0.75;
+}
+.battle-map-ship text,
+.battle-port text {
+  text-anchor: middle;
+  fill: #10252e;
+  font-size: 13px;
+  font-weight: 800;
+}
+.battle-map-ship .ship-ring {
+  stroke: #dddfc4;
+  stroke-width: 0.75;
+}
+.battle-map-ship.eligible {
+  cursor: pointer;
+  outline: none;
+}
+.battle-map-ship.eligible .ship-ring {
+  stroke: #f7d47c;
+  stroke-width: 1.5;
+}
+.battle-map-ship.chosen .ship-ring,
+.battle-map-ship.eligible:hover .ship-ring,
+.battle-map-ship:focus-visible .ship-ring {
+  stroke: white;
+  stroke-width: 3;
+}
+.battle-map-ship.removed {
+  opacity: 0.5;
+}
+.battle-map-ship path {
+  stroke: #fff;
+  stroke-width: 2;
+  paint-order: stroke;
+}
+.port-attacks {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding-top: 12px;
+  border-top: 1px solid #49605e;
+}
+.port-attacks strong {
+  color: #edc98a;
+  font-size: 13px;
+}
+.port-attacks small {
+  display: block;
+  font-size: 11px;
+  margin-top: 5px;
+  color: #b7c7c1;
+}
+.port-attack-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.port-attack-option select {
+  width: auto;
+  max-width: 270px;
+  font-size: 11px;
+  padding: 9px;
+}
+.port-attack-option button {
+  font-size: 12px;
+}
+.port-callouts line {
+  stroke: #e4d5ad;
+  stroke-width: 1.5;
+}
+.port-callouts circle {
+  fill: #172a28;
+  stroke-width: 1.5;
+}
+.port-callouts text {
+  fill: #fff1c8;
+  text-anchor: middle;
+  font-size: 18px;
+  font-weight: 700;
 }
 .defense-modifier {
   font-size: 11px;
@@ -2067,5 +2202,82 @@
   }
   .victory-banner h1 {
     font-size: 32px;
+  }
+}
+
+/* Keep the chart and command deck together on desktop, including zoomed views. */
+@media (min-width: 801px) {
+  .in-game .masthead {
+    height: 58px;
+    margin-bottom: 8px;
+  }
+  .in-game .site-nav {
+    padding: 5px 0;
+    margin-bottom: 8px;
+  }
+  .in-game .turn-bar {
+    margin: 12px 0 16px;
+  }
+  .in-game .command-deck {
+    margin-top: 14px;
+    padding: 14px 18px;
+  }
+  .game-table .chart-scroll,
+  .game-table .chart-scroll:has(.fit-map) {
+    width: 100%;
+    aspect-ratio: 1032 / 838;
+    max-height: max(260px, calc(100dvh - 380px));
+    min-height: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+  .game-table .sea-map {
+    min-width: 0;
+    max-height: none;
+    margin-inline: auto;
+  }
+  .battle-modal .battle-title {
+    padding: 14px 20px;
+  }
+  .battle-modal .battle-title > .icon,
+  .battle-modal .battle-crest {
+    display: none;
+  }
+  .battle-modal .battle-title h2 {
+    font-size: 32px;
+  }
+  .battle-modal .battle-side {
+    padding: 10px 12px;
+  }
+  .battle-modal .battle-side h3 {
+    font-size: 24px;
+  }
+  .battle-modal .battle-dice {
+    margin: 12px 0 8px;
+  }
+  .battle-modal .battle-result {
+    margin-block: 12px;
+    padding: 10px 16px;
+  }
+  .battle-modal .battle-actions {
+    margin-block: 12px 16px;
+  }
+}
+@media (max-width: 800px) {
+  .game-table .chart-scroll {
+    width: 100%;
+    aspect-ratio: 1032 / 838;
+    max-height: 65vh;
+    min-height: 0;
+  }
+  .game-table .sea-map {
+    min-width: 0;
+    margin-inline: auto;
+  }
+  .battle-map-panel {
+    margin-inline: 15px;
+  }
+  .public-movement-roll > span:last-child {
+    display: none;
   }
 }

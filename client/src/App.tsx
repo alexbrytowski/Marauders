@@ -5,6 +5,9 @@ import { PlayerCard } from './PlayerCard'
 import { CharacterPortrait } from './CharacterPortrait'
 import { RoundHistory } from './RoundHistory'
 import { MapVotePanel } from './MapVotePanel'
+import { PortAttacks } from './PortAttacks'
+import { RollingDie } from './RollingDie'
+import { useRollPresentation } from './useRollPresentation'
 import { AboutPage, ControllerPage, HowToPlayPage } from './InfoPages'
 import { Die, Icon } from './Icons'
 import { useGame } from './useGame'
@@ -32,8 +35,21 @@ function Countdown({ until, label }: { until: string | null; label: string }) {
 }
 
 export default function App() {
-  const { game, board, boards, maps, profiles, session, connection, error, busy, act, send, clearError } =
-    useGame()
+  const {
+    game: latest,
+    board,
+    boards,
+    maps,
+    profiles,
+    session,
+    connection,
+    error,
+    busy,
+    act,
+    send,
+    clearError,
+  } = useGame()
+  const { game, rolling } = useRollPresentation(latest, connection === 'Live')
   const [page, setPage] = useState(() => window.location.hash)
   useEffect(() => {
     const navigate = () => setPage(window.location.hash)
@@ -57,7 +73,7 @@ export default function App() {
     : (game?.players[0]?.id ?? '')
   const myTurn = !!me && active?.id === me.id
   const online = connection === 'Live'
-  const disabled = busy || !online
+  const disabled = busy || !online || !!rolling
   const ship = game?.ships.find((s) => s.id === selectedShipId)
   const port = game?.ports.find((p) => p.id === selectedPortId)
   const canMove =
@@ -69,7 +85,8 @@ export default function App() {
     game.remainingMovement > 0 &&
     !game.isBuildPhase &&
     !game.combat &&
-    !game.combatChoices.length
+    !game.combatChoices.length &&
+    !disabled
   const paths = useMemo(
     () => (canMove && board && game && ship ? movementPaths(board, game, ship) : new Map()),
     [canMove, board, game, ship],
@@ -100,8 +117,6 @@ export default function App() {
     )
       setDestination(null)
   }
-  const attackPortId = ship && board?.cells.find((c) => key(c) === key(ship))?.harborId
-  const attackPort = game?.ports.find((p) => p.id === attackPortId && p.ownerId !== me?.id)
   const ownPorts = game?.ports.filter((p) => p.ownerId === me?.id) ?? []
   const ownShips = game?.ships.filter((s) => s.ownerId === me?.id) ?? []
   const availableColor = !game?.players.some((p) => p.color === color)
@@ -109,7 +124,7 @@ export default function App() {
     : colors.find((c) => !game?.players.some((p) => p.color === c))
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${game && game.phase !== 'lobby' ? 'in-game' : ''}`}>
       <header className="masthead">
         <a href="/" className="brand">
           <Icon name="compass" />
@@ -340,19 +355,21 @@ export default function App() {
             </>
           ) : (
             <>
-              <section className="map-result" aria-label="Selected map">
-                <strong>{board.name}</strong>
-                {game.mapSelection ? (
-                  <span>
-                    Drawn from {game.mapSelection.totalTickets} tickets · ticket {game.mapSelection.ticket}
-                    {game.mapSelection.usedEqualOdds
-                      ? ' · no votes, equal odds'
-                      : ' · weighted by captain votes'}
-                  </span>
-                ) : (
-                  <span>The original voyage</span>
-                )}
-              </section>
+              {game.phase === 'draft' && (
+                <section className="map-result" aria-label="Selected map">
+                  <strong>{board.name}</strong>
+                  {game.mapSelection ? (
+                    <span>
+                      Drawn from {game.mapSelection.totalTickets} tickets · ticket {game.mapSelection.ticket}
+                      {game.mapSelection.usedEqualOdds
+                        ? ' · no votes, equal odds'
+                        : ' · weighted by captain votes'}
+                    </span>
+                  ) : (
+                    <span>The original voyage</span>
+                  )}
+                </section>
+              )}
               {game.winnerId && (
                 <section className="victory-banner">
                   <Icon name="flag" />
@@ -388,13 +405,26 @@ export default function App() {
                       className="action-dice"
                       aria-label={`${game.remainingActions} action dice remaining`}
                     >
-                      {Array.from({ length: Math.max(1, game.remainingActions) }, (_, i) => (
-                        <Die key={i} dim={game.remainingActions === 0} />
-                      ))}
+                      <strong>
+                        {game.remainingActions} {game.remainingActions === 1 ? 'Die' : 'Dice'}
+                      </strong>
+                      <small>remaining</small>
                     </div>
+                    {(rolling === 'movement' || game.lastRoll !== null) && (
+                      <div
+                        className="public-movement-roll"
+                        role="status"
+                        aria-label={
+                          rolling === 'movement' ? 'Rolling movement dice' : `Movement roll: ${game.lastRoll}`
+                        }
+                      >
+                        {rolling === 'movement' ? <RollingDie /> : <Die value={game.lastRoll!} />}
+                        <span>{rolling === 'movement' ? 'Rolling…' : 'Movement roll'}</span>
+                      </div>
+                    )}
                     <div className="timers">
-                      <Countdown until={game.turnEndsAt} label="round" />
-                      <Countdown until={game.actionEndsAt} label="action" />
+                      <Countdown until={latest?.turnEndsAt ?? game.turnEndsAt} label="round" />
+                      <Countdown until={latest?.actionEndsAt ?? game.actionEndsAt} label="action" />
                     </div>
                   </>
                 )}
@@ -527,18 +557,6 @@ export default function App() {
                           Roll to sail
                         </button>
                       )}
-                      {ship?.ownerId === me?.id && attackPort && (
-                        <button
-                          className="danger-button"
-                          disabled={disabled || game.remainingActions === 0 || game.remainingMovement > 0}
-                          onClick={() =>
-                            void act({ type: 'attack-port', shipId: ship.id, portId: attackPort.id })
-                          }
-                        >
-                          <Icon name="battle" />
-                          Attack {attackPort.name}
-                        </button>
-                      )}
                       <button
                         className="secondary"
                         disabled={disabled}
@@ -575,6 +593,13 @@ export default function App() {
                     </span>
                   )}
                 </div>
+                <PortAttacks
+                  game={game}
+                  board={board}
+                  playerId={session.playerId}
+                  disabled={disabled}
+                  act={act}
+                />
               </section>
               {me && (
                 <section className="personal-deck">
@@ -699,7 +724,15 @@ export default function App() {
             </ol>
             {!game.events.length && <p>Your story begins when the first captain joins.</p>}
           </section>
-          <BattleModal game={game} playerId={session.playerId} busy={disabled} act={act} error={error} />
+          <BattleModal
+            game={game}
+            board={board}
+            rolling={rolling === 'combat'}
+            playerId={session.playerId}
+            busy={disabled}
+            act={act}
+            error={error}
+          />
           <footer className="site-footer">
             <span>
               MARAUDERS <i>·</i> Claim the ports. Command the seas.

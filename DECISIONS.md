@@ -1,5 +1,49 @@
 # Implementation decisions
 
+## 2026-09-09: Classic playtest follow-up
+
+- The owner's Thoughts.txt supersedes the 60/20-second playtest clocks: use
+  90 seconds per round and 30 per action (1.5 times longer). Explicit environment
+  overrides and deadlines already saved in an ongoing round retain their values.
+- When exactly one participating ship belongs to the losing side, the server
+  immediately applies the normal casualty rule, including Black Pearl recruitment
+  and perk drops. Multiple eligible ships still require the losing captain's choice.
+  Keep the result visible until the active captain continues.
+  A previously saved sole-casualty choice resumes on the next server timer tick;
+  an already expired round still follows the existing timeout policy.
+- Animate new public movement and combat rolls for 1.3 seconds locally, then
+  reveal the authoritative state. Cosmetic values never become game rolls; inputs
+  are disabled during the reveal and newer server updates are retained. Opening or
+  refreshing a browser shows current results immediately; reduced-motion users skip the animation.
+  Server clocks continue normally during this short presentation.
+- Show a public close-up of each battle with numbered ships in their actual hexes,
+  trigger/helper labels, and selectable casualties for the losing captain. Preserve
+  the original participant positions in the battle state so losses remain identifiable.
+- List available port attacks without first selecting a ship. Each eligible trigger
+  is labeled with its ship number and helper count; the captain chooses the trigger
+  because its position determines assistance. Existing server validation applies.
+- Retain the corner captain cards and fitted whole-board default. Make zoom relative
+  to that fitted size, preserve the viewed center, use smaller increments, and reserve
+  room for controls. Enlarge port labels in nearby land with a line to the actual port;
+  keep an enlarged token number as a fallback. Map lottery details remain in the draft
+  and public log, but leave the playing screen.
+
+## 2026-09-09: alternate-map geography revision
+
+- The owner requested another pass on The Narrows and Shattered Isles because
+  their symmetry and repeated islands lacked Classic's nuance. Preserve Classic
+  and the source photo; replace the alternate layouts with authored, asymmetric
+  coastlines, uneven port spacing, and different harbor exposures. This changes
+  terrain only, with thirteen ports and all existing rules retained.
+- The Narrows keeps two crossings, but a tight northern cut and a broader,
+  offset southern passage create different sailing and blocking costs. Shattered
+  Isles uses unequal island groups, coastal bays, and off-center hubs, with
+  sheltered ports trading quick access for longer journeys around headlands.
+- Publish both geometries as v2. Existing v1 matches must not silently acquire new
+  terrain: the existing version check still rejects incompatible saves. No live
+  match is reset or migrated as part of this design pass. Four-player balance
+  remains a playtest question, not a guarantee from geographic asymmetry.
+
 ## 2026-09-08: setup playtest follow-up
 
 - The follow-up report of a blank right half exposed a separate launcher problem: its browser contexts emulated an 1100×850 viewport regardless of the native window size. Remove that emulation (`viewport: null`) and open normal crew windows maximized. Verify native-window resizing through the actual crew launcher; synthetic `page.setViewportSize` tests alone missed this problem.

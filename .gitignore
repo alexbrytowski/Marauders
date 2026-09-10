@@ -16,6 +16,7 @@ server/data/game-state.json
 
 # Local tools, runtime saves, and verification artifacts
 .tools/
+__pycache__/
 server/data/game-state-v2.json*
 server/data/keys/
 server/data/backups/

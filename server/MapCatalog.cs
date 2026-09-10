@@ -11,8 +11,8 @@ public static class MapCatalog
 {
     public static IReadOnlyList<MapOption> All { get; } = [
         new("classic", "Classic", "The original Marauder Sea: familiar coastlines, sheltered harbors, and open crossings.", BoardDefinition.Classic),
-        new("narrows", "The Narrows", "Two basins, two contested passages. Hold a crossing or sail for the other gate.", BoardMap.Load("maps/narrows.json")),
-        new("shattered-isles", "Shattered Isles", "Scattered islands and several routes. Spread out, flank rivals, and contest the central crown.", BoardMap.Load("maps/shattered-isles.json"))
+        new("narrows", "The Narrows", "Unequal basins, a tight northern cut, and a broad southern passage. Shelter costs sailing distance.", BoardMap.Load("maps/narrows.json")),
+        new("shattered-isles", "Shattered Isles", "Uneven island groups, tucked-away coves, and an exposed inner hub. Choose shelter or quicker access.", BoardMap.Load("maps/shattered-isles.json"))
     ];
     public static MapOption? Find(string? id) => All.FirstOrDefault(m => m.Id == id);
     public static MapOption Get(string id) => Find(id) ?? throw new RuleException("Choose a map from the lobby.");

@@ -1,22 +1,29 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Die, Icon } from './Icons'
-import type { Command, Game } from './game'
+import { BattleMap } from './BattleMap'
+import { RollingDie } from './RollingDie'
+import type { Board, Command, Game } from './game'
 import { perks } from './game'
 
 export function BattleModal({
   game,
+  board,
+  rolling,
   playerId,
   busy,
   act,
   error,
 }: {
   game: Game
+  board: Board
+  rolling: boolean
   playerId: string | null
   busy: boolean
   act: (command: Command) => Promise<boolean>
   error: string
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const [selection, setSelection] = useState({ exchange: '', id: '' })
   const open = !!game.combat || game.combatChoices.length > 0
   useEffect(() => {
     const node = dialog.current
@@ -25,6 +32,18 @@ export function BattleModal({
   }, [open])
   const battle = game.combat,
     active = playerId === game.activePlayerId
+  const exchange = `${battle?.id}-${battle?.round}`
+  const selected =
+    selection.exchange === exchange
+      ? game.ships.find(
+          (ship) =>
+            ship.id === selection.id &&
+            battle?.participantShipIds.includes(ship.id) &&
+            ship.ownerId === battle.losingPlayerId,
+        )
+      : undefined
+  const canChoose = battle?.status === 'choose-loss' && battle.losingPlayerId === playerId && !busy
+  const selectLoss = (id: string) => setSelection({ exchange, id })
   const side = (id: string, defending: boolean) => {
     const player = game.players.find((p) => p.id === id)
     const ships = game.ships.filter((s) => s.ownerId === id && battle?.participantShipIds.includes(s.id))
@@ -49,7 +68,16 @@ export function BattleModal({
           {support > 0 && ' (includes harbor defense)'}
         </p>
         <div className="battle-dice" key={`${battle?.id}-${battle?.round}`}>
-          {battle?.rolls[id]?.length ? (
+          {rolling ? (
+            <>
+              {ships.map((ship) => (
+                <RollingDie key={ship.id} glass={ship.perk === 'glass-cannon'} />
+              ))}
+              {Array.from({ length: port ? 1 : support }, (_, i) => (
+                <RollingDie key={`port-${i}`} />
+              ))}
+            </>
+          ) : battle?.rolls[id]?.length ? (
             battle.rolls[id].map((value, i) => <Die key={i} value={value} />)
           ) : (
             <span className="awaiting-dice">Awaiting the roll</span>
@@ -61,13 +89,18 @@ export function BattleModal({
         {!port && (
           <div className="battle-fleet">
             {ships.map((s) => (
-              <span key={s.id}>
+              <button
+                key={s.id}
+                disabled={!canChoose || s.ownerId !== playerId}
+                aria-pressed={selected?.id === s.id}
+                onClick={() => selectLoss(s.id)}
+              >
                 Ship {s.number}
                 {s.perk && ` · ${perks[s.perk]?.name}`}
                 {s.id === battle?.triggerShipId || s.id === battle?.opponentShipId
                   ? ' · trigger'
                   : ' · helper'}
-              </span>
+              </button>
             ))}
           </div>
         )}
@@ -128,13 +161,20 @@ export function BattleModal({
         </div>
       ) : (
         <>
+          <BattleMap
+            game={game}
+            board={board}
+            canChoose={!!canChoose}
+            selectedId={selected?.id ?? null}
+            onSelect={selectLoss}
+          />
           <div className="battle-sides">
             {side(battle.attackerId, false)}
             <span className="versus">VS</span>
             {side(battle.defenderId, true)}
           </div>
           <div className="battle-result" role="status">
-            {battle.message}
+            {rolling ? 'Rolling the battle dice…' : battle.message}
           </div>
           <div className="battle-actions">
             {battle.status === 'awaiting-roll' &&
@@ -153,20 +193,17 @@ export function BattleModal({
             {battle.status === 'choose-loss' &&
               (battle.losingPlayerId === playerId ? (
                 <>
-                  <p>Choose one of your participating ships to remove.</p>
+                  <p>Choose one of your participating ships on the battle map or in your fleet below it.</p>
                   <div className="casualty-options">
-                    {game.ships
-                      .filter((s) => s.ownerId === playerId && battle.participantShipIds.includes(s.id))
-                      .map((s) => (
-                        <button
-                          key={s.id}
-                          disabled={busy}
-                          onClick={() => void act({ type: 'remove-ship', combatId: battle.id, shipId: s.id })}
-                        >
-                          <Icon name="ship" />
-                          Lose ship {s.number}
-                        </button>
-                      ))}
+                    <button
+                      disabled={busy || !selected}
+                      onClick={() =>
+                        selected &&
+                        void act({ type: 'remove-ship', combatId: battle.id, shipId: selected.id })
+                      }
+                    >
+                      <Icon name="ship" /> {selected ? `Lose ship ${selected.number}` : 'Select a casualty'}
+                    </button>
                   </div>
                 </>
               ) : (

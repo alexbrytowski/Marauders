@@ -70,7 +70,7 @@ Examples:
 - Team 1: 1, 2, 5; Team 2: 6. Team 2 wins.
 - Team 1: 6, 6; Team 2: 6. Tie; reroll.
 
-The losing team must choose a participating ship to remove from battle. If a helper is removed, it must be removed before the next dice roll; the battle then continues because the two triggering ships remain adjacent. If a triggering ship is removed and the opposing triggering ship is no longer adjacent to an enemy, the battle ends.
+The losing team must choose a participating ship to remove from battle. If only one of its ships participated, the server automatically resolves that casualty, including any perk effects. If a helper is removed, it must be removed before the next dice roll; the battle then continues because the two triggering ships remain adjacent. If a triggering ship is removed and the opposing triggering ship is no longer adjacent to an enemy, the battle ends.
 
 When ship-vs.-ship combat occurs in a port's dark-blue water, that port may contribute one additional die for its owner. The port cannot be removed if its side loses that battle.
 
@@ -100,7 +100,7 @@ If someone captures a player's final remaining port, all of that player's remain
 
 The unowned port can be captured by anyone, but it fights back like a player-owned port. Its defense weakness is not reset when ships enter its dark-blue water, because it has no allied ships.
 
-There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 60 seconds per turn and 20 seconds per action. Port drafting is untimed.
+There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 90 seconds per turn and 30 seconds per action. Port drafting is untimed.
 
 ### Perks
 

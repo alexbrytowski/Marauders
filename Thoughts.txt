@@ -1,0 +1,12 @@
+9-9-26 playtest on classic
+
+The game board is too small when im full screen. See the image on my desktop. I take that back a bit. It looks really good on one monitor. And the other one it doesn't. 
+The fives at the top that are dice I kept thinking that those were my rolls, just do X Dice in text
+The dice roll feels too instant, can we give it a cycle between random numbers in the UI and then have it land on the number the server decides. COuld be just a second or two to add suspense
+The timers need to go up by about 1.5X
+Once the game starts we dont need to know how we chose the map we did
+THe battles work great but its not clear at all which ship is ship 19 and which is 20. We need maybe a small display of the battle thats taking place for everyone to watch and the loser can pick the ship from that
+If theres only one ship to lose then dont make the captain pick it, just remove it for them
+When there's an available port to attack, make that an option without having to select the ship. I worry folks will accidentally not realize they can attack a port. 
+Zoom is funky but after playing a bit with zoomed in mode, this is actually not that bad because before its really hard to see the card and the map on the same screen. I saved a screenshot where I finally found a zoom that let me cleanly see.
+I think the port numbers might be too small. Something we could experiment with is just putting it in large text in a non playable land hex nearby....

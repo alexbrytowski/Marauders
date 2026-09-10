@@ -78,12 +78,14 @@ export function HowToPlayPage() {
       </p>
       <p>
         Each participating ship rolls one combat die. A harbor can add one die for its owner. Compare each
-        side’s highest result; ties reroll. The losing captain chooses a participating ship to lose. Removing
-        a helper can leave the battle going. The port itself is never a ship-battle casualty.
+        side’s highest result; ties reroll. The losing captain selects a participating ship on the battle
+        close-up and confirms its loss. A sole eligible ship is resolved automatically, including perk
+        effects. Removing a helper can leave the battle going. The port itself is never a ship-battle
+        casualty.
       </p>
       <h2>5. Attack a port</h2>
       <p>
-        Select your ship in an enemy or unclaimed port’s dark-blue harbor and choose Attack using an unused
+        Ports within reach appear in your controls. Choose the attacking ship there and Attack using an unused
         action. Resolve enemy ships first. The port rolls one die against your participating ships. On a
         defense win, no attacker dies; the port’s future defense loses 1, cumulatively. An allied ship
         entering its harbor restores its defense. Unclaimed ports have no allies to restore them.
@@ -135,8 +137,8 @@ export function HowToPlayPage() {
       <h2>Clocks, controls, and the final tally</h2>
       <p>
         The round and action countdowns are visible. If either expires, the server resolves pending combat
-        with automatic casualty choices and ends the round, including due construction. Default limits are 60
-        seconds per round and 20 per action. The port draft is untimed.
+        with automatic casualty choices and ends the round, including due construction. Default limits are 90
+        seconds per round and 30 per action. The port draft is untimed.
       </p>
       <p>
         Use the map’s arrow keys and Enter or Space to select cells. Zoom in for touch play. Your fleet and

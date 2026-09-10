@@ -136,10 +136,10 @@ try {
       const response = await fetch(`${websiteUrl}/api/game/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Marauders-Client': 'web', Cookie: cookie },
-        body: JSON.stringify({ password: resetPassword, gameId: previous.id, expectedRevision: previous.revision, releaseSeats: false }),
+        body: JSON.stringify({ password: resetPassword, gameId: previous.id, expectedRevision: previous.revision, releaseSeats: crewMode }),
       })
       if (!response.ok) throw new Error(`Could not reset the match: ${(await response.json()).error}`)
-      console.log('Match reset to the lobby. Captain seats retained; the previous match was archived.\n')
+      console.log(`Match reset to the lobby. ${crewMode ? 'Captain seats released for the new crew windows' : 'Captain seats retained'}; the previous match was archived.\n`)
     }
     console.log(`\nREADY — open ${websiteUrl}\nKeep this window open while playing. Press Ctrl+C to stop both services.\n`)
     if (crewMode) {

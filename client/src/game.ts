@@ -42,6 +42,7 @@ export type Battle = {
   defenderId: string
   portId: string | null
   participantShipIds: string[]
+  ships?: Pick<Ship, 'id' | 'ownerId' | 'number' | 'q' | 'r' | 'perk'>[]
   supportingPortIds: string[]
   status: string
   losingPlayerId: string | null

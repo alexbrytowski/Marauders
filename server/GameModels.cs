@@ -70,6 +70,7 @@ public sealed class Construction
     public int StartedTurnNumber { get; set; }
 }
 public sealed record CombatChoice(string Id, string TriggerShipId, string OpponentShipId, string? HarborId);
+public sealed record BattleShip(string Id, string OwnerId, int Number, int Q, int R, string? Perk);
 public sealed class CombatState
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
@@ -80,6 +81,7 @@ public sealed class CombatState
     public string DefenderId { get; set; } = "";
     public string? PortId { get; set; }
     public List<string> ParticipantShipIds { get; set; } = [];
+    public List<BattleShip> Ships { get; set; } = [];
     public List<string> SupportingPortIds { get; set; } = [];
     public string Status { get; set; } = "awaiting-roll";
     public string? LosingPlayerId { get; set; }
@@ -101,8 +103,8 @@ public sealed record PerkPickup(string Kind, int Q, int R);
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
 public sealed class GameOptions
 {
-    public int TurnSeconds { get; set; } = 60;
-    public int ActionSeconds { get; set; } = 20;
+    public int TurnSeconds { get; set; } = 90;
+    public int ActionSeconds { get; set; } = 30;
     public string? DataDirectory { get; set; }
     public string? ResetPassword { get; set; }
 }

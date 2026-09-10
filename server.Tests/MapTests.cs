@@ -90,6 +90,38 @@ public partial class GameRulesTests
     }
 
     [Theory] [InlineData("narrows")] [InlineData("shattered-isles")]
+    public void Revised_coasts_have_no_isolated_water_or_split_harbors(string mapId)
+    {
+        var map = MapCatalog.Get(mapId).Board;
+        var water = map.Cells.Where(c => map.IsSailable(c.Hex)).Select(c => c.Hex).ToHashSet();
+        var reached = new HashSet<Hex> { water.First() };
+        var queue = new Queue<Hex>(reached);
+        while (queue.TryDequeue(out var current))
+            foreach (var next in map.Neighbors(current))
+                if (reached.Add(next)) queue.Enqueue(next);
+        Assert.True(water.SetEquals(reached));
+        foreach (var port in map.Ports)
+        {
+            var harbor = map.Harbor(port.Id).ToHashSet();
+            var blocked = water.Except(harbor).ToHashSet();
+            Assert.All(harbor, h => Assert.NotNull(map.FindPath(harbor.First(), h, blocked)));
+        }
+    }
+
+    [Fact] public void Narrows_crossings_provide_independent_routes_around_the_spine()
+    {
+        var map = MapCatalog.Get("narrows").Board;
+        var west = BoardMap.Offset(10, 15); var east = BoardMap.Offset(22, 15);
+        var north = (from r in Enumerable.Range(10, 2) from c in Enumerable.Range(11, 11)
+                     select BoardMap.Offset(c, r)).ToHashSet();
+        var south = (from r in Enumerable.Range(22, 4) from c in Enumerable.Range(12, 9)
+                     select BoardMap.Offset(c, r)).ToHashSet();
+        Assert.NotNull(map.FindPath(west, east, north));
+        Assert.NotNull(map.FindPath(west, east, south));
+        Assert.Null(map.FindPath(west, east, north.Union(south).ToHashSet()));
+    }
+
+    [Theory] [InlineData("narrows")] [InlineData("shattered-isles")]
     public void Alternate_map_movement_and_port_combat_use_its_own_terrain(string mapId)
     {
         var map = MapCatalog.Get(mapId).Board; var s = Playing(); s.MapId = mapId; s.BoardVersion = map.Version;

@@ -1,7 +1,7 @@
 # Marauders implementation status
 
-Updated 2026-09-08 against [GAME_RULES.md](GAME_RULES.md) and the owner's notes in
-[9-8-26.md](9-8-26.md). Scope is one private game for friends, retaining server
+Updated 2026-09-09 against [GAME_RULES.md](GAME_RULES.md) and the owner's notes in
+[9-8-26.md](9-8-26.md) and [Thoughts.txt](Thoughts.txt). Scope is one private game for friends, retaining server
 state and JSON persistence. See [decisions](DECISIONS.md)
 and [board mapping notes](BOARD_MAPPING.md) for explicit interpretations.
 
@@ -9,6 +9,26 @@ Legend: `[x]` implemented and locally verified; `[~]` partial or needs wider
 verification; `[ ]` not done. CI configuration is present but has not run remotely.
 
 ## Board and player experience
+
+- [x] September 9 Classic playtest: replace the unused dice faces with an explicit
+  text count; show actual movement results separately for every viewer.
+- [x] Cycle cosmetic movement/combat dice for 1.3 seconds, then reveal the server
+  result and log together. Disable actions during the reveal, retain newer server
+  updates, skip animation on initial load/refresh and with reduced motion.
+- [x] Public battle close-up with large ship numbers at their real hexes, trigger/
+  helper labels, keyboard-selectable casualty tokens, and a loss confirmation.
+  Retain lost/recruited participants on the map and in saved battle snapshots.
+- [x] Automatically resolve a sole eligible casualty on the server, including
+  recruitment and perk drops. Resume older pending sole-casualty saves once.
+- [x] Display every reachable port attack in the command deck without selecting a
+  board ship. Show trigger choices, helpers, and unused-action requirements.
+- [x] Hide lottery details after drafting. Preserve the map name on the chart and
+  the selection event in the public log.
+- [x] Fit the chart and normal controls together across desktop resolutions;
+  center the fitted map and zoom from its actual size in 25% steps, keeping the
+  viewed center. Keep corner cards and personal tabs.
+- [x] Enlarge ship/token numbers and experiment with large port numbers on nearby
+  nonplayable land, linked to the actual port. Original board/photo untouched.
 
 - [x] Replace the photo with a server-defined SVG hex map: land, water, 13 ports,
   harbor zones, colored ship tokens, zoom, route previews, and legal-cell highlights.
@@ -32,6 +52,10 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
   no votes gives each map equal odds. Previews, odds, selection, and saved map
   identity synchronize across browsers. Designs and checks are in MAPS.md.
 - [~] Four-player balance playtesting for the new maps and their draft strategies.
+- [x] September 9 geography pass: replace alternate-map symmetry and repeated
+  islands with uneven coastlines, varied harbor exposure, unequal crossings, and
+  local port clusters. Both layouts are v2; Classic is unchanged. Reproducible
+  labeled previews and geographic tradeoffs are documented in MAPS.md.
 - [x] Reveal all four perks before the first draft pick and preserve the layout
   through drafting, reconnects, server restarts, and launch on all three maps.
 - [x] Final port pick automatically launches two ships per owned harbor and starts
@@ -80,7 +104,7 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 - [x] Separate configurable round/action clocks, visible countdowns, immediate
   deadline validation, and normal construction completion on timeout.
 - [~] Playtest timer lengths and timeout casualty policy. Owner-approved defaults
-  are now 60/20 seconds in both launchers; the four-window practice override is
+  are now 90/30 seconds in both launchers; the four-window practice override is
   removed. Deterministic automatic casualty handling is recorded in DECISIONS.md.
 
 ## Engineering before staging
@@ -136,6 +160,29 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 
 ## Current verification
 
+- September 9 Classic playtest follow-up: client lint/build and 66 server tests
+  pass. The new five-browser scenario verifies shared roll presentation, reduced
+  motion, map-based casualty selection/permissions, and port attacks without a
+  board selection. Fitted map/controls and proportional zoom pass at 1366x768,
+  1536x864, 1920x1080, and 2560x1440; board and battle screenshots reviewed.
+  All eight browser scenarios pass, including native launcher resizing, live
+  90/30-second timeout synchronization, saved automatic casualties, controller
+  reset, perks, both alternate maps, and same-origin published serving. The map
+  sailing test now waits for the visible roll reveal before choosing a destination.
+  Debug build and same-origin publish pass with zero warnings/errors. Review
+  screenshots are saved under the ignored artifacts/playtest-2026-09-09 directory.
+
+- September 9 local startup recovery: the owner confirmed the incompatible
+  Shattered Isles v1 draft was unused test data. Archived that practice save,
+  returned to a fresh lobby, and rebound all four practice browser seats.
+  The crew launcher startup check, client lint/build, and 62 Release server tests
+  pass. The original archive remains under the ignored practice data backups.
+- September 9 map revision: 62 server tests pass, including all-water and harbor
+  connectivity, two independent Narrows crossings, automatic fleets, perks, and
+  saved v2 identity. Client lint and production build pass. PNG previews were
+  rendered from the playable JSON and visually reviewed. The five-browser map
+  scenario passed for both v2 layouts, including setup, sailing, synchronization,
+  and restart persistence (Debug build; EventLog disabled in the test process).
 - Client lint and production build passed with the September 8 changes.
 - 59 server tests passed in Debug and previously in Release, including automatic setup,
   immutable predraft pickups, legacy save continuation, and 60/20-second deadlines.
@@ -161,5 +208,5 @@ verification; `[ ]` not done. CI configuration is present but has not run remote
 
 - Exact dark-blue membership if any photo cells differ from the first-ring mapping.
 - Final eight character names/JPEGs; playtest feedback on perk power and quantity.
-- Feedback on the new 60/20-second timers and documented timeout policy.
+- Feedback on the new 90/30-second timers, larger port labels, and documented timeout policy.
 - Hosting/domain, privacy/contact wording, and acceptance of the proposed backup retention.

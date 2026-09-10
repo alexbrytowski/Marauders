@@ -1,15 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { directions, key, perks, portNumber } from './game'
+import { directions, distance, key, perks, portNumber } from './game'
 import type { Board, Cell, Game, Hex } from './game'
-
-const size = 17
-const point = (h: Hex) => ({ x: 40 + Math.sqrt(3) * size * (h.q + h.r / 2), y: 32 + size * 1.5 * h.r })
-const outline = Array.from(
-  { length: 6 },
-  (_, i) =>
-    `${size * Math.cos(((i * 60 - 30) * Math.PI) / 180)},${size * Math.sin(((i * 60 - 30) * Math.PI) / 180)}`,
-).join(' ')
+import { outline, point } from './boardGeometry'
 
 export function BoardView({
   board,
@@ -39,11 +32,62 @@ export function BoardView({
   const [zoom, setZoom] = useState(1)
   const [focusKey, setFocusKey] = useState('9,0')
   const frame = useRef<HTMLDivElement>(null)
+  const [fitWidth, setFitWidth] = useState(1032)
+  const zoomCenter = useRef<{ x: number; y: number } | null>(null)
+  useLayoutEffect(() => {
+    const node = frame.current
+    if (!node || preview) return
+    const observer = new ResizeObserver(() => {
+      setFitWidth(Math.floor(Math.min(node.clientWidth, (node.clientHeight * 1032) / 838)))
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [preview])
+  const changeZoom = (next: number) => {
+    const node = frame.current,
+      map = node?.querySelector('svg')
+    if (node && map) {
+      const bounds = node.getBoundingClientRect(),
+        mapBounds = map.getBoundingClientRect()
+      zoomCenter.current = {
+        x: (bounds.left + node.clientWidth / 2 - mapBounds.left) / mapBounds.width,
+        y: (bounds.top + node.clientHeight / 2 - mapBounds.top) / mapBounds.height,
+      }
+    }
+    setZoom(next)
+  }
+  useLayoutEffect(() => {
+    const node = frame.current,
+      map = node?.querySelector('svg'),
+      center = zoomCenter.current
+    if (!node || !map) return
+    if (zoom === 1) node.scrollTo(0, 0)
+    else if (center) {
+      const bounds = node.getBoundingClientRect(),
+        mapBounds = map.getBoundingClientRect()
+      node.scrollLeft += mapBounds.left + mapBounds.width * center.x - bounds.left - node.clientWidth / 2
+      node.scrollTop += mapBounds.top + mapBounds.height * center.y - bounds.top - node.clientHeight / 2
+    }
+    zoomCenter.current = null
+  }, [zoom])
   const ports = new Map(game.ports.map((p) => [p.id, p]))
   const players = new Map(game.players.map((p) => [p.id, p]))
   const ships = new Map(game.ships.map((s) => [key(s), s]))
   const pickups = new Map(game.perkPickups.map((p) => [key(p), p]))
   const cells = useMemo(() => new Map(board.cells.map((c) => [key(c), c])), [board])
+  const portLabels = useMemo(() => {
+    const used = new Set<string>()
+    return board.cells
+      .filter((cell) => cell.portId)
+      .flatMap((port) => {
+        const land = board.cells
+          .filter((cell) => cell.terrain === 'land' && distance(cell, port) <= 3 && !used.has(key(cell)))
+          .sort((a, b) => distance(a, port) - distance(b, port) || a.r - b.r || a.q - b.q)[0]
+        if (!land) return []
+        used.add(key(land))
+        return [{ port, land }]
+      })
+  }, [board])
   const coasts = useMemo(
     () =>
       new Set(
@@ -107,7 +151,7 @@ export function BoardView({
         <svg
           className={`sea-map ${zoom === 1 ? 'fit-map' : ''}`}
           viewBox="0 0 1032 838"
-          style={{ width: `${zoom * 100}%` }}
+          style={{ width: preview ? '100%' : `${fitWidth * zoom}px` }}
           aria-label="Marauders interactive hex map"
           role="group"
         >
@@ -178,8 +222,8 @@ export function BoardView({
                   <g className="port-token" filter="url(#token-shadow)">
                     <circle r="14" fill={owner?.color ?? '#d2c9af'} stroke="#081a22" strokeWidth="2" />
                     <path d="M-7 6V-3h3v3h3v-5h4v5h3v-3h3v9z" fill="#14262b" />
-                    <rect x="-3" y="-15" width="15" height="10" rx="3" fill="#0c1c22" />
-                    <text x="4" y="-7.5">
+                    <rect x="-7" y="-17" width="22" height="14" rx="3" fill="#0c1c22" />
+                    <text x="4" y="-6">
                       {portNumber(port.id)}
                     </text>
                   </g>
@@ -207,6 +251,27 @@ export function BoardView({
               </g>
             )
           })}
+          {!preview && (
+            <g className="port-callouts" pointerEvents="none" aria-hidden="true">
+              {portLabels.map(({ port, land }) => {
+                const a = point(port),
+                  b = point(land),
+                  owner = players.get(ports.get(port.portId!)?.ownerId ?? '')
+                const length = Math.hypot(b.x - a.x, b.y - a.y),
+                  dx = (b.x - a.x) / length,
+                  dy = (b.y - a.y) / length
+                return (
+                  <g key={port.portId} data-port-label={port.portId}>
+                    <line x1={a.x + dx * 16} y1={a.y + dy * 16} x2={b.x - dx * 12} y2={b.y - dy * 12} />
+                    <circle cx={b.x} cy={b.y} r="13" stroke={owner?.color ?? '#dfc795'} />
+                    <text x={b.x} y={b.y + 6}>
+                      {portNumber(port.portId!)}
+                    </text>
+                  </g>
+                )
+              })}
+            </g>
+          )}
           {route.length > 1 && (
             <g pointerEvents="none">
               <polyline
@@ -261,17 +326,17 @@ export function BoardView({
         {!preview && (
           <div className="zoom-controls">
             <button
-              onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
+              onClick={() => changeZoom(Math.max(1, zoom - 0.25))}
               disabled={zoom === 1}
               aria-label="Zoom out"
             >
               −
             </button>
-            <button onClick={() => setZoom(1)} aria-label="Fit board">
-              {zoom === 1 ? 'Fit' : `${zoom}×`}
+            <button onClick={() => changeZoom(1)} aria-label="Fit board">
+              {zoom === 1 ? 'Fit' : `${Math.round(zoom * 100)}%`}
             </button>
             <button
-              onClick={() => setZoom((z) => Math.min(3, z + 0.5))}
+              onClick={() => changeZoom(Math.min(3, zoom + 0.25))}
               disabled={zoom === 3}
               aria-label="Zoom in"
             >
