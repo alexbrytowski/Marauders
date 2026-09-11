@@ -30,6 +30,7 @@ export async function openLocalCrew(root, url, headless = false) {
         const color = ['#ed7866', '#69c5bc', '#b19bdf', '#e6be68'][i]
         const choice = page.getByLabel(`Choose ${color} crew color`)
         if (await choice.isEnabled()) await choice.click()
+        await page.locator('.profile-picker button:enabled').first().click()
         await page.getByRole('button', { name: /Join the crew/ }).click()
         await page.getByText('Your seat is reserved.').waitFor()
       }

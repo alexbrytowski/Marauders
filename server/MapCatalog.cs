@@ -11,15 +11,17 @@ public static class MapCatalog
 {
     public static IReadOnlyList<MapOption> All { get; } = [
         new("classic", "Classic", "The original Marauder Sea: familiar coastlines, sheltered harbors, and open crossings.", BoardDefinition.Classic),
-        new("narrows", "The Choke", "Ports circle two great seas. One passage, three ships wide, links the bays between two gate ports.", BoardMap.Load("maps/narrows.json")),
-        new("shattered-isles", "Serpent's Coil", "A winding inner sea with two shortcuts: an eastern breach and a northern cut close to the heart.", BoardMap.Load("maps/shattered-isles.json"))
+        new("narrows", "The Choke", "An island in each bay divides the sailing routes. One passage, three ships wide, links the seas between two gate ports.", BoardMap.Load("maps/narrows.json")),
+        new("shattered-isles", "Serpent's Coil", "A northwest island and a winding inner sea, with eastern and southern entrances and a northern cut near the heart.", BoardMap.Load("maps/shattered-isles.json"))
     ];
     private static readonly IReadOnlyDictionary<string, BoardMap> Legacy = new Dictionary<string, BoardMap>
     {
         ["narrows-v2"] = BoardMap.Load("maps/narrows-v2.json"),
         ["shattered-isles-v2"] = BoardMap.Load("maps/shattered-isles-v2.json"),
         ["narrows-v3"] = BoardMap.Load("maps/narrows-v3.json"),
-        ["shattered-isles-v3"] = BoardMap.Load("maps/shattered-isles-v3.json")
+        ["shattered-isles-v3"] = BoardMap.Load("maps/shattered-isles-v3.json"),
+        ["narrows-v4"] = BoardMap.Load("maps/narrows-v4.json"),
+        ["shattered-isles-v4"] = BoardMap.Load("maps/shattered-isles-v4.json")
     };
     public static BoardMap Resolve(string id, string version)
     {

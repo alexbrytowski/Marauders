@@ -17,6 +17,26 @@ let dataDirectory: string
 let output = ''
 const headers = { 'X-Marauders-Client': 'web' }
 const resetPassword = randomBytes(24).toString('hex')
+const characterIds = [
+  'navigator',
+  'corsair',
+  'privateer',
+  'buccaneer',
+  'captain-5',
+  'captain-6',
+  'captain-7',
+  'captain-8',
+]
+const characterNames = [
+  'Alex the Merciless',
+  'Alyssa the Sea Witch',
+  'Dylan the Salty Dog',
+  'Hayven the Merchant',
+  'Jacob the Vengeful',
+  'Jared the Oil Baron',
+  'Josh the Phantom',
+  'Steven the Cruel',
+]
 
 test('overnight changes synchronize whirlpools, hover details, equivalent battles and confirmed forfeits', async ({
   browser,
@@ -38,7 +58,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
           (
             await pages[i].request.post('/api/game/players', {
               headers,
-              data: { name: `Overnight ${i + 1}`, color: colors[i], character: 'navigator' },
+              data: { name: `Overnight ${i + 1}`, color: colors[i], character: characterIds[i] },
             })
           ).status(),
         ).toBe(200)
@@ -83,6 +103,13 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
           r: open.r,
           perk: 'mouth-to-feed',
         },
+        // Keep every captain able to act during the eight-turn lifetime check.
+        // Shipless captains with full construction queues can skip their turns.
+        ...[1, 2, 3].map((i) => {
+          const portId = `port-${i * 3 + 1}`
+          const hex = board.cells.find((c) => c.harborId === portId)!
+          return { id: `overnight-idle-${i}`, ownerId: ids[i], portId, number: 30 + i, q: hex.q, r: hex.r }
+        }),
       ],
       constructions: [
         {
@@ -255,7 +282,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     )
     expect(game.activePlayerId).toBe(ids[2])
     expect(game.turnNumber).toBe(turn + 1)
-    expect(game.constructions).toHaveLength(0)
+    expect(game.constructions.some((b) => b.ownerId === ids[0] || b.ownerId === ids[1])).toBe(false)
     await pages[3].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
     game = await clickAction(pages[3], () =>
       pages[3].getByRole('button', { name: 'Confirm forfeit' }).click(),
@@ -269,6 +296,170 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     await expect(pages[4].locator('.connection')).toHaveText('Live')
     expect((await state(pages[4])).winnerId).toBe(ids[2])
     expect(errors).toEqual([])
+  } finally {
+    await Promise.all(contexts.map((c) => c.close()))
+  }
+})
+
+test('automatic rebuilding, five-die clocks and final-opponent forfeit synchronize and persist', async ({
+  browser,
+}, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({ viewport: { width: 1920, height: 1080 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((c) => c.newPage()))
+    for (let i = 0; i < pages.length; i++) {
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4)
+        expect(
+          (
+            await pages[i].request.post('/api/game/players', {
+              headers,
+              data: { name: `Pacing ${i + 1}`, color: colors[i], character: characterIds[i] },
+            })
+          ).status(),
+        ).toBe(200)
+    }
+    let game = await state(pages[0])
+    const ids = game.players.map((p) => p.id)
+    const board: Board = await (await pages[0].request.get('/api/board')).json()
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    const saved = JSON.parse(await readFile(savePath, 'utf8'))
+    const first = board.cells.find((c) => c.harborId === 'port-1')!
+    const fleet = Array.from({ length: 8 }, (_, i) =>
+      board.cells
+        .filter((c) => c.harborId === `port-${i + 4}`)
+        .slice(0, 2)
+        .map((c, n) => ({
+          id: `large-fleet-${i}-${n}`,
+          ownerId: ids[1],
+          portId: `port-${i + 4}`,
+          number: i * 2 + n + 2,
+          q: c.q,
+          r: c.r,
+        })),
+    ).flat()
+    expect(fleet).toHaveLength(16)
+    Object.assign(saved.game, {
+      phase: 'playing',
+      activePlayerId: ids[0],
+      turnOrder: ids,
+      turnNumber: 9,
+      remainingActions: 0,
+      remainingMovement: 0,
+      isBuildPhase: true,
+      availableBuilds: 5,
+      turnEndsAt: new Date(Date.now() + 600_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 600_000).toISOString(),
+      ships: [
+        { id: 'small-fleet', ownerId: ids[0], portId: 'port-1', number: 1, q: first.q, r: first.r },
+        ...fleet,
+      ],
+      constructions: [],
+      perkPickups: [],
+      revision: saved.game.revision + 1,
+    })
+    saved.game.ports.forEach((p: { ownerId: string | null }, i: number) => {
+      p.ownerId = i < 3 ? ids[0] : i < 12 ? ids[1] : null
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer(false, true)
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    game = await state(pages[0])
+    expect(
+      (
+        await pages[4].request.post('/api/game/action', {
+          headers,
+          data: { type: 'end-turn', playerId: ids[0], expectedRevision: game.revision },
+        })
+      ).status(),
+    ).toBe(400)
+    expect(
+      (
+        await pages[1].request.post('/api/game/action', {
+          headers,
+          data: { type: 'build', portId: 'port-2', expectedRevision: game.revision },
+        })
+      ).status(),
+    ).toBe(400)
+    await pages[0].locator('.sea-map [data-port="port-2"]').click()
+    game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /^Build at / }).click())
+    const manual = game.constructions[0]
+    await expect(pages[0].locator('.command-buttons')).toContainText('random ports for any left at turn end')
+    await pages[0].screenshot({ path: testInfo.outputPath('automatic-build-hint.png'), fullPage: true })
+    game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Finish round/ }).click())
+    expect(game.activePlayerId).toBe(ids[1])
+    expect(game.remainingActions).toBe(5)
+    const started = new Date(game.events.findLast((e) => e.kind === 'turn')!.at).getTime()
+    expect(new Date(game.turnEndsAt!).getTime() - started).toBe(270_000)
+    expect(new Date(game.actionEndsAt!).getTime() - started).toBe(45_000)
+    expect(game.constructions).toHaveLength(5)
+    expect(game.constructions.find((b) => b.id === manual.id)).toEqual(manual)
+    expect(game.events.filter((e) => e.message.includes('automatically started a ship'))).toHaveLength(4)
+    for (const build of game.constructions) {
+      expect(build.remainingOwnerTurns).toBe(2)
+      expect(game.ports.find((p) => p.id === build.portId)?.ownerId).toBe(ids[0])
+    }
+    for (const page of pages) {
+      await expect(page.locator('.captains-log')).toContainText('automatically started a ship')
+      expect((await state(page)).constructions).toEqual(game.constructions)
+    }
+    const budget = game.turnEndsAt
+    const builds = game.constructions
+    await stopServer()
+    await startServer(false, true)
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      const restored = await state(page)
+      expect(restored.turnEndsAt).toBe(budget)
+      expect(restored.constructions).toEqual(builds)
+    }
+    // Expire an unfinished five-die turn; the server fills its two missing ships.
+    await stopServer()
+    const expired = JSON.parse(await readFile(savePath, 'utf8'))
+    expired.game.actionEndsAt = new Date(Date.now() - 1_000).toISOString()
+    await writeFile(savePath, JSON.stringify(expired))
+    await startServer(false, true)
+    await expect.poll(async () => (await state(pages[4])).turnNumber).toBe(11)
+    game = await state(pages[4])
+    expect(game.activePlayerId).toBe(ids[0])
+    expect(game.constructions.filter((b) => b.ownerId === ids[1])).toHaveLength(2)
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      expect((await state(page)).constructions).toEqual(game.constructions)
+    }
+    await pages[1].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
+    game = await clickAction(pages[1], () =>
+      pages[1].getByRole('button', { name: 'Confirm forfeit' }).click(),
+    )
+    expect(game.phase).toBe('finished')
+    expect(game.winnerId).toBe(ids[0])
+    expect(game.players.filter((p) => !p.hasForfeited)).toHaveLength(3)
+    expect(game.ports.filter((p) => p.ownerId === null)).toHaveLength(1)
+    expect(game.turnEndsAt).toBeNull()
+    expect(game.actionEndsAt).toBeNull()
+    expect(game.roundHistory.filter((h) => h.isFinal)).toHaveLength(1)
+    for (const page of pages) {
+      await expect(page.locator('.victory-banner')).toContainText('The only captain with ports')
+      await expect(page.locator('.countdown')).toHaveCount(0)
+    }
+    await stopServer()
+    await startServer(false, true)
+    await pages[4].reload()
+    await expect(pages[4].locator('.victory-banner')).toContainText('Pacing 1 rules the sea')
+    const finished = await state(pages[4])
+    expect(finished.winnerId).toBe(ids[0])
+    expect(finished.roundHistory.filter((h) => h.isFinal)).toHaveLength(1)
   } finally {
     await Promise.all(contexts.map((c) => c.close()))
   }
@@ -370,6 +561,139 @@ test.afterEach(async () => {
   await stopServer()
 })
 
+test('portraits and required exclusive choices synchronize across browsers and survive restart', async ({
+  browser,
+}, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({ viewport: { width: 1920, height: 1080 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((c) => c.newPage()))
+    for (const page of pages) {
+      await page.goto('/')
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.locator('.profile-picker button')).toHaveCount(8)
+      await expect(page.locator('form [aria-pressed="true"]')).toHaveCount(0)
+    }
+    const profiles: { id: string; name: string; imageUrl: string }[] = await (
+      await pages[0].request.get('/api/characters')
+    ).json()
+    expect(profiles.map((p) => p.name)).toEqual(characterNames)
+    for (const profile of profiles) {
+      const button = pages[0].getByRole('button', { name: `Choose ${profile.name}`, exact: true })
+      await expect(button).toBeEnabled()
+      // Personal photos stay outside Git. Verify all installed images locally;
+      // a checkout without the owner's files must still offer named fallbacks.
+      if (existsSync(path.join(root, 'server/wwwroot', profile.imageUrl))) {
+        const portrait = button.getByRole('img', { name: profile.name, exact: true })
+        await expect(portrait).toBeVisible()
+        await expect
+          .poll(() => portrait.evaluate((img: HTMLImageElement) => img.naturalWidth))
+          .toBeGreaterThan(0)
+      } else await expect(button.getByLabel(profile.name, { exact: true })).toBeVisible()
+    }
+    const join = (page: Page) => page.getByRole('button', { name: /Join the crew/ })
+    const chooseCharacter = (page: Page, i: number) =>
+      page.getByRole('button', { name: `Choose ${characterNames[i]}`, exact: true })
+    const chooseColor = (page: Page, i: number) => page.getByLabel(`Choose ${colors[i]} crew color`)
+    await pages[0].getByLabel('CAPTAIN NAME').fill('First claimant')
+    await expect(join(pages[0])).toBeDisabled()
+    await chooseCharacter(pages[0], 0).click()
+    await expect(join(pages[0])).toBeDisabled()
+    await pages[0].getByLabel('CAPTAIN NAME').press('Enter')
+    expect((await state(pages[0])).players).toHaveLength(0)
+    await chooseColor(pages[0], 0).click()
+    await expect(join(pages[0])).toBeEnabled()
+    await pages[1].getByLabel('CAPTAIN NAME').fill('Second claimant')
+    await chooseColor(pages[1], 1).click()
+    await expect(join(pages[1])).toBeDisabled()
+    await chooseCharacter(pages[1], 0).click()
+    await pages[0].screenshot({ path: testInfo.outputPath('characters-desktop.png'), fullPage: true })
+    const initial = await state(pages[0])
+    for (const data of [
+      { name: 'Missing', color: colors[0] },
+      { name: 'Missing', character: characterIds[0] },
+      { name: 'Invalid', color: colors[0], character: 'unknown' },
+      { name: 'Invalid', color: 'red', character: characterIds[0] },
+    ])
+      expect((await pages[4].request.post('/api/game/players', { headers, data })).status()).toBe(400)
+    expect((await state(pages[0])).revision).toBe(initial.revision)
+    // Both browsers have selected the same character before either claims it.
+    const results = await Promise.all(
+      pages.slice(0, 2).map((page, i) =>
+        page.request.post('/api/game/players', {
+          headers,
+          data: { name: `Claimant ${i}`, color: colors[i], character: characterIds[0] },
+        }),
+      ),
+    )
+    expect(results.map((r) => r.status()).sort()).toEqual([200, 400])
+    const winner = results[0].status() === 200 ? 0 : 1
+    const loser = 1 - winner
+    expect(await results[loser].json()).toMatchObject({
+      error: expect.stringContaining('character is already taken'),
+    })
+    await expect(chooseCharacter(pages[loser], 0)).toBeDisabled()
+    await expect(chooseColor(pages[loser], winner)).toBeDisabled()
+    await expect(join(pages[loser])).toBeDisabled()
+    await expect(pages[loser].locator('.join-guidance')).toContainText('now taken')
+    await expect(pages[loser].locator('.profile-picker [aria-pressed="true"]')).toHaveCount(0)
+    let game = await state(pages[0])
+    expect(game.players).toHaveLength(1)
+    const duplicateColor = await pages[4].request.post('/api/game/players', {
+      headers,
+      data: { name: 'Color claimant', color: game.players[0].color, character: characterIds[1] },
+    })
+    expect(duplicateColor.status()).toBe(400)
+    expect(await duplicateColor.json()).toMatchObject({
+      error: expect.stringContaining('color is already taken'),
+    })
+    await stopServer()
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    await expect(pages[winner].getByText('Your seat is reserved.')).toBeVisible()
+    await expect(chooseCharacter(pages[loser], 0)).toBeDisabled()
+    await expect(chooseColor(pages[loser], winner)).toBeDisabled()
+    expect((await state(pages[loser])).players).toEqual(game.players)
+    const sibling = await contexts[winner].newPage()
+    await sibling.goto('/')
+    await expect(sibling.getByText('Your seat is reserved.')).toBeVisible()
+    await expect(sibling.locator('.crew-identity small')).toHaveText(characterNames[0])
+    await sibling.close()
+    const left = await pages[winner].request.post('/api/game/action', {
+      headers,
+      data: { type: 'forfeit', expectedRevision: game.revision },
+    })
+    expect(left.status()).toBe(200)
+    await expect(chooseCharacter(pages[loser], 0)).toBeEnabled()
+    await expect(chooseColor(pages[loser], winner)).toBeEnabled()
+    for (let i = 0; i < 4; i++) {
+      await pages[i].reload()
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      await pages[i].getByLabel('CAPTAIN NAME').fill(`Portrait captain ${i + 1}`)
+      await chooseCharacter(pages[i], i).click()
+      await chooseColor(pages[i], i).click()
+      await join(pages[i]).click()
+      await expect(pages[i].getByText('Your seat is reserved.')).toBeVisible()
+    }
+    game = await state(pages[0])
+    expect(new Set(game.players.map((p) => p.character)).size).toBe(4)
+    expect(new Set(game.players.map((p) => p.color)).size).toBe(4)
+    await expect(pages[4].getByRole('heading', { name: 'Watch the voyage.' })).toBeVisible()
+    game = await readyCrew(pages)
+    expect(game.phase).toBe('draft')
+    await expect(pages[4].locator('.captain-emblem')).toHaveCount(4)
+    await pages[4].screenshot({ path: testInfo.outputPath('characters-draft.png'), fullPage: true })
+  } finally {
+    await Promise.all(contexts.map((c) => c.close()))
+  }
+})
+
 test('captains ready together, restore lobby setup, and automatically start one shared draft', async ({
   browser,
 }, testInfo) => {
@@ -388,7 +712,7 @@ test('captains ready together, restore lobby setup, and automatically start one 
           (
             await pages[i].request.post('/api/game/players', {
               headers,
-              data: { name: `Ready captain ${i + 1}`, color: colors[i], character: 'navigator' },
+              data: { name: `Ready captain ${i + 1}`, color: colors[i], character: characterIds[i] },
             })
           ).status(),
         ).toBe(200)
@@ -611,6 +935,7 @@ test('four browser seats, predraft perks, automatic launch, permissions, reconne
     if (i < 4) {
       await page.getByLabel('CAPTAIN NAME').fill(['Anne Bonny', 'Blackbeard', 'Mary Read', 'Calico Jack'][i])
       await page.getByLabel(`Choose ${colors[i]} crew color`).click()
+      await page.getByRole('button', { name: `Choose ${characterNames[i]}`, exact: true }).click()
       await page.getByRole('button', { name: /Join the crew/ }).click()
       await expect(page.getByText('Your seat is reserved.')).toBeVisible()
       expect(
@@ -868,7 +1193,7 @@ test('crew launcher uses native window size and the original UI fits the whole b
   }
 })
 
-test('short playtest clocks start at automatic launch and timeout synchronizes across five browsers', async ({
+test('longer playtest clocks start at automatic launch and timeout synchronizes across five browsers', async ({
   browser,
 }) => {
   await stopServer()
@@ -886,7 +1211,7 @@ test('short playtest clocks start at automatic launch and timeout synchronizes a
       if (i < 4) {
         const joined = await page.request.post('/api/game/players', {
           headers,
-          data: { name: `Timer captain ${i}`, color: colors[i], character: 'navigator' },
+          data: { name: `Timer captain ${i}`, color: colors[i], character: characterIds[i] },
         })
         expect(joined.status()).toBe(200)
       }
@@ -906,13 +1231,13 @@ test('short playtest clocks start at automatic launch and timeout synchronizes a
     }
     expect(game.phase).toBe('playing')
     const turnStarted = new Date(game.events.findLast((event) => event.kind === 'turn')!.at).getTime()
-    expect(new Date(game.turnEndsAt!).getTime() - turnStarted).toBe(90_000)
-    expect(new Date(game.actionEndsAt!).getTime() - turnStarted).toBe(30_000)
+    expect(new Date(game.turnEndsAt!).getTime() - turnStarted).toBe(135_000)
+    expect(new Date(game.actionEndsAt!).getTime() - turnStarted).toBe(45_000)
     for (const page of pages) {
       await expect(page.locator('.sea-map [data-ship]')).toHaveCount(24)
       await expect(page.locator('.countdown')).toHaveCount(2)
     }
-    await expect.poll(async () => (await state(pages[4])).turnNumber, { timeout: 35_000 }).toBe(2)
+    await expect.poll(async () => (await state(pages[4])).turnNumber, { timeout: 50_000 }).toBe(2)
     game = await state(pages[4])
     expect(game.activePlayerId).toBe(ids[1])
     for (const page of pages) {
@@ -975,7 +1300,7 @@ test('password controller, eight profiles, help pages, and reset synchronization
       await pages[i].getByLabel(`Choose ${colors[i]} crew color`).click()
       await pages[i]
         .locator('.profile-picker')
-        .getByRole('button', { name: `Captain ${i + 5}` })
+        .getByRole('button', { name: `Choose ${characterNames[i + 4]}`, exact: true })
         .click()
       await pages[i].getByRole('button', { name: /Join the crew/ }).click()
       await expect(pages[i].getByText('Your seat is reserved.')).toBeVisible()
@@ -1019,6 +1344,7 @@ test('password controller, eight profiles, help pages, and reset synchronization
     for (let i = 0; i < 4; i++) {
       await pages[i].getByLabel('CAPTAIN NAME').fill(`New captain ${i + 1}`)
       await pages[i].getByLabel(`Choose ${colors[i]} crew color`).click()
+      await pages[i].getByRole('button', { name: `Choose ${characterNames[i]}`, exact: true }).click()
       await pages[i].getByRole('button', { name: /Join the crew/ }).click()
       await expect(pages[i].getByText('Your seat is reserved.')).toBeVisible()
     }
@@ -1053,6 +1379,7 @@ test('perks collect and drop publicly, zero rolls render, and victory history su
       if (i < 4) {
         await pages[i].getByLabel('CAPTAIN NAME').fill(`Perk captain ${i + 1}`)
         await pages[i].getByLabel(`Choose ${colors[i]} crew color`).click()
+        await pages[i].getByRole('button', { name: `Choose ${characterNames[i]}`, exact: true }).click()
         await pages[i].getByRole('button', { name: /Join the crew/ }).click()
         await expect(pages[i].getByText('Your seat is reserved.')).toBeVisible()
       }
@@ -1171,7 +1498,7 @@ test('perks collect and drop publicly, zero rolls render, and victory history su
       ],
     })
     saved.game.ports.forEach((p: { ownerId: string | null; defenseWeakness: number }, i: number) => {
-      p.ownerId = i < 12 ? ids[0] : null
+      p.ownerId = i < 11 ? ids[0] : i === 12 ? ids[1] : null
       p.defenseWeakness = i === 12 ? 10 : 0
     })
     saved.game.revision++
@@ -1187,13 +1514,14 @@ test('perks collect and drop publicly, zero rolls render, and victory history su
       pages[0].getByRole('button', { name: 'Roll battle dice', exact: true }).click(),
     )
     expect(game.winnerId).toBe(ids[0])
-    expect(game.roundHistory.at(-1)?.teams[0].ports).toBe(13)
+    expect(game.roundHistory.at(-1)?.teams[0].ports).toBe(12)
+    expect(game.ports.filter((p) => p.ownerId === null)).toHaveLength(1)
     await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Continue to victory/ }).click())
     for (const p of pages)
       await expect(p.getByRole('heading', { name: 'The voyage, round by round' })).toBeVisible()
     await pages[4].getByLabel('Chart', { exact: true }).selectOption('ports')
     await pages[4].getByText('View exact round statistics').click()
-    await expect(pages[4].getByRole('cell', { name: '1 / 13', exact: true })).toBeVisible()
+    await expect(pages[4].getByRole('cell', { name: '1 / 12', exact: true })).toBeVisible()
     await pages[4].screenshot({ path: testInfo.outputPath('victory-history-desktop.png'), fullPage: true })
     await pages[4].setViewportSize({ width: 390, height: 844 })
     await pages[4].screenshot({ path: testInfo.outputPath('victory-history-mobile.png'), fullPage: true })
@@ -1222,6 +1550,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       if (i < 4) {
         await pages[i].getByLabel('CAPTAIN NAME').fill(`Map captain ${i + 1}`)
         await pages[i].getByLabel(`Choose ${colors[i]} crew color`).click()
+        await pages[i].getByRole('button', { name: `Choose ${characterNames[i]}`, exact: true }).click()
         await pages[i].getByRole('button', { name: /Join the crew/ }).click()
         await expect(pages[i].getByText('Your seat is reserved.')).toBeVisible()
       }
@@ -1284,7 +1613,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       expect(game.mapSelection?.totalTickets).toBe(4)
       const board: Board = await (await pages[0].request.get('/api/board')).json()
       expect(board.id).toBe(mapId)
-      expect(board.version).toBe(`${mapId}-v4`)
+      expect(board.version).toBe(`${mapId}-v5`)
       expect(board.version).toBe(game.boardVersion)
       for (const p of pages) {
         await expect(p.getByRole('region', { name: 'Selected map' })).toContainText(board.name)
@@ -1376,12 +1705,14 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         await expect(p.locator('.map-options')).toBeVisible()
       }
     }
-    // Existing matches retain v2/v3 geometry while new drafts receive v4.
+    // Existing matches retain v2/v3/v4 geometry while new drafts receive v5.
     for (const [mapId, version] of [
       ['narrows', 'v2'],
       ['shattered-isles', 'v2'],
       ['narrows', 'v3'],
       ['shattered-isles', 'v3'],
+      ['narrows', 'v4'],
+      ['shattered-isles', 'v4'],
     ]) {
       await stopServer()
       const savePath = path.join(dataDirectory, 'game-state-v2.json')
@@ -1418,7 +1749,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       const legacyBoard: Board = await (await pages[0].request.get('/api/board')).json()
       const latestBoard: Board = await (await pages[0].request.get(`/api/board?mapId=${mapId}`)).json()
       expect(legacyBoard.version).toBe(`${mapId}-${version}`)
-      expect(latestBoard.version).toBe(`${mapId}-v4`)
+      expect(latestBoard.version).toBe(`${mapId}-v5`)
       const changed = legacyBoard.cells.find(
         (c) => latestBoard.cells.find((next) => key(next) === key(c))?.terrain !== c.terrain,
       )!
@@ -1443,6 +1774,28 @@ test('published client, API, and hub work from one origin', async ({ page }) => 
   await expect(page.locator('.connection')).toHaveText('Live')
   await expect(page.getByRole('group', { name: 'Marauders interactive hex map' })).toBeVisible()
   expect((await page.request.get('http://127.0.0.1:5134/api/board')).status()).toBe(200)
+  for (const portrait of await (await page.request.get('/api/characters')).json()) {
+    if (existsSync(path.join(root, 'server/wwwroot', portrait.imageUrl))) {
+      const response = await page.request.get(`http://127.0.0.1:5134${portrait.imageUrl}`)
+      expect(response.status()).toBe(200)
+      expect(response.headers()['content-type']).toContain('image/jpeg')
+    }
+  }
+})
+
+test('a failed initial state refresh retries without restarting its connected hub', async ({ page }) => {
+  let failedOnce = false
+  await page.route('**/api/game', async (route) => {
+    if (!failedOnce) {
+      failedOnce = true
+      await route.abort('failed')
+      return
+    }
+    await route.continue()
+  })
+  await page.goto('/')
+  await expect(page.locator('.connection')).toHaveText('Live', { timeout: 8_000 })
+  expect(failedOnce).toBeTruthy()
 })
 
 test('playtest readability, public roll reveal, map casualty choices and discoverable port attacks', async ({
@@ -1466,7 +1819,7 @@ test('playtest readability, public roll reveal, map casualty choices and discove
           (
             await pages[i].request.post('/api/game/players', {
               headers,
-              data: { name: `Playtest ${i + 1}`, color: colors[i], character: 'navigator' },
+              data: { name: `Playtest ${i + 1}`, color: colors[i], character: characterIds[i] },
             })
           ).status(),
         ).toBe(200)

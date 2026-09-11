@@ -160,8 +160,40 @@
   outline-color: var(--crew);
   border-color: #1e3339;
 }
+.color-picker button:not(:disabled):hover {
+  background: var(--crew);
+  border-color: #e8dfc5;
+}
 .color-picker button:disabled {
-  opacity: 0.17;
+  opacity: 0.45;
+}
+.crew-color-picker {
+  border: 0;
+  padding: 0;
+  margin: 21px 0 0;
+}
+.crew-color-picker legend {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+  color: #c7bc9a;
+}
+.crew-color-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 48px;
+  font-size: 10px;
+  color: #b4c7c7;
+}
+.crew-color-option small {
+  color: #dec995;
+}
+.join-guidance {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d9c391;
 }
 .perk-note {
   font-size: 11px;
@@ -205,9 +237,17 @@
     Georgia,
     serif;
 }
-.crew-row > span:nth-child(2) {
+.crew-row .crew-identity {
   flex: 1;
+  min-width: 0;
   font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.crew-identity small {
+  display: block;
+  margin-top: 4px;
+  color: #9cb0b0;
+  font-size: 11px;
 }
 .crew-row > small {
   font-size: 8px;
@@ -1558,11 +1598,33 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 7px 3px;
-  gap: 5px;
+  padding: 6px;
+  gap: 7px;
   min-width: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+.profile-picker .profile-name {
+  flex: 1;
+}
+.profile-picker .profile-status {
   font-size: 9px;
+  color: #c8b993;
   overflow-wrap: anywhere;
+}
+.profile-picker button:disabled {
+  opacity: 0.65;
+}
+.profile-picker button:disabled .character-portrait {
+  filter: grayscale(0.8);
+}
+.profile-picker .character-portrait,
+.profile-picker .character-placeholder {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-position: center 30%;
 }
 .profile-picker button[aria-pressed='true'] {
   border-color: #dfbf7c;
@@ -2312,28 +2374,10 @@
   line-height: 1.5;
   color: #c6d8d7;
 }
-.whirlpool-token circle {
-  fill: #124a88;
-  stroke: #64caff;
-  stroke-width: 1.5;
-}
 .hex[data-whirlpool] > polygon {
   fill: #155582;
   stroke: #62bdeb;
   stroke-width: 1.5;
-}
-.whirlpool-token path {
-  fill: none;
-  stroke: #9de6ff;
-  stroke-width: 2;
-  stroke-linecap: round;
-  transform-origin: center;
-  animation: whirlpool-spin 7s linear infinite;
-}
-@keyframes whirlpool-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 .whirlpool-status {
   color: #86d5ff;
@@ -2392,9 +2436,4 @@
   gap: 10px;
   justify-content: flex-end;
   margin-top: 20px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .whirlpool-token path {
-    animation: none;
-  }
 }

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Marauders is a turn-based board game about pirate ships capturing ports. Each player takes turns rolling dice to move ships and attack ports. Win by owning every remaining port or by being the last captain after others forfeit.
+Marauders is a turn-based board game about pirate ships capturing ports. Each player takes turns rolling dice to move ships and attack ports. Win as soon as you are the only captain who owns any ports, whether opponents lose their final ports or forfeit. Neutral ports do not delay victory.
 
 ## The board
 
@@ -16,7 +16,7 @@ The game board features multiple hexagons, each with its own meaning. A JPEG of 
 
 ## Setup
 
-Before the game is set up, each player enters a name, picks one of eight cosmetic character profiles, and a color. Character names and JPEG images will be provided later; numbered placeholders may be used initially. Perks are collected at sea during play.
+Before joining, each player enters a name and explicitly picks one of eight pictured cosmetic characters and an available crew color. No two captains may choose the same character or color. Taken choices remain reserved across refreshes and disconnections; leaving the lobby releases them. The characters are Alex the Merciless, Alyssa the Sea Witch, Dylan the Salty Dog, Hayven the Merchant, Jacob the Vengeful, Jared the Oil Baron, Josh the Phantom, and Steven the Cruel. Perks are collected at sea during play.
 
 The game is played with four players. Additional players are spectators only and cannot make moves. Players should be reliably identified by their browsers.
 
@@ -92,7 +92,7 @@ When a port is captured, ownership transfers immediately. Any ships it was build
 
 ### End of a player's round
 
-For each ship they are below their population cap, the player may choose a port at which to begin construction.
+For each ship they are below their population cap, including ships already under construction, the player may choose an owned port at which to begin construction. When the round ends, including on timeout, the server automatically starts every unchosen build at a randomly selected owned port. Each ship's port is chosen independently with equal chances. Manual choices and existing builds stay in place; automatic builds also need two future owner rounds to finish.
 
 ### Miscellaneous
 
@@ -102,7 +102,7 @@ If someone captures a player's final remaining port, all of that player's remain
 
 The unowned port can be captured by anyone, but it fights back like a player-owned port. Its defense weakness is not reset when ships enter its dark-blue water, because it has no allied ships.
 
-There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 90 seconds per turn and 30 seconds per action. Port drafting is untimed.
+There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 45 seconds per action and a minimum of 135 seconds per turn. At turn start, the turn budget is the greater of that minimum or (starting action dice + 1) times the action interval: two dice get 2:15, five dice get 4:30. The extra interval allows planning and construction. Gaining ships during a turn does not extend its budget. Port drafting is untimed.
 
 ### Perks
 
@@ -121,9 +121,10 @@ A captain may forfeit during drafting or play after confirming. Their ports,
 ships, carried perks, and construction vanish. Former port hexes become
 impassable land and their harbor water becomes ordinary water without port
 support. Their remaining draft picks and turns are skipped; they watch as a
-spectator and cannot rejoin that match. The last remaining captain wins, even
-if a neutral port remains. Otherwise, victory requires owning every remaining
-port. Leaving the lobby releases the seat and vote; leaving a finished game
+spectator and cannot rejoin that match. During play, the only captain still
+owning ports wins immediately, even if neutral ports and previously eliminated
+captains remain. During drafting, the last nonforfeited captain wins; captains
+who have not picked yet still count. Leaving the lobby releases the seat and vote; leaving a finished game
 preserves its result.
 
 ### Whirlpools

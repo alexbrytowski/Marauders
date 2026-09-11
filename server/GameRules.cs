@@ -32,6 +32,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(Colors.Contains(request.Color), "Choose one of the four crew colors.");
         Require(!state.Players.Any(p => p.Color == request.Color), "That crew color is already taken.");
         Require(Characters.Contains(request.Character), "Choose a captain character.");
+        Require(!state.Players.Any(p => p.Character == request.Character), "That character is already taken. Choose another captain character.");
         var player = new Player { Name = name, Color = request.Color, Character = request.Character };
         state.Players.Add(player);
         state.HostPlayerId ??= player.Id;
@@ -481,14 +482,28 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             foreach (var ship in state.Ships.Where(s => s.OwnerId == previous)) ship.OwnerId = capturer;
             Log("elimination", $"{Name(previous)} lost their final port. Their surviving ships now sail for {Name(capturer)}.");
         }
-        if (state.Ports.All(p => p.OwnerId == capturer))
-        {
-            state.Phase = "finished"; state.WinnerId = capturer;
-            state.RemainingActions = 0; state.RemainingMovement = 0;
-            state.TurnEndsAt = null; state.ActionEndsAt = null;
-            Log("victory", $"{Name(capturer)} owns every port and wins Marauders!");
-            SnapshotRound(isFinal: true);
-        }
+        TryFinishGame(keepBattle: true);
+    }
+    private bool TryFinishGame(bool keepBattle = false)
+    {
+        if (state.Phase is not ("playing" or "draft")) return false;
+        // Unpicked captains are still competitors during the draft. Once play
+        // begins, only ownership matters; neutral ports are never competitors.
+        var remaining = state.Players.Where(p => !p.HasForfeited &&
+            (state.Phase == "draft" || state.Ports.Any(port => port.OwnerId == p.Id))).ToArray();
+        if (remaining.Length != 1) return false;
+        var drafting = state.Phase == "draft";
+        state.Phase = "finished"; state.WinnerId = remaining[0].Id;
+        if (!keepBattle) state.Combat = null;
+        state.CombatChoices.Clear();
+        state.RemainingActions = 0; state.RemainingMovement = 0;
+        state.IsBuildPhase = false; state.AvailableBuilds = 0;
+        state.TurnEndsAt = null; state.ActionEndsAt = null;
+        Log("victory", drafting
+            ? $"{remaining[0].Name} is the last captain and wins Marauders!"
+            : $"{remaining[0].Name} is the only captain with ports and wins Marauders!");
+        SnapshotRound(isFinal: true);
+        return true;
     }
     private void SettleActions()
     {
@@ -526,6 +541,14 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private void FinishRound()
     {
         var owner = state.ActivePlayerId!;
+        var ports = state.Ports.Where(p => p.OwnerId == owner).ToArray();
+        var unchosen = FreeBuilds(owner);
+        for (var i = 0; i < unchosen && ports.Length > 0; i++)
+        {
+            var port = ports[dice.Next(ports.Length)];
+            state.Constructions.Add(new() { OwnerId = owner, PortId = port.Id, StartedTurnNumber = state.TurnNumber });
+            Log("construction", $"{Name(owner)} automatically started a ship at randomly selected {port.Name}; ready in two owner rounds.");
+        }
         CompleteConstruction(owner);
         SnapshotRound();
         AdvanceWhirlpool();
@@ -584,17 +607,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.Ports.RemoveAll(p => p.OwnerId == actor);
         if (state.HostPlayerId == actor) state.HostPlayerId = state.Players.FirstOrDefault(p => !p.HasForfeited)?.Id;
         Log("forfeit", $"{player.Name} forfeited and left. Their ports, ships, carried perks, and construction vanished.");
-        var remaining = state.Players.Where(p => !p.HasForfeited && (state.Phase == "draft" || state.Ports.Any(port => port.OwnerId == p.Id))).ToArray();
-        if (remaining.Length == 1 || (state.Ports.Count > 0 && state.Ports[0].OwnerId is { } owner && state.Ports.All(p => p.OwnerId == owner)))
-        {
-            state.WinnerId = remaining.Length == 1 ? remaining[0].Id : state.Ports[0].OwnerId;
-            state.Phase = "finished"; state.Combat = null; state.CombatChoices.Clear();
-            state.RemainingActions = 0; state.RemainingMovement = 0; state.IsBuildPhase = false; state.AvailableBuilds = 0;
-            state.TurnEndsAt = null; state.ActionEndsAt = null;
-            Log("victory", $"{Name(state.WinnerId!)} wins Marauders after the forfeit!");
-            SnapshotRound(isFinal: true);
-            return;
-        }
+        if (TryFinishGame()) return;
         if (state.Phase == "draft") { AdvanceDraft(); return; }
         var wasActive = state.ActivePlayerId == actor;
         var battle = state.Combat;
@@ -623,7 +636,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.RemainingActions = ActionCount(state.Ships.Count(s => s.OwnerId == owner));
         state.RemainingMovement = 0; state.LastRoll = null;
         state.IsBuildPhase = false; state.AvailableBuilds = 0;
-        state.TurnEndsAt = now.AddSeconds(options.TurnSeconds);
+        state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
         RefreshEncounters();
@@ -632,6 +645,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
 
     public bool Expire()
     {
+        // Finish older saves that were waiting for the sole owner to capture
+        // neutral ports, using the normal atomic persistence/broadcast path.
+        if (state.Phase == "playing" && TryFinishGame()) return true;
         // Resume saves from the former manual setup flow through the store's
         // normal atomic commit and broadcast, without requiring a client action.
         if (state.Phase == "placement")

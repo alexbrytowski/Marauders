@@ -1,8 +1,11 @@
 # Single-game operations
 
-This private friends-and-family game uses one server process and one JSON save.
+This small open-join game currently uses one server process and one JSON save.
 Do not run two servers against the same data directory. Keep a persistent writable
-directory across updates; no database or account provider is required for this scope.
+directory across updates. The owner declined an invitation gate; normal play keeps
+signed browser seats, and only reset requires the owner's secret. Hosted storage
+is still a decision: the earlier JSON scope and AGENTS.md's public-release database
+requirement must be reconciled before deployment. See [TASKLIST.md](TASKLIST.md).
 
 ## Passwords and reset
 
@@ -11,6 +14,19 @@ The reset secret is `Game__ResetPassword` in the server process environment, wit
 checked into Git, screenshots, or issue reports. `.env` and `.env.*` are ignored,
 but are not automatically loaded. The checked-in `.env.example` contains no secret.
 For a hosted instance, configure it in the hosting provider's secret settings.
+
+The owner's chosen approach is a long random reset token, with a matching local
+copy (a private file outside this repository or a password manager). A 32-byte
+random value encoded as 64 hexadecimal characters fits the existing password
+limit. Keep the host value stable across deploys. No managed admin account is
+required. A forgotten token can be replaced in provider secrets followed by a
+restart; rotating it does not require deleting the game or its signing keys.
+Production startup now refuses to run without `Game__ResetPassword`; this turns a
+forgotten secret into a deployment error rather than a live game with reset
+disabled. For Railway, also set `Game__TrustForwardedHeaders=true`: it is an
+explicit opt-in to Railway's HTTPS proxy so secure-cookie redirects and the
+reset IP limit use the forwarded request details. Do not set that variable on a
+server reachable directly from the internet.
 
 The Windows launcher generates a fresh random password for the run when no
 environment value is configured. It shows that generated password only in the
@@ -70,6 +86,19 @@ Check the process logs for failed disk writes, invalid saves, repeated disconnec
 or unexpected shutdowns. Do not enable request-body logging on the reset endpoint.
 If persistence fails, check free disk space and directory permissions before retrying.
 Do not delete a save to hide a load error; preserve it and restore a verified backup.
+
+An in-app reset needs a running server and writable storage. It cannot recover a
+server that fails to load a corrupt save. In that case use the provider console to
+stop the process, preserve the failing data, and restore a verified backup as above.
+The health endpoint has no storage-write check; a 200 alone does not prove that a
+reset archive can be created. Reset failure on an unwritable/full disk is protective.
+
+Before hosting, configure and verify a provider-enforced spending shutdown plus
+an earlier alert. The owner does not authorize unbounded usage billing or automatic
+budget increases. If the limit shuts down the service, in-app reset is unavailable:
+use the provider console, check usage, and obtain the owner's approval before any
+paid restart or limit increase. A budget stop is not permission to discard saves.
+See [launch cost controls](LAUNCH_REVIEW.md#avoiding-surprise-bills).
 
 For frozen play, first let clocks resolve an overdue round. Reconnect a browser to
 rule out a stale connection. If the state is unusable, use the password controller

@@ -92,7 +92,7 @@ public partial class GameRulesTests
         }
         Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(first, s.ActivePlayerId); Assert.Equal(2, s.RemainingActions);
         Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());
-        Assert.Equal(Now.AddSeconds(90), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(30), s.ActionEndsAt);
+        Assert.Equal(Now.AddSeconds(135), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(45), s.ActionEndsAt);
         Assert.Throws<RuleException>(() => Rules(s).Act(first, new("place", PortId: s.Ports[0].Id, Q: 0, R: 0)));
         Assert.Throws<RuleException>(() => Rules(s).Act(first, new("finish-placement")));
         Assert.False(Rules(s).Expire()); Assert.Equal(24, s.Ships.Count);
@@ -102,12 +102,12 @@ public partial class GameRulesTests
     {
         var s = Lobby(); ReadyCrew(s);
         for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
-        Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(29)).Expire());
-        Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(30)).Act(s.ActivePlayerId!, new("roll-movement")));
+        Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(44)).Expire());
+        Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(45)).Act(s.ActivePlayerId!, new("roll-movement")));
         var configured = new GameOptions { TurnSeconds = 150, ActionSeconds = 45 };
-        Assert.True(new GameRules(s, new FixedDice(), configured, Now.AddSeconds(30)).Expire());
+        Assert.True(new GameRules(s, new FixedDice(), configured, Now.AddSeconds(45)).Expire());
         Assert.Equal(s.TurnOrder[1], s.ActivePlayerId); Assert.Equal(2, s.TurnNumber);
-        Assert.Equal(Now.AddSeconds(180), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(75), s.ActionEndsAt);
+        Assert.Equal(Now.AddSeconds(195), s.TurnEndsAt); Assert.Equal(Now.AddSeconds(90), s.ActionEndsAt);
     }
     [Fact] public void Illegal_moves_and_wrong_actor_are_rejected()
     {
@@ -205,10 +205,12 @@ public partial class GameRulesTests
         Assert.Equal("resolved", s.Combat.Status); Assert.Equal(1, p.DefenseWeakness); Assert.Single(s.Ships);
         Assert.Equal(2, s.Events.Count(e => e.Kind == "roll"));
     }
-    [Fact] public void Capture_cancels_builds_converts_last_port_fleet_and_announces_victory()
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void Capture_cancels_builds_converts_last_port_fleet_and_announces_victory(bool neutralRemains)
     {
         var s = Playing(); var target = s.Ports[3];
         foreach (var p in s.Ports) p.OwnerId = s.Players[0].Id;
+        if (neutralRemains) s.Ports[12].OwnerId = null;
         target.OwnerId = s.Players[1].Id;
         var ship = Add(s, 0, BoardDefinition.Harbor(target.Id)[0]);
         var survivor = Add(s, 1, Open);
@@ -217,6 +219,10 @@ public partial class GameRulesTests
         Rules(s, 6, 1).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
         Assert.Empty(s.Constructions); Assert.Equal(s.Players[0].Id, survivor.OwnerId); Assert.Equal(Open, survivor.Hex);
         Assert.Equal("finished", s.Phase); Assert.Equal(s.Players[0].Id, s.WinnerId); Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
+        Assert.Equal(neutralRemains ? 1 : 0, s.Ports.Count(p => p.OwnerId is null));
+        Assert.True(Assert.Single(s.RoundHistory).IsFinal);
+        Rules(s).Act(s.ActivePlayerId!, new("continue-combat", CombatId: s.Combat.Id));
+        Assert.Null(s.Combat); Assert.False(Rules(s).Expire()); Assert.Single(s.RoundHistory);
         Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("roll-movement")));
     }
     [Fact] public void Timeout_completes_construction_and_uses_nearest_open_water_when_harbor_is_full()
@@ -226,7 +232,7 @@ public partial class GameRulesTests
         s.Constructions.Add(new() { OwnerId = s.ActivePlayerId!, PortId = port.Id, RemainingOwnerTurns = 1, StartedTurnNumber = 1 });
         s.TurnEndsAt = Now.AddSeconds(-1);
         Assert.True(Rules(s).Expire());
-        Assert.Empty(s.Constructions);
+        Assert.DoesNotContain(s.Constructions, b => b.StartedTurnNumber == 1);
         var launched = s.Ships.Last(); Assert.Equal("water", BoardDefinition.Cell(launched.Hex)!.Terrain);
         Assert.Equal(6, s.TurnNumber); Assert.Equal(s.Players[1].Id, s.ActivePlayerId);
         Assert.Contains(s.Events, e => e.Kind == "timeout");
@@ -241,9 +247,10 @@ public partial class GameRulesTests
         s.ActivePlayerId = s.Players[0].Id; s.TurnNumber = 9; s.IsBuildPhase = true;
         Rules(s).Act(s.ActivePlayerId!, new("end-turn")); Assert.Equal(1, build.RemainingOwnerTurns);
         s.ActivePlayerId = s.Players[0].Id; s.TurnNumber = 13; s.IsBuildPhase = true;
-        Rules(s).Act(s.ActivePlayerId!, new("end-turn")); Assert.Empty(s.Constructions); Assert.Equal(2, s.Ships.Count(sh => sh.OwnerId == s.Players[0].Id));
+        Rules(s).Act(s.ActivePlayerId!, new("end-turn"));
+        Assert.DoesNotContain(s.Constructions, b => b.OwnerId == s.Players[0].Id);
+        Assert.Equal(6, s.Ships.Count(sh => sh.OwnerId == s.Players[0].Id));
         s.ActivePlayerId = s.Players[0].Id; s.IsBuildPhase = true;
-        for (var i = 0; i < 4; i++) Rules(s).Act(s.ActivePlayerId!, new("build", PortId: s.Ports[0].Id));
         Assert.Throws<RuleException>(() => Rules(s).Act(s.ActivePlayerId!, new("build", PortId: s.Ports[0].Id)));
     }
 }

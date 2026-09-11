@@ -4,6 +4,7 @@ import { BattleModal } from './BattleModal'
 import { LeaveGame } from './LeaveGame'
 import { PlayerCard } from './PlayerCard'
 import { CharacterPortrait } from './CharacterPortrait'
+import { JoinCrew } from './JoinCrew'
 import { RoundHistory } from './RoundHistory'
 import { MapVotePanel } from './MapVotePanel'
 import { LobbyReady } from './LobbyReady'
@@ -14,7 +15,7 @@ import { AboutPage, ControllerPage } from './InfoPages'
 import { HowToPlayPage } from './HowToPlayPage'
 import { Die, Icon } from './Icons'
 import { useGame } from './useGame'
-import { colors, firstEncounter, key, movementPaths, perks, portNumber, whirlpoolExit } from './game'
+import { firstEncounter, key, movementPaths, perks, portNumber, whirlpoolExit } from './game'
 import type { Cell } from './game'
 import './App.css'
 
@@ -59,9 +60,6 @@ export default function App() {
     window.addEventListener('hashchange', navigate)
     return () => window.removeEventListener('hashchange', navigate)
   }, [])
-  const [name, setName] = useState(''),
-    [color, setColor] = useState(colors[0]),
-    [character, setCharacter] = useState('navigator')
   const [selectedShipId, setSelectedShipId] = useState<string | null>(null)
   const [selectedPortId, setSelectedPortId] = useState<string | null>(null)
   const [hover, setHover] = useState<Cell | null>(null),
@@ -118,9 +116,6 @@ export default function App() {
   }
   const ownPorts = game?.ports.filter((p) => p.ownerId === me?.id) ?? []
   const ownShips = game?.ships.filter((s) => s.ownerId === me?.id) ?? []
-  const availableColor = !game?.players.some((p) => p.color === color)
-    ? color
-    : colors.find((c) => !game?.players.some((p) => p.color === c))
 
   return (
     <main className={`app-shell ${game && game.phase !== 'lobby' ? 'in-game' : ''}`}>
@@ -247,63 +242,7 @@ export default function App() {
                       opening another tab returns to this captain.
                     </p>
                   ) : game.players.length < 4 ? (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        if (availableColor)
-                          void send('/api/game/players', { name, color: availableColor, character })
-                      }}
-                    >
-                      <label htmlFor="captain-name">CAPTAIN NAME</label>
-                      <input
-                        id="captain-name"
-                        placeholder="What shall we call you?"
-                        maxLength={24}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        autoComplete="nickname"
-                        required
-                      />
-                      <label>YOUR COLORS</label>
-                      <div className="color-picker">
-                        {colors.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            className={availableColor === c ? 'chosen' : ''}
-                            style={{ '--crew': c } as React.CSSProperties}
-                            disabled={game.players.some((p) => p.color === c)}
-                            onClick={() => setColor(c)}
-                            aria-label={`Choose ${c} crew color`}
-                            aria-pressed={availableColor === c}
-                          >
-                            {availableColor === c ? '✓' : ''}
-                          </button>
-                        ))}
-                      </div>
-                      <fieldset className="profile-picker">
-                        <legend>YOUR CHARACTER</legend>
-                        {profiles.map((profile) => (
-                          <button
-                            key={profile.id}
-                            type="button"
-                            aria-pressed={character === profile.id}
-                            onClick={() => setCharacter(profile.id)}
-                          >
-                            <CharacterPortrait profile={profile} />
-                            <span>{profile.name}</span>
-                          </button>
-                        ))}
-                      </fieldset>
-                      <p className="perk-note">Characters are cosmetic. Collect ship perks at sea.</p>
-                      <button
-                        className="primary join-button"
-                        type="submit"
-                        disabled={disabled || !name.trim() || !availableColor}
-                      >
-                        Join the crew <span>→</span>
-                      </button>
-                    </form>
+                    <JoinCrew key={game.id} game={game} profiles={profiles} disabled={disabled} send={send} />
                   ) : (
                     <p className="lobby-copy">
                       All four seats are filled. You’ll see the whole board, every turn, and every battle
@@ -321,7 +260,11 @@ export default function App() {
                           <span className="seat-number" style={{ color: p?.color }}>
                             0{i + 1}
                           </span>
-                          <span>{p?.name ?? 'Open seat'}</span>
+                          {p && <CharacterPortrait profile={profiles.find((profile) => profile.id === p.character)} />}
+                          <span className="crew-identity">
+                            {p?.name ?? 'Open seat'}
+                            {p && <small>{profiles.find((profile) => profile.id === p.character)?.name}</small>}
+                          </span>
                           <small className={p?.isReady ? 'captain-is-ready' : ''}>
                             {p
                               ? `${p.id === me?.id ? 'YOU · ' : ''}${p.isReady ? 'READY' : 'NOT READY'}`
@@ -361,9 +304,9 @@ export default function App() {
                   <Icon name="flag" />
                   <h1>{game.players.find((p) => p.id === game.winnerId)?.name} rules the sea.</h1>
                   <p>
-                    {game.ports.every((port) => port.ownerId === game.winnerId)
-                      ? `All ${game.ports.length} remaining ports captured. The voyage is won.`
-                      : 'The last captain sailing. The voyage is won.'}
+                    {game.ports.some((port) => port.ownerId === game.winnerId)
+                      ? 'The only captain with ports. The voyage is won.'
+                      : 'The last captain remaining. The voyage is won.'}
                   </p>
                 </section>
               )}
@@ -561,7 +504,7 @@ export default function App() {
                   )}
                   {game.phase === 'playing' && myTurn && game.isBuildPhase && (
                     <>
-                      <span>{game.availableBuilds} builds available</span>
+                      <span>{game.availableBuilds} builds · random ports for any left at turn end</span>
                       <button
                         className="primary"
                         disabled={disabled || !port || port.ownerId !== me?.id || game.availableBuilds === 0}

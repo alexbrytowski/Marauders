@@ -116,10 +116,12 @@ public sealed class WhirlpoolPair
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
 public sealed class GameOptions
 {
-    public int TurnSeconds { get; set; } = 90;
-    public int ActionSeconds { get; set; } = 30;
+    public int TurnSeconds { get; set; } = 135;
+    public int ActionSeconds { get; set; } = 45;
     public string? DataDirectory { get; set; }
     public string? ResetPassword { get; set; }
+    // Opt in only when a trusted deployment proxy is the sole public entry point.
+    public bool TrustForwardedHeaders { get; set; }
 }
 public interface IDice
 {

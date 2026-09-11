@@ -234,12 +234,6 @@ export function BoardView({
               >
                 <title>{description}</title>
                 <polygon points={outline} />
-                {exit && (
-                  <g className="whirlpool-token" aria-hidden="true">
-                    <circle r="13" />
-                    <path d="M-11 2C-15-11 4-17 11-6C18 5 4 16-6 10C-15 4-7-8 2-6C10-4 8 7 1 6C-4 5-4-1 0-2" />
-                  </g>
-                )}
                 {cell.terrain === 'land' && !coast && (cell.q + cell.r) % 3 === 0 && (
                   <path className="mountain" d="m-8 5 6-11 7 11m-4 0 4-7 5 7" />
                 )}

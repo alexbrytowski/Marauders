@@ -57,7 +57,7 @@ def write(name, rows, points, names):
     assert reached == water, f"Isolated water: {water - reached}"
     target = ROOT / "server" / "maps" / f"{name}.json"
     target.parent.mkdir(exist_ok=True)
-    target.write_text(json.dumps(dict(version=f"{name}-v4", rows=["".join(r) for r in rows], ports=ports), indent=2) + "\n", encoding="utf-8")
+    target.write_text(json.dumps(dict(version=f"{name}-v5", rows=["".join(r) for r in rows], ports=ports), indent=2) + "\n", encoding="utf-8")
     print(f"{name}: {len(water)} sailing hexes; harbor sizes {list(map(len, harbors))}")
 
 
@@ -71,6 +71,10 @@ def narrows():
     for r in range(1, HEIGHT - 1):
         if r not in (14, 15, 16):
             land(rows, r, [(15 if r % 4 else 14, 17 if r % 5 else 18)])
+    # A northern island in the western bay and a southern one in the eastern
+    # bay create flanking routes while leaving the central crossing untouched.
+    land(rows, 9, [(8, 9), (7, 9), (7, 10), (8, 9)])
+    land(rows, 17, [(24, 25), (23, 26), (23, 25), (24, 24)])
     # Ring each bay: north/south, outer shore, and both inner-shore shoulders.
     points = [(5, 14), (9, 4), (14, 9), (14, 23), (8, 28),
               (24, 4), (18, 8), (29, 14), (28, 22), (24, 28), (18, 23),
@@ -86,7 +90,7 @@ def shattered_isles():
         [0, 27, 29, 30, 30, 31, 31, 30, 31, 31, 30, 31, 31, 30, 31, 31, 31, 30, 31, 31, 30, 31, 31, 30, 31, 31, 30, 30, 29, 27, 0],
     )
     # A square spiral, two hexes thick, curling into the prize harbor. The
-    # eastern outer breach and northern inner cut open two distinct shortcuts.
+    # eastern/southern outer breaches and northern inner cut offer different routes.
     land(rows, 1, [(14, 15)] * 5)
     land(rows, 5, [(14, 25)] * 2)
     land(rows, 6, [(24, 25)] * 19)
@@ -103,6 +107,13 @@ def shattered_isles():
     # the north as well as by sailing around the coil's southern arm.
     for r in (10, 11):
         rows[r][14] = rows[r][15] = "."
+    # Southern fleets can enter the middle circuit without circling the wall.
+    # Keep the inner arm intact so this does not become a straight shot to the Heart.
+    for r in (23, 24):
+        rows[r][17] = rows[r][18] = "."
+    # Break up the northwest sea with a small island, leaving broad routes on
+    # both sides between Dawn Watch, Serpent's Jaw, and the western approach.
+    land(rows, 4, [(8, 9), (6, 9), (6, 10), (7, 9), (8, 8)])
     points = [(3, 3), (26, 2), (30, 10), (30, 21), (25, 28), (7, 28), (2, 19),
               (14, 6), (23, 9), (23, 21), (9, 14), (18, 12), (16, 15)]
     write("shattered-isles", rows, points, ["Dawn Watch", "North Star", "Eastwind", "Last Light", "South Star",

@@ -1,32 +1,57 @@
-# Eight personal profiles
+# The eight captains
 
-The server offers eight cosmetic profiles. Until names/photos are supplied, they
-show as Captain 1–8 with a compass placeholder. Profiles do not grant perks and
-can be shared by players. Old saved character IDs remain valid.
+The owner's supplied portraits are installed from `Characters/`. The default
+server catalog uses the exact names below, with stable IDs for existing saves.
 
-Create `server/characters.local.json` using this structure, replacing the names
-and adding an optional JPEG path for each portrait:
+| Saved ID | Character | Web portrait |
+| --- | --- | --- |
+| navigator | Alex the Merciless | alex-the-merciless.jpg |
+| corsair | Alyssa the Sea Witch | alyssa-the-witch.jpg |
+| privateer | Dylan the Salty Dog | dylan-the-salty-dog.jpg |
+| buccaneer | Hayven the Merchant | hayven-the-merchant.jpg |
+| captain-5 | Jacob the Vengeful | jacob-the-vengeful.jpg |
+| captain-6 | Jared the Oil Baron | jared-the-oil-baron.jpg |
+| captain-7 | Josh the Phantom | josh-the-phantom.jpg |
+| captain-8 | Steven the Cruel | steven-the-cruel.jpg |
+
+Joining requires a name and an explicit choice of both character and color.
+Neither is preselected. Each character and color can be claimed once per lobby;
+the server checks simultaneous claims atomically. Taken choices identify their
+owner and cannot be selected. Leaving the lobby releases both; refreshing,
+disconnecting, or restarting preserves them. Characters grant no perks.
+
+Existing saved seats keep their IDs and choices, including any shared profiles
+from the former rules. Use the game controller's empty-lobby reset if that crew
+wants to choose afresh. A rematch retaining seats retains their choices.
+
+## Preparing the supplied images
+
+Alyssa's source file is `Alyssa the Sea Witch.png`; her existing web portrait
+filename remains unchanged after the display-name correction.
+
+Run `python tools/prepare_characters.py` with Pillow installed. On this local
+workspace, `.tools/python/python.exe tools/prepare_characters.py` is available.
+The script reads all eight original PNG/JPEG files and writes optimized JPEGs,
+at most 640 by 800 pixels, under `server/wwwroot/characters/`. Originals remain
+intact. The site serves the copies at `/characters/`; Vite proxies that path to
+the API during development. Missing images fall back to a named compass.
+
+The original folder and generated photos are Git-ignored. A fresh checkout
+needs the owner's original folder and this preparation step to show photos.
+Installed web portraits are included in `dotnet publish` output, so prepare them
+before publishing. Everyone with access to the game can view the names/photos.
+
+## Optional local overrides
+
+`server/characters.local.json` still overrides the default catalog. It must list
+all eight stable IDs, names up to 40 characters, and optional image paths using
+`/characters/filename.jpg` or `.jpeg` (letters, digits, hyphens, underscores).
+For example, an entry is:
 
 ```json
-[
-  { "id": "navigator", "name": "Captain 1", "imageUrl": "/characters/navigator.jpg" },
-  { "id": "corsair", "name": "Captain 2", "imageUrl": null },
-  { "id": "privateer", "name": "Captain 3", "imageUrl": null },
-  { "id": "buccaneer", "name": "Captain 4", "imageUrl": null },
-  { "id": "captain-5", "name": "Captain 5", "imageUrl": null },
-  { "id": "captain-6", "name": "Captain 6", "imageUrl": null },
-  { "id": "captain-7", "name": "Captain 7", "imageUrl": null },
-  { "id": "captain-8", "name": "Captain 8", "imageUrl": null }
-]
+{ "id": "navigator", "name": "Alex the Merciless", "imageUrl": "/characters/alex-the-merciless.jpg" }
 ```
 
-Put JPEGs under `server/wwwroot/characters/` (for example `navigator.jpg`). Names
-may contain up to 40 characters. Image filenames use letters, digits, hyphens,
-or underscores and `.jpg`/`.jpeg`. Keep all eight stable IDs. Restart the server
-after changing the catalog; reload clients to refresh it. Missing images fall
-back to a compass. Portraits appear in the selection grid and captain cards.
-
-The local catalog and personal photos are Git-ignored and excluded from automatic
-publish output. For a deployed build, copy the catalog next to the server DLL and
-copy portraits into that deployment's `wwwroot/characters/` directory separately.
-Everyone able to access the game can view its profile names and photos.
+The override file stays Git-ignored and is excluded from automatic publish;
+copy it beside the deployed server DLL if using custom overrides. Restart the
+server and reload clients after changing the catalog.

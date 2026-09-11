@@ -9,6 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOptions<GameOptions>().BindConfiguration("Game")
     .Validate(o => o.TurnSeconds >= 10 && o.ActionSeconds >= 5, "Game timers must be at least 10/5 seconds.")
     .Validate(o => o.ResetPassword is null || o.ResetPassword.Length is >= 12 and <= 1024, "The reset password must contain 12–1024 characters when configured.").ValidateOnStart();
+builder.Services.AddOptions<GameOptions>()
+    .Validate(o => builder.Environment.IsDevelopment() || !string.IsNullOrWhiteSpace(o.ResetPassword), "A production server requires Game__ResetPassword so its reset control is available.")
+    .Validate(o => builder.Environment.IsDevelopment() || o.TrustForwardedHeaders, "A production server requires Game__TrustForwardedHeaders=true behind its trusted HTTPS proxy.");
 builder.Services.AddControllers();
 builder.Services.AddSingleton<CharacterCatalog>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
@@ -44,7 +47,18 @@ builder.Services.AddRateLimiter(options =>
         context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
-builder.Services.Configure<ForwardedHeadersOptions>(options => options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Railway terminates public HTTPS before this single container. The explicit
+    // production opt-in above prevents accepting spoofed forwarding headers on a
+    // server exposed directly to the internet.
+    if (!builder.Environment.IsDevelopment())
+    {
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    }
+});
 var app = builder.Build();
 app.UseForwardedHeaders();
 app.UseExceptionHandler();

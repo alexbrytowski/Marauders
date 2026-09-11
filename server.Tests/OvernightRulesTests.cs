@@ -71,6 +71,7 @@ public partial class GameRulesTests
     [Fact] public void Whirlpool_lasts_eight_subsequent_turns_with_no_overlapping_draw_or_expiry_respawn()
     {
         var s = Playing(); var dice = new WhirlpoolDice(0); var rules = new GameRules(s, dice, new(), Now);
+        for (var i = 0; i < 4; i++) Add(s, i, BoardDefinition.Harbor(s.Ports[i * 3].Id)[0]);
         s.IsBuildPhase = true; rules.Act(s.ActivePlayerId!, new("end-turn"));
         var pair = s.Whirlpool!;
         for (var i = 1; i <= 8; i++)

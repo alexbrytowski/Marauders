@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { HubConnectionBuilder } from '@microsoft/signalr'
+import { HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr'
 import { effectiveBoard, getJson } from './game'
 import type { Board, CharacterProfile, Command, Game, MapOption, Session } from './game'
 
@@ -19,6 +19,10 @@ export function useGame() {
     let cancelled = false
     let retry: ReturnType<typeof setTimeout> | undefined
     const hub = new HubConnectionBuilder().withUrl('/hubs/game').withAutomaticReconnect().build()
+    const schedule = (operation: () => void) => {
+      clearTimeout(retry)
+      retry = setTimeout(operation, 3000)
+    }
     const resync = async () => {
       const [state, identity] = await Promise.all([
         getJson<Game>('/api/game'),
@@ -45,10 +49,26 @@ export function useGame() {
     hub.onreconnecting(() => {
       if (!cancelled) setConnection('Reconnecting')
     })
+    const retryResync = () => {
+      void resync()
+        .then(() => {
+          if (!cancelled) {
+            setConnection('Live')
+            setError('')
+          }
+        })
+        .catch((e) => {
+          if (!cancelled) {
+            setConnection('Reconnecting')
+            setError(e instanceof Error ? e.message : 'Unable to refresh the game. Retrying…')
+            schedule(retryResync)
+          }
+        })
+    }
     hub.onreconnected(() => {
       if (!cancelled) {
-        setConnection('Live')
-        void resync().catch((e) => setError(String(e)))
+        setConnection('Reconnecting')
+        retryResync()
       }
     })
     const connect = async () => {
@@ -78,14 +98,22 @@ export function useGame() {
         if (!cancelled) {
           setConnection('Offline')
           setError(e instanceof Error ? e.message : 'Connection failed. Retrying…')
-          retry = setTimeout(connect, 3000)
+          // A hub can be connected even when the first state request failed.
+          // Calling start again in that state fails and leaves the UI stranded.
+          if (hub.state === HubConnectionState.Connected) {
+            setConnection('Reconnecting')
+            schedule(retryResync)
+          } else {
+            setConnection('Offline')
+            schedule(() => void connect())
+          }
         }
       }
     }
     hub.onclose(() => {
       if (!cancelled) {
         setConnection('Offline')
-        retry = setTimeout(connect, 3000)
+        schedule(() => void connect())
       }
     })
     void connect()

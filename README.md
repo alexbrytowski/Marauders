@@ -58,9 +58,10 @@ practice launcher releases old seat bindings before opening the four windows, so
 stale browser profiles do not become spectators.
 The practice game runs on `http://localhost:5175` with separate state under
 `artifacts/local-crew/`, so your main game's save is unaffected. Both launchers use
-90 seconds per round and 30 per action by default; environment settings can override these.
-Keep its launcher open; Ctrl+C closes the practice services and windows. Reopening
-it restores the four seats and practice game. Use Game controller to reset it.
+135 seconds minimum per round and 45 per action by default; larger fleets get more turn time.
+Keep its launcher open; Ctrl+C closes the practice services and windows. Running
+Play-Local-Crew.cmd again starts a fresh practice match, as described above; it
+does not resume the previous practice game. Use Game controller for an in-app reset.
 On Linux, install Playwright Chromium first; the same launcher supports `--crew`.
 
 The launcher shows a newly generated local reset password in its terminal unless
@@ -80,7 +81,7 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 5. Select a ship in an enemy harbor to attack that port with an unused action.
 6. Everyone watches the battle dialog. The active captain rolls; only the losing
    captain chooses their casualty. Rolls remain in the captain's log.
-7. At round end, select owned ports for construction, then finish the round.
+7. At round end, select owned ports for construction, then finish the round. Unchosen builds start at random owned ports automatically, including on timeout.
 8. Whirlpools may appear after a captain turn. Enter one to teleport, then chart
    again with unused movement. Each pair lasts two full cycles.
 
@@ -124,15 +125,20 @@ Browser tests use installed Edge on Windows. On Linux, first run
 
 See [.env.example](.env.example) for shell/hosting variable names. ASP.NET reads
 environment variables; this file is a reference, not an automatically loaded secret file.
-`Game__TurnSeconds` defaults to 90, `Game__ActionSeconds` to 30. Both need playtesting.
+`Game__TurnSeconds` defaults to 135 (minimum turn budget), `Game__ActionSeconds` to 45.
+Each turn gets the greater of that minimum or `(starting action dice + 1) * action seconds`.
+Two dice get 2:15; five get 4:30. Existing saved deadlines remain unchanged. These still need playtesting.
 
 The current single match is stored in `server/data/game-state-v2.json`. Session
 bindings are private; signing keys are under `server/data/keys/`. Preserve both to
 retain browser seats across server restarts. Neither belongs in version control.
 The original `game-state.json` is preserved and is not migrated onto the new grid.
-The owner chose one private game for friends with JSON persistence and browser
-identity. Database-backed matches, lobby codes, and managed accounts are outside
-the current scope. Keep a single server process and back up its data and keys.
+The owner chose one small game with open joining and browser identity. There is
+no invitation gate; reset remains password-protected. The current local store is
+JSON. Before hosting, resolve the earlier JSON decision against AGENTS.md's public
+release database requirement; SQLite is proposed, not yet implemented. Keep a
+single server process and back up its data and keys. See the
+[launch checklist](TASKLIST.md) and [launch review](LAUNCH_REVIEW.md).
 
 ## Same-origin build
 

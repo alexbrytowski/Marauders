@@ -141,6 +141,40 @@ public partial class GameRulesTests
         Assert.Equal(direct.Count, map.FindPath(north, heart, breach)!.Count);
     }
 
+    [Fact] public void Coil_southern_entrance_shortens_access_without_replacing_other_routes()
+    {
+        var map = MapCatalog.Get("shattered-isles").Board;
+        var legacy = MapCatalog.Resolve("shattered-isles", "shattered-isles-v4");
+        var south = BoardMap.Offset(18, 26); var middle = BoardMap.Offset(18, 21);
+        var cut = (from r in new[] { 23, 24 } from c in new[] { 17, 18 } select BoardMap.Offset(c, r)).ToHashSet();
+        Assert.All(cut, h => { Assert.True(map.IsSailable(h)); Assert.False(legacy.IsSailable(h)); });
+        var direct = map.FindPath(south, middle, new HashSet<Hex>())!;
+        var around = map.FindPath(south, middle, cut)!;
+        Assert.Equal(5, direct.Count - 1); Assert.Contains(direct, cut.Contains);
+        Assert.True(around.Count > direct.Count + 15);
+        // The two lanes remain independently navigable; one blocking ship
+        // cannot shut the entire entrance. The inner wall still needs a detour.
+        foreach (var hex in cut)
+            Assert.True(map.FindPath(south, middle, new HashSet<Hex> { hex })!.Count < around.Count);
+        Assert.False(map.IsSailable(BoardMap.Offset(17, 18)));
+    }
+
+    [Theory] [InlineData("narrows", 8, 10)] [InlineData("narrows", 24, 19)]
+    [InlineData("shattered-isles", 8, 6)]
+    public void New_islands_are_small_separate_land_masses_with_unchanged_ports_and_harbors(string mapId, int col, int row)
+    {
+        var map = MapCatalog.Get(mapId).Board; var old = MapCatalog.Resolve(mapId, mapId + "-v4");
+        Assert.Equal(map.Ports, old.Ports);
+        foreach (var port in map.Ports) Assert.Equal(old.Harbor(port.Id), map.Harbor(port.Id));
+        var start = BoardMap.Offset(col, row);
+        var island = new HashSet<Hex> { start }; var queue = new Queue<Hex>(island);
+        while (queue.TryDequeue(out var current))
+            foreach (var next in BoardMap.Adjacent(current))
+                if (map.Cell(next)?.Terrain == "land" && island.Add(next)) queue.Enqueue(next);
+        Assert.InRange(island.Count, 8, 18);
+        Assert.All(island, h => { Assert.Equal("water", old.Cell(h)!.Terrain); Assert.Equal("land", map.Cell(h)!.Terrain); });
+    }
+
     [Theory] [InlineData("narrows", "shattered-isles-v3")] [InlineData("classic", "narrows-v3")]
     [InlineData("narrows", "narrows-v999")]
     public void Map_versions_cannot_select_another_maps_terrain_or_unknown_data(string id, string version)

@@ -8,7 +8,7 @@ export function AboutPage() {
       <h1>About Marauders</h1>
       <p>
         Marauders is a four-player pirate strategy game about capturing ports, building fleets, and choosing
-        when to risk a battle. Capture every remaining port to win, or outlast captains who forfeit.
+        when to risk a battle. Win when you are the only captain who owns ports, including after a forfeit.
       </p>
       <p>
         This version brings our physical hex-board game online so friends can play together. Every captain
@@ -16,8 +16,8 @@ export function AboutPage() {
       </p>
       <h2>Your crew, your character</h2>
       <p>
-        Choose a name, crew color, and one of eight cosmetic profiles. Personal character names and portraits
-        are coming from the crew. Perks belong to ships and are collected at sea.
+        Choose a name, an available crew color, and one of eight pictured characters. Each character and
+        color belongs to one captain only. Characters are cosmetic; perks belong to ships and are collected at sea.
       </p>
       <h2>One shared game</h2>
       <p>

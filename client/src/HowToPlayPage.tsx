@@ -213,9 +213,9 @@ function Basics({ board }: { board?: Board }) {
       <p>Command a pirate fleet, capture ports, and become ruler of the sea.</p>
       <ul>
         <li>
-          <strong>Win by owning every remaining port.</strong>
+          <strong>Win when you are the only captain who owns ports.</strong>
         </li>
-        <li>You also win if every other captain forfeits.</li>
+        <li>Capturing the last opponent’s port or their forfeit ends the game. Neutral ports can remain.</li>
         <li>Your crew color marks your ships and ports.</li>
       </ul>
       <p>Try selecting a piece or a terrain type on the chart.</p>
@@ -262,7 +262,8 @@ function Setup({ board }: { board?: Board }) {
       <h3>Assemble your crew</h3>
       <ol>
         <li>
-          Choose a name, color, and cosmetic character. Use a separate browser profile or device for each
+          Choose a name, an available color, and a pictured character. No duplicate characters or colors.
+          Use a separate browser profile or device for each
           captain. Extra visitors watch.
         </li>
         <li>Vote for a map. The host chooses who picks first.</li>
@@ -373,8 +374,9 @@ function Sailing({ board }: { board?: Board }) {
           round.
         </p>
         <p>
-          Default clocks are 90 seconds per turn and 30 per action. If either expires, your round ends,
-          including due construction.
+          Default clocks give 45 seconds per action and at least 2:15 per turn. Larger fleets get one action
+          interval per starting die plus one extra: five dice get 4:30. If either clock expires, your round
+          ends, including due construction and automatic placement of unchosen builds.
         </p>
       </details>
     </Lesson>
@@ -611,6 +613,7 @@ function Building({ board }: { board?: Board }) {
           Active ships <em>and ships under construction</em> use capacity.
         </li>
         <li>At the end of your round, choose owned ports to build missing ships. It costs no action dice.</li>
+        <li>Any unchosen builds start automatically at random owned ports when you finish or time out.</li>
         <li>A port can build several ships, but a build cannot switch ports.</li>
       </ul>
       <details>
@@ -779,7 +782,7 @@ function Extras() {
         <summary>Timeouts & forfeiting</summary>
         <p>
           If either the turn or action clock expires, pending combat is resolved with automatic casualty
-          choices and the round ends, including due construction.
+          choices and the round ends, including due construction. Unchosen builds start at random owned ports.
         </p>
         <p>
           Forfeit and leave requires confirmation. Your ports, ships, carried perks, and builds vanish; former
@@ -787,8 +790,8 @@ function Extras() {
           cannot rejoin that match. Your remaining picks and turns are skipped.
         </p>
         <p>
-          The last captain wins even if a neutral port remains. Leaving the lobby releases your seat and vote;
-          leaving a finished game preserves its result.
+          The only captain with ports wins even if neutral ports remain. Leaving the lobby releases your seat
+          and vote; leaving a finished game preserves its result.
         </p>
       </details>
       <details>

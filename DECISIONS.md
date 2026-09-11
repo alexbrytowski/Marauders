@@ -1,5 +1,68 @@
 # Implementation decisions
 
+## 2026-09-10: launch planning and open access
+
+- The owner prioritizes avoiding surprise hosting bills. Require a verified
+  provider-enforced usage shutdown limit, not only email alerts, before launch.
+  Railway Hobby is now the recommendation over Render because Railway documents
+  such a control; Render's starting compute price is not a total spending cap.
+  A $10 compute-usage hard limit with an earlier alert is proposed, not approved
+  or configured. Explain that reaching the limit takes the game (including reset)
+  offline, and separately account for taxes, subscriptions, and optional services.
+  No autoscaling replicas, preview environments, paid add-ons, or hosting AI agent
+  usage without explicit approval. Do not raise a limit automatically.
+- The owner wants the active task list focused on launching one small hosted game,
+  with approximately seven concurrent people. Planning assumes four captains and
+  three spectators, matching the four-player rules; this is a capacity target,
+  not approval to add a hard spectator limit or seven playable seats.
+- The owner explicitly declined a friends-only/invitation gate and accepts random
+  visitors joining. Do not add one as a launch prerequisite. Retain server-issued
+  browser identities, spectator/turn authorization, and password-only reset.
+  Public names and installed portraits will be viewable by visitors.
+- Reliable reset is a launch requirement: a stable provider-managed secret,
+  access from any browser, both keep-seat and empty-lobby modes, stale-request
+  protection, a pre-reset backup, and verification across redeploys. Never put
+  the secret in the frontend or rely on the development launcher's generated
+  password for hosting. No live game reset is authorized by this review.
+- The owner is comfortable keeping a long random reset token locally on their
+  desktop. Use the matching token in the host's secret settings; a private local
+  file outside the repo or password manager is sufficient. No admin-account
+  system or actual secret generation is requested by this discussion.
+- The earlier private-game JSON decision conflicts with AGENTS.md's database
+  requirement before public release. Open joining does not resolve storage:
+  record an owner-approved hosted storage decision before implementation.
+  Single-instance SQLite on persistent storage is a proposed low-cost database
+  path, not an implemented or approved migration. Managed visitor accounts are
+  not part of the requested open-join experience; preserve authenticated browser
+  seats rather than treating open access as authority to act for another player.
+- Preserve completed work in IMPLEMENTATION_HISTORY.md and track release gates
+  in TASKLIST.md. Hosting recommendations are proposals, not authorization to
+  create paid resources, upload personal assets, deploy, or commit changes.
+
+## 2026-09-10: Alyssa's character name correction
+
+- The owner clarified the name is **Alyssa the Sea Witch**, matching the renamed
+  original portrait. Correct the catalog, rules, and tests; preserve the saved
+  `corsair` ID and existing web portrait URL so existing selections stay intact.
+  The image preparation script must read `Alyssa the Sea Witch.png`.
+
+## 2026-09-10: supplied portraits and exclusive character choices
+
+- The owner supplied eight named portraits in `Characters/`. Use those filenames
+  as the display names, preserving the existing eight saved character IDs in
+  alphabetical name order. Generate smaller JPEG copies for the website; keep
+  the source images intact and personal image files out of Git. Include installed
+  portraits in local publish output so the packaged frontend can display them.
+- This supersedes the earlier shared-profile rule: joining requires an explicit
+  available character and crew color, with neither preselected or automatically
+  substituted. Each character and each color can belong to only one seated
+  captain. The server rejects duplicate claims atomically, including concurrent
+  joins; the lobby shows taken options and their owners to every browser.
+- Leaving the lobby releases both choices. Refresh, disconnect, and restart keep
+  the seat and its choices. Existing saved seats retain their original IDs and
+  choices, including shared profiles from older games; new joins enforce the
+  exclusive rule. An empty-lobby reset lets an old crew choose again.
+
 ## 2026-09-10: guided rules and captain readiness
 
 - The owner requested a short, paged rules guide with game visuals and practice
@@ -19,6 +82,46 @@
   lobby setup version, rather than the whole game revision, so simultaneous ready
   clicks succeed but clicks from a previous setup or match are rejected. The old
   start-draft command cannot bypass readiness.
+
+## 2026-09-10: southern entrance and open-water islands
+
+- The owner confirmed "coke" meant The Choke, and approved terrain islands on
+  both maps while retaining 13 ports. Add a small irregular northwest island to
+  Serpent's Coil and one island in each of The Choke's bays. Leave multiple water
+  lanes around each island; do not turn them into walls or new ports.
+- Open a two-hex-wide cut in the Coil's southern outer arm. Southern captains can
+  enter the middle circuit toward Scalehaven and the inner approaches instead of
+  sailing around the outer wall. Keep the eastern breach, northern inner cut,
+  and winding approach. The Heart remains an ordinary port: its incentive is
+  capacity, rebuilding position, and eliminating its owner, with no extra reward.
+- These islands create routes around terrain, rather than new income objectives.
+  Keep enough open sea to maneuver fleets and avoid making chokepoint camping
+  the only useful strategy. Preserve The Choke's sole three-hex crossing.
+- Publish both as v5 and keep exact v4 data for existing matches. New drafts use
+  v5. Verify connected water, contiguous harbors, alternate routes, fleet setup,
+  and perk access; practical balance still requires four-player playtesting.
+
+## 2026-09-10: endgame, automatic rebuilding, and fleet-sized clocks
+
+- The owner's follow-up supersedes the all-ports victory condition: during play,
+  the only captain still owning any ports wins immediately. Neutral ports never
+  delay victory, whether the last opponent loses a port or forfeits. Captains
+  eliminated earlier do not count. During drafting, count nonforfeited captains
+  instead, since some have not picked yet. Older playing saves with one port owner
+  finish on the next server tick, with one persisted final history entry.
+- At every normal or timed-out turn end, the server fills all unused population
+  slots with construction. Preserve manual choices and existing builds; select an
+  owned port independently and uniformly for each remaining ship. Log those
+  assignments publicly. New builds still require two future owner rounds and
+  include pending construction and Mouth to Feed in the capacity calculation.
+  Forfeiting removes assets and never starts replacement builds for that captain.
+- Increase default action time from 30 to 45 seconds and minimum turn time from
+  90 to 135 seconds. To address late-game decision load, set each turn's budget to
+  max(configured minimum, (starting action dice + 1) * configured action seconds).
+  The extra action interval allows planning/construction: two dice get 2:15,
+  five get 4:30. Snapshot the budget at turn start; gaining ships cannot extend it.
+  Either deadline still ends the round. Saved current deadlines stay unchanged;
+  environment settings supply the minimum turn length and action interval.
 
 ## 2026-09-10: map review refinements
 

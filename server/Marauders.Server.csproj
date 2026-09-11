@@ -9,7 +9,7 @@
   <ItemGroup>
     <Content Remove="data/**/*" />
     <Content Remove="characters.local.json" />
-    <Content Remove="wwwroot/characters/**/*" />
+    <Content Update="wwwroot/characters/**/*" CopyToPublishDirectory="PreserveNewest" />
     <Content Update="board.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="maps/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

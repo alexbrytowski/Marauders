@@ -138,12 +138,13 @@ public partial class GameRulesTests
     {
         var s = Playing(); var owner = s.ActivePlayerId!; var port = s.Ports[0];
         Add(s, 1, BoardDefinition.Harbor(port.Id)[0]).Perk = "mouth-to-feed";
-        s.Constructions.Add(new() { OwnerId = owner, PortId = port.Id, StartedTurnNumber = 1 }); s.IsBuildPhase = true;
+        var build = new Construction { OwnerId = owner, PortId = port.Id, StartedTurnNumber = 1 };
+        s.Constructions.Add(build); s.IsBuildPhase = true;
         Rules(s).Act(owner, new("end-turn"));
-        Assert.Equal(1, Assert.Single(s.Constructions).RemainingOwnerTurns);
+        Assert.Equal(1, build.RemainingOwnerTurns);
         s.ActivePlayerId = owner; s.IsBuildPhase = true;
         Rules(s).Act(owner, new("end-turn"));
-        Assert.Empty(s.Constructions); Assert.Equal(1, s.RoundHistory.Last().Teams.Single(t => t.PlayerId == owner).Ships);
+        Assert.DoesNotContain(build, s.Constructions); Assert.Equal(1, s.RoundHistory.Last().Teams.Single(t => t.PlayerId == owner).Ships);
     }
 
     [Fact] public void Round_history_records_timeouts_and_final_capture_without_mutable_references()
@@ -152,7 +153,7 @@ public partial class GameRulesTests
         Assert.True(Rules(s).Expire()); var before = Assert.Single(s.RoundHistory); Assert.False(before.IsFinal);
         s.Ships.Clear(); Assert.Equal(1, before.Teams[0].Ships);
         s = Playing(); var owner = s.ActivePlayerId!; foreach (var p in s.Ports) p.OwnerId = owner;
-        var last = s.Ports.Last(); last.OwnerId = null; var attacker = Add(s, 0, BoardDefinition.Harbor(last.Id)[0]);
+        var last = s.Ports.Last(); last.OwnerId = s.Players[1].Id; var attacker = Add(s, 0, BoardDefinition.Harbor(last.Id)[0]);
         Rules(s).Act(owner, new("attack-port", ShipId: attacker.Id, PortId: last.Id));
         Rules(s, 6, 1).Act(owner, new("roll-combat", CombatId: s.Combat!.Id));
         Assert.Equal("finished", s.Phase); var final = Assert.Single(s.RoundHistory); Assert.True(final.IsFinal);
