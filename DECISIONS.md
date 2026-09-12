@@ -1,5 +1,20 @@
 # Implementation decisions
 
+## 2026-09-12: Black and White perk
+
+- Add one **Black and White** pickup, bringing the initial layout to five perks.
+  If its carrier participates in a combat exchange, the server replaces every
+  numbered ship and port roll, including defense modifiers, with one equally
+  likely black-or-white result. Black wins for the carrier's team; white wins
+  for the opposing side. The result applies to ship battles, helpers, harbor
+  support, and port attacks. Normal casualty, capture, defense-weakening, and
+  Black Pearl effects follow the selected winner.
+- The override is evaluated for each exchange from the current fixed participant
+  list. If the carrier is removed while a ship battle continues, later exchanges
+  return to normal dice. The public battle UI replaces both dice panels with one
+  animated black/white token and retains the authoritative result in the saved
+  battle and captain's log.
+
 ## 2026-09-11: Railway release preparation
 
 - The owner requested deployment-ready code, confirmed local saves are not

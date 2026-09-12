@@ -1,6 +1,6 @@
 # Marauders launch checklist
 
-Updated 2026-09-11. Target: one game, four captains plus approximately three
+Updated 2026-09-12. Target: one game, four captains plus approximately three
 spectators, desktop-first. Joining is open; the owner explicitly declined an
 invitation gate. Reset stays password-protected. No hard spectator cap is
 implemented or required by this planning assumption.
@@ -93,7 +93,12 @@ provider settings and a live deployment have not been verified by the agent.
 
 ## Current review evidence
 
-- [x] Release solution build: zero warnings/errors; all 133 server tests pass.
+- [x] Black and White perk: five-perk layouts on every map, server-side 50/50
+  resolution, port and helper behavior, persistence, dedicated public UI, and
+  five-browser synchronization are covered by server and browser regressions.
+- [x] Combat handbook includes the supplied one-exchange and cumulative encounter
+  probability tables, with desktop and narrow-screen browser verification.
+- [x] Solution build: zero warnings/errors; all 138 server tests pass.
 - [x] Client lint and production build pass; same-origin Release publish succeeds.
 - [x] Production HTTPS proxy regression passes: seven browsers, eight portrait
   reads, secure cookies, WebSockets, spectator rejection, reset synchronization,
@@ -105,10 +110,11 @@ provider settings and a live deployment have not been verified by the agent.
 - [x] Fault injection reproduced the initial-resync failure, then regression
   coverage verified the repair returns Live after a retry. Review probe is
   retained under ignored `artifacts/launch-review-probe.mjs`.
-- [x] All 15 browser regressions pass in Release (4.7 minutes), including
-  Production HTTPS with seven browsers, password reset, same-origin publish and
-  initial-refresh fault injection. Current results are under ignored
-  `client/test-results/`; the older launch-review evidence remains in artifacts.
+- [x] All 15 browser regressions pass (5.4 minutes), including Black and White
+  synchronization/persistence, Production HTTPS with seven browsers, password
+  reset, same-origin publish and initial-refresh fault injection. Current results
+  are under ignored `client/test-results/`; the older launch-review evidence
+  remains in artifacts.
 - [x] Release asset validation rejects missing UI and missing portraits and passes
   with all eight JPEGs. Public JPEGs contain no EXIF metadata. Docker entrypoint
   and container-smoke script pass local syntax checks; Linux execution is pending CI.

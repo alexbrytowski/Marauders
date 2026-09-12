@@ -45,9 +45,27 @@ export function BattleModal({
       : undefined
   const canChoose = battle?.status === 'choose-loss' && battle.losingPlayerId === playerId && !busy
   const selectLoss = (id: string) => setSelection({ exchange, id })
+  const shipsFor = (id: string) =>
+    game.ships.filter((ship) => ship.ownerId === id && battle?.participantShipIds.includes(ship.id))
+  const fleet = (id: string) => (
+    <div className="battle-fleet">
+      {shipsFor(id).map((s) => (
+        <button
+          key={s.id}
+          disabled={!canChoose || s.ownerId !== playerId}
+          aria-pressed={selected?.id === s.id}
+          onClick={() => selectLoss(s.id)}
+        >
+          Ship {s.number}
+          {s.perk && ` · ${perks[s.perk]?.name}`}
+          {s.id === battle?.triggerShipId || s.id === battle?.opponentShipId ? ' · trigger' : ' · helper'}
+        </button>
+      ))}
+    </div>
+  )
   const side = (id: string, defending: boolean) => {
     const player = game.players.find((p) => p.id === id)
-    const ships = game.ships.filter((s) => s.ownerId === id && battle?.participantShipIds.includes(s.id))
+    const ships = shipsFor(id)
     const port = battle?.kind === 'port' && defending ? game.ports.find((p) => p.id === battle.portId) : null
     const support =
       battle?.supportingPortIds.filter((portId) => game.ports.find((p) => p.id === portId)?.ownerId === id)
@@ -88,26 +106,31 @@ export function BattleModal({
           <span className="defense-modifier">Port defense modifier: {battle!.defenseModifier}</span>
         )}
         {!port && (
-          <div className="battle-fleet">
-            {ships.map((s) => (
-              <button
-                key={s.id}
-                disabled={!canChoose || s.ownerId !== playerId}
-                aria-pressed={selected?.id === s.id}
-                onClick={() => selectLoss(s.id)}
-              >
-                Ship {s.number}
-                {s.perk && ` · ${perks[s.perk]?.name}`}
-                {s.id === battle?.triggerShipId || s.id === battle?.opponentShipId
-                  ? ' · trigger'
-                  : ' · helper'}
-              </button>
-            ))}
-          </div>
+          fleet(id)
         )}
       </section>
     )
   }
+  const currentBlackWhiteHolder = battle
+    ? game.ships.find(
+        (ship) => battle.participantShipIds.includes(ship.id) && ship.perk === 'black-and-white',
+      )
+    : undefined
+  const blackWhiteOwnerId =
+    battle?.status === 'awaiting-roll'
+      ? (currentBlackWhiteHolder?.ownerId ?? null)
+      : (battle?.blackWhiteOwnerId ?? currentBlackWhiteHolder?.ownerId ?? null)
+  const blackWhiteActive = !!blackWhiteOwnerId
+  const opposingBlackWhiteId =
+    battle && blackWhiteOwnerId
+      ? blackWhiteOwnerId === battle.attackerId
+        ? battle.defenderId
+        : battle.attackerId
+      : null
+  const combatantName = (id: string | null) =>
+    game.players.find((player) => player.id === id)?.name ??
+    game.ports.find((port) => port.id === battle?.portId && (port.ownerId ?? port.id) === id)?.name ??
+    'Unclaimed port'
   return (
     <dialog
       ref={dialog}
@@ -133,7 +156,9 @@ export function BattleModal({
               : 'Choose your battle'}
         </h2>
         <p>
-          {battle?.portId
+          {blackWhiteActive
+            ? 'One black-or-white draw decides this exchange.'
+            : battle?.portId
             ? game.ports.find((p) => p.id === battle.portId)?.name
             : 'Every roll is public. Highest die wins.'}
         </p>
@@ -170,13 +195,50 @@ export function BattleModal({
             selectedId={selected?.id ?? null}
             onSelect={selectLoss}
           />
-          <div className="battle-sides">
-            {side(battle.attackerId, false)}
-            <span className="versus">VS</span>
-            {side(battle.defenderId, true)}
-          </div>
+          {blackWhiteActive ? (
+            <section className="black-white-battle" aria-label="Black and White battle override">
+              <span className="black-white-kicker">BLACK AND WHITE OVERRIDES THE DICE</span>
+              <h3>One draw. Equal odds.</h3>
+              <p>Every numbered die and port modifier is set aside for this exchange.</p>
+              <div
+                className={`black-white-token ${rolling ? 'rolling' : (battle.blackWhiteResult ?? 'ready')}`}
+                role="img"
+                aria-label={
+                  rolling
+                    ? 'Drawing black or white'
+                    : battle.blackWhiteResult
+                      ? `${battle.blackWhiteResult} was drawn`
+                      : 'Black and white token ready'
+                }
+              >
+                <span>{rolling ? '' : battle.blackWhiteResult?.toUpperCase() || 'B / W'}</span>
+              </div>
+              <div className="black-white-odds">
+                <div>
+                  <strong>BLACK</strong>
+                  <span>{combatantName(blackWhiteOwnerId)} wins</span>
+                  {blackWhiteOwnerId && fleet(blackWhiteOwnerId)}
+                </div>
+                <div>
+                  <strong>WHITE</strong>
+                  <span>{combatantName(opposingBlackWhiteId)} wins</span>
+                  {opposingBlackWhiteId && fleet(opposingBlackWhiteId)}
+                </div>
+              </div>
+            </section>
+          ) : (
+            <div className="battle-sides">
+              {side(battle.attackerId, false)}
+              <span className="versus">VS</span>
+              {side(battle.defenderId, true)}
+            </div>
+          )}
           <div className="battle-result" role="status">
-            {rolling ? 'Rolling the battle dice…' : battle.message}
+            {rolling
+              ? blackWhiteActive
+                ? 'Drawing black or white…'
+                : 'Rolling the battle dice…'
+              : battle.message}
           </div>
           <div className="battle-actions">
             {battle.status === 'awaiting-roll' &&
@@ -187,7 +249,13 @@ export function BattleModal({
                   onClick={() => void act({ type: 'roll-combat', combatId: battle.id })}
                 >
                   <Icon name="dice" />
-                  {battle.round ? 'Roll next exchange' : 'Roll battle dice'}
+                  {blackWhiteActive
+                    ? battle.round
+                      ? 'Draw next exchange'
+                      : 'Draw black or white'
+                    : battle.round
+                      ? 'Roll next exchange'
+                      : 'Roll battle dice'}
                 </button>
               ) : (
                 <p>Waiting for {game.players.find((p) => p.id === game.activePlayerId)?.name} to roll.</p>

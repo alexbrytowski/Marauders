@@ -70,7 +70,7 @@ public partial class GameRulesTests
         var s = Lobby(); var first = s.Players[2].Id;
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("start-draft", FirstPlayerId: first)));
         ReadyCrew(s, first);
-        Assert.Equal(4, s.PerkPickups.Count); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
+        Assert.Equal(5, s.PerkPickups.Count); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
         var pickups = s.PerkPickups.ToArray();
         var picks = new List<string>();
         for (var i = 0; i < 12; i++)

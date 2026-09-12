@@ -802,9 +802,9 @@ test('captains ready together, restore lobby setup, and automatically start one 
     expect(game.activePlayerId).toBe(ids[2])
     expect(game.events.filter((e) => e.kind === 'draft')).toHaveLength(1)
     expect(game.mapId).toBe('classic')
-    expect(game.perkPickups).toHaveLength(4)
+    expect(game.perkPickups).toHaveLength(5)
     for (const page of [...pages, sameSeat]) {
-      await expect(page.locator('.sea-map [data-perk]')).toHaveCount(4)
+      await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
       await expect(page.getByLabel('Captain readiness')).toHaveCount(0)
     }
     expect(
@@ -883,6 +883,20 @@ test('paged handbook teaches with interactive game pieces without changing the v
   await expect(feedback).toContainText('Two sixes do not beat one six')
   await chapter.getByRole('button', { name: 'Try the reroll example' }).click()
   await expect(feedback).toContainText('Your 5 beats their 3')
+  await chapter.getByText('Combat odds without perks', { exact: true }).click()
+  await expect(chapter.getByRole('table', { name: 'Chance to win one exchange' })).toContainText('11.38%')
+  await expect(chapter.getByRole('table', { name: 'Chance to win the full encounter' })).toContainText(
+    '99.95%',
+  )
+  for (const [width, height] of [
+    [1920, 1080],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`handbook-combat-odds-${width}.png`), fullPage: true })
+  }
+  await page.setViewportSize({ width: 1920, height: 1080 })
   await next()
   await chapter.getByRole('button', { name: 'Try a defense win' }).click()
   await chapter.getByRole('button', { name: 'Try another defense win' }).click()
@@ -972,14 +986,14 @@ test('four browser seats, predraft perks, automatic launch, permissions, reconne
   expect(game.phase).toBe('draft')
   expect(game.ships).toHaveLength(0)
   const revealedPerks = game.perkPickups
-  expect(revealedPerks).toHaveLength(4)
-  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(4)
+  expect(revealedPerks).toHaveLength(5)
+  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
   await stopServer()
   await startServer()
   for (const page of pages) {
     await page.reload()
     await expect(page.locator('.connection')).toHaveText('Live')
-    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(4)
+    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
   }
   expect((await state(spectator)).perkPickups).toEqual(revealedPerks)
   for (let pick = 0; pick < 12; pick++) {
@@ -1367,7 +1381,7 @@ test('password controller, eight profiles, help pages, and reset synchronization
   }
 })
 
-test('perks collect and drop publicly, zero rolls render, and victory history survives restart', async ({
+test('perks, Black and White override, zero rolls, and victory history synchronize and persist', async ({
   browser,
 }, testInfo) => {
   const contexts = await Promise.all(Array.from({ length: 5 }, () => browser.newContext()))
@@ -1465,6 +1479,84 @@ test('perks collect and drop publicly, zero rolls render, and victory history su
       pages[0].getByRole('button', { name: /Continue the voyage/ }).click(),
     )
     for (const p of pages) await expect(p.locator('[data-perk="glass-cannon"]')).toHaveCount(1)
+    // The binary perk replaces every die with one shared server result and keeps
+    // that dedicated presentation for all captains and the spectator.
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      isBuildPhase: false,
+      remainingActions: 2,
+      remainingMovement: 1,
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      combat: null,
+      combatChoices: [],
+      perkPickups: [],
+      ships: [
+        {
+          id: 'black-white-a',
+          ownerId: ids[0],
+          portId: 'port-1',
+          number: 10,
+          q: open.q,
+          r: open.r,
+          perk: 'black-and-white',
+        },
+        {
+          id: 'black-white-b',
+          ownerId: ids[1],
+          portId: 'port-4',
+          number: 20,
+          q: open.q + 2,
+          r: open.r,
+        },
+      ],
+    })
+    saved.game.revision++
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const p of pages) {
+      await p.reload()
+      await expect(p.locator('.connection')).toHaveText('Live')
+    }
+    await pages[0].locator('[data-ship="black-white-a"]').click()
+    await pages[0].locator(`[data-hex="${open.q + 1},${open.r}"]`).click()
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: /Sail 1 hex · battle ahead/ }).click(),
+    )
+    for (const p of pages) {
+      await expect(p.getByLabel('Black and White battle override')).toBeVisible()
+      await expect(p.getByRole('button', { name: 'Draw black or white', exact: true })).toHaveCount(
+        p === pages[0] ? 1 : 0,
+      )
+      await expect(p.locator('.battle-dice')).toHaveCount(0)
+    }
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: 'Draw black or white', exact: true }).click(),
+    )
+    expect(['black', 'white']).toContain(game.combat?.blackWhiteResult)
+    expect(game.combat?.blackWhiteOwnerId).toBe(ids[0])
+    expect(game.combat?.rolls).toEqual({ [ids[0]]: [], [ids[1]]: [] })
+    const binaryResult = game.combat!.blackWhiteResult!
+    for (const p of pages) {
+      await expect(p.getByLabel(`${binaryResult} was drawn`, { exact: true })).toContainText(
+        binaryResult.toUpperCase(),
+      )
+      await expect(p.locator('.captains-log')).toContainText('Black and White exchange')
+    }
+    await pages[4].screenshot({ path: testInfo.outputPath('black-and-white-battle.png'), fullPage: true })
+    await stopServer()
+    await startServer()
+    for (const p of pages) {
+      await p.reload()
+      await expect(p.getByLabel(`${binaryResult} was drawn`, { exact: true })).toBeVisible()
+    }
+    game = await state(pages[0])
+    expect(game.combat?.blackWhiteResult).toBe(binaryResult)
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: /Continue the voyage/ }).click(),
+    )
     // A final port battle exercises real server capture and final-round recording.
     await stopServer()
     saved = JSON.parse(await readFile(savePath, 'utf8'))
@@ -1637,14 +1729,14 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         game = await result.json()
       }
       const revealed = game.perkPickups
-      expect(revealed).toHaveLength(4)
-      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(4)
+      expect(revealed).toHaveLength(5)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(5)
       for (let i = 0; i < 12; i++) await act({ type: 'draft', portId: game.ports[i].id })
       expect(game.phase).toBe('playing')
       expect(game.perkPickups).toEqual(revealed)
       expect(game.ships).toHaveLength(24)
-      expect(game.perkPickups).toHaveLength(4)
-      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(4)
+      expect(game.perkPickups).toHaveLength(5)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(5)
       await pages[4].screenshot({ path: testInfo.outputPath(`${mapId}-board.png`), fullPage: true })
       const actor = pages[ids.indexOf(game.activePlayerId!)]
       game = await clickAction(actor, () =>
@@ -1744,7 +1836,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         await expect(page.locator('.connection')).toHaveText('Live')
         await expect(page.locator('.chart-header')).toContainText('(LEGACY)')
         await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
-        await expect(page.locator('.sea-map [data-perk]')).toHaveCount(4)
+        await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
       }
       const legacyBoard: Board = await (await pages[0].request.get('/api/board')).json()
       const latestBoard: Board = await (await pages[0].request.get(`/api/board?mapId=${mapId}`)).json()

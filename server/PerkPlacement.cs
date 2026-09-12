@@ -3,7 +3,7 @@ namespace Marauders.Server;
 /// <summary>Terrain-based sailing distances and randomized pickup layouts revealed before drafting.</summary>
 public static class PerkPlacement
 {
-    public static readonly string[] Kinds = ["black-pearl", "glass-cannon", "loaded-dice", "mouth-to-feed"];
+    public static readonly string[] Kinds = ["black-pearl", "glass-cannon", "loaded-dice", "mouth-to-feed", "black-and-white"];
     private sealed class MapDistances(BoardMap board)
     {
         public Dictionary<string, Dictionary<Hex, int>> Ports { get; } = board.Ports.ToDictionary(p => p.Id, p => HarborDistances(board, p.Id));

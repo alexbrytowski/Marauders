@@ -105,7 +105,7 @@ public partial class GameStateStoreTests
         store = Store(directory);
         var resumed = await store.ExpireTurnAsync(); Assert.NotNull(resumed);
         Assert.Equal(game.Revision + 1, resumed.Revision); Assert.Equal(game.Id, resumed.Id);
-        Assert.Equal(4, resumed.PerkPickups.Count);
+        Assert.Equal(5, resumed.PerkPickups.Count);
         Assert.Equal(phase == "draft" ? "draft" : "playing", resumed.Phase);
         Assert.Equal(phase == "draft" ? 0 : 24, resumed.Ships.Count);
         Assert.All(originalShips, original => Assert.Contains(resumed.Ships, s => (s.Id, s.OwnerId, s.Hex) == original));

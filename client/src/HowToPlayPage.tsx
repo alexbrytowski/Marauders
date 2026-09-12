@@ -383,6 +383,62 @@ function Sailing({ board }: { board?: Board }) {
   )
 }
 
+const singleExchangeOdds = [
+  ['1 die', '50.00%', '30.56%', '20.83%', '15.11%', '11.38%'],
+  ['2 dice', '69.44%', '50.00%', '37.32%', '28.61%', '22.36%'],
+  ['3 dice', '79.17%', '62.68%', '50.00%', '40.20%', '32.55%'],
+  ['4 dice', '84.89%', '71.39%', '59.80%', '50.00%', '41.78%'],
+  ['5 dice', '88.62%', '77.64%', '67.45%', '58.22%', '50.00%'],
+]
+
+const fullEncounterOdds = [
+  ['1 die', '50.00%', '15.28%', '3.18%', '0.48%', '0.05%'],
+  ['2 dice', '84.72%', '50.00%', '20.65%', '6.25%', '1.44%'],
+  ['3 dice', '96.82%', '79.35%', '50.00%', '23.84%', '8.73%'],
+  ['4 dice', '99.52%', '93.75%', '76.16%', '50.00%', '25.97%'],
+  ['5 dice', '99.95%', '98.56%', '91.27%', '74.03%', '50.00%'],
+]
+
+function CombatOddsTable({
+  caption,
+  firstColumn,
+  rows,
+}: {
+  caption: string
+  firstColumn: string
+  rows: string[][]
+}) {
+  return (
+    <div className="combat-odds-scroll">
+      <table>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{firstColumn}</th>
+            {[1, 2, 3, 4, 5].map((dice) => (
+              <th key={dice} scope="col">
+                vs {dice} {dice === 1 ? 'die' : 'dice'}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([team, ...chances], rowIndex) => (
+            <tr key={team}>
+              <th scope="row">{team}</th>
+              {chances.map((chance, columnIndex) => (
+                <td key={columnIndex} className={rowIndex === columnIndex ? 'even-odds' : undefined}>
+                  {chance}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function Battles({ board }: { board?: Board }) {
   const [example, setExample] = useState(0)
   const [revealed, setRevealed] = useState(false)
@@ -487,6 +543,23 @@ function Battles({ board }: { board?: Board }) {
           battle close-up, select your casualty and confirm its loss. Losing a helper can leave the triggering
           ships fighting; losing a trigger can end the battle. A supporting port cannot be a casualty.
         </p>
+      </details>
+      <details className="combat-odds">
+        <summary>Combat odds without perks</summary>
+        <p>
+          These are your chances when every participating ship uses a normal six-sided die and ties reroll.
+          Harbor support, port attacks, and perks are excluded.
+        </p>
+        <CombatOddsTable caption="Chance to win one exchange" firstColumn="Your team" rows={singleExchangeOdds} />
+        <p>
+          The cumulative table assumes the fight continues after every casualty until one team has no ships
+          left. A live battle can end sooner when removing a triggering ship leaves no opposing ships adjacent.
+        </p>
+        <CombatOddsTable
+          caption="Chance to win the full encounter"
+          firstColumn="Starting team"
+          rows={fullEncounterOdds}
+        />
       </details>
     </Lesson>
   )
@@ -664,6 +737,13 @@ function Perks() {
         <strong>1 holder → 7 slots</strong>
       </>
     ),
+    'black-and-white': (
+      <>
+        <span className="black-white-example black">BLACK</span>
+        <span>or</span>
+        <span className="black-white-example white">WHITE</span>
+      </>
+    ),
   }
   return (
     <Lesson
@@ -691,7 +771,7 @@ function Perks() {
         </>
       }
     >
-      <h3>Four pickups. Four different edges.</h3>
+      <h3>Five pickups. Five different edges.</h3>
       <p>
         One of each perk appears in open water before the draft. Each ship can carry <strong>one perk</strong>
         ; a fleet can hold several.
@@ -700,7 +780,8 @@ function Perks() {
         <li>A ship already carrying a perk sails past other pickups.</li>
         <li>Destroyed ships drop their perk where they sank.</li>
         <li>Combat perks work for participating helpers and port attackers.</li>
-        <li>Movement and port defense use ordinary six-sided dice.</li>
+        <li>Movement uses an ordinary six-sided die.</li>
+        <li>Black and White replaces all dice and modifiers in an exchange with one 50/50 result.</li>
       </ul>
       <details>
         <summary>Recruitment & population details</summary>

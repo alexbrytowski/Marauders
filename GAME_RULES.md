@@ -26,7 +26,7 @@ Captains then pick ports using a snake draft. With four players and 13 ports, ea
 
 Before the draft, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Serpent’s Coil has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
-The four perk pickups appear on the selected map before the first port pick, so captains can plan their ports around them. Their locations and types stay fixed throughout the draft.
+The five perk pickups appear on the selected map before the first port pick, so captains can plan their ports around them. Their locations and types stay fixed throughout the draft.
 
 When the final port is picked, the server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
 
@@ -112,8 +112,9 @@ Updated from the owner's September 10 notes and clarifications. Perks appear as 
 - **Glass Cannon:** This ship's combat roll is uniformly distributed from 0 through 8, including both endpoints. This replaces its normal d6 combat roll.
 - **Loaded Dice:** This ship's combat results of 1 or 2 become 3.
 - **Mouth to Feed:** Adds one population slot to the captain of the ship carrying it, anywhere at sea. Each holder adds one slot. The bonus follows the ship’s owner; losing the perk never removes existing ships or cancels construction.
+- **Black and White:** When this ship participates in a combat exchange, all numbered ship and port dice and defense modifiers are replaced by one server-generated black-or-white result. Black wins for this ship's team; white wins for the opposing side. This applies in ship battles and port attacks, including when the holder helps. If the holder is removed and the ship battle continues, later exchanges return to normal dice.
 
-Combat perks work for participating helpers and port attackers. Shared movement rolls and port defense rolls remain normal d6s. The initial playtest uses one pickup of each type and no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
+Combat perks work for participating helpers and port attackers. Shared movement rolls remain normal d6s. Port defense rolls remain normal d6s unless Black and White replaces the entire exchange. The initial playtest uses one pickup of each type and no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
 
 ### Forfeit and leave
 

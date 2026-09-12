@@ -18,9 +18,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     {
         if (state.IsBuildPhase && state.ActivePlayerId is { } owner) state.AvailableBuilds = FreeBuilds(owner);
     }
-    private void Log(string kind, string message, Dictionary<string, List<int>>? rolls = null)
+    private void Log(string kind, string message, Dictionary<string, List<int>>? rolls = null,
+        string? blackWhiteResult = null, string? blackWhiteOwnerId = null)
         => state.Events.Add(new(Guid.NewGuid().ToString("N"), now, state.TurnNumber, kind, message,
-            rolls?.ToDictionary(p => p.Key, p => p.Value.ToList())));
+            rolls?.ToDictionary(p => p.Key, p => p.Value.ToList()), blackWhiteResult, blackWhiteOwnerId));
 
     public Player Join(JoinRequest request)
     {
@@ -194,7 +195,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private void RevealPerks()
     {
         state.PerkPickups = PerkPlacement.Create(state, dice);
-        Log("perk", "Four perks are charted in open water. Plan your ports around them; sail through a pickup to collect it.");
+        Log("perk", "Five perks are charted in open water. Plan your ports around them; sail through a pickup to collect it.");
     }
     private void LaunchStartingFleets()
     {
@@ -365,6 +366,14 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (battle!.Ships.Count == 0) SnapshotBattleShips(battle);
         battle!.Round++;
         battle.Rolls = new() { [battle.AttackerId] = [], [battle.DefenderId] = [] };
+        battle.BlackWhiteResult = null;
+        battle.BlackWhiteOwnerId = null;
+        var blackWhite = battle.ParticipantShipIds.Select(Ship).FirstOrDefault(ship => ship.Perk == "black-and-white");
+        if (blackWhite is not null)
+        {
+            RollBlackAndWhite(battle, blackWhite);
+            return;
+        }
         foreach (var id in battle.ParticipantShipIds)
         {
             var ship = Ship(id);
@@ -409,6 +418,42 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Log("roll", battle.Message, battle.Rolls);
         ActionClock();
         ResolveOnlyLoss($"{Name(battle.WinnerId!)} wins {Math.Max(a, b)} to {Math.Min(a, b)}.");
+    }
+    private void RollBlackAndWhite(CombatState battle, Ship holder)
+    {
+        battle.BlackWhiteOwnerId = holder.OwnerId;
+        battle.BlackWhiteResult = dice.Roll(2) == 1 ? "black" : "white";
+        var opposingId = holder.OwnerId == battle.AttackerId ? battle.DefenderId : battle.AttackerId;
+        battle.WinnerId = battle.BlackWhiteResult == "black" ? holder.OwnerId : opposingId;
+        var result = $"{(battle.BlackWhiteResult == "black" ? "Black" : "White")}. " +
+            $"{Name(battle.WinnerId)} wins the Black and White exchange.";
+        if (battle.Kind == "port")
+        {
+            var port = Port(battle.PortId);
+            if (battle.WinnerId == battle.AttackerId)
+            {
+                Capture(port, battle.AttackerId);
+                battle.Message = $"{result} {Name(battle.AttackerId)} captured {port.Name}.";
+            }
+            else
+            {
+                port.DefenseWeakness++;
+                battle.Message = $"{result} {port.Name} held. Its defense is now −{port.DefenseWeakness}. No ship is lost.";
+            }
+            battle.Status = "resolved";
+        }
+        else
+        {
+            battle.LosingPlayerId = battle.WinnerId == battle.AttackerId ? battle.DefenderId : battle.AttackerId;
+            battle.Status = "choose-loss";
+            var onlyCasualty = state.Ships.Count(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id)) == 1;
+            battle.Message = result + " " +
+                (onlyCasualty ? "The only eligible casualty will be resolved automatically." : $"{Name(battle.LosingPlayerId)} must choose a participating ship to lose.");
+        }
+        Log("roll", battle.Message, blackWhiteResult: battle.BlackWhiteResult,
+            blackWhiteOwnerId: battle.BlackWhiteOwnerId);
+        ActionClock();
+        ResolveOnlyLoss($"{Name(battle.WinnerId!)} wins the Black and White exchange.");
     }
     private bool ResolveOnlyLoss(string? result = null)
     {
@@ -536,7 +581,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     }
     private static string PerkName(string kind) => kind switch
     {
-        "black-pearl" => "The Black Pearl", "glass-cannon" => "Glass Cannon", "loaded-dice" => "Loaded Dice", "mouth-to-feed" => "Mouth to Feed", _ => kind
+        "black-pearl" => "The Black Pearl", "glass-cannon" => "Glass Cannon", "loaded-dice" => "Loaded Dice",
+        "mouth-to-feed" => "Mouth to Feed", "black-and-white" => "Black and White", _ => kind
     };
     private void FinishRound()
     {

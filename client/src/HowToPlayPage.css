@@ -144,6 +144,7 @@
   text-align: center;
 }
 .lesson-copy {
+  min-width: 0;
   font-size: 13px;
   line-height: 1.75;
 }
@@ -179,6 +180,59 @@
   cursor: pointer;
   color: #e2c891;
   font-weight: 500;
+}
+.combat-odds > p {
+  margin: 12px 0;
+}
+.combat-odds {
+  min-width: 0;
+}
+.combat-odds-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+.combat-odds table {
+  width: 100%;
+  min-width: 535px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+}
+.combat-odds caption {
+  padding: 8px 10px;
+  background: #172f37;
+  border: 1px solid #42606a;
+  color: #edcf97;
+  font-weight: 700;
+  text-align: left;
+}
+.combat-odds th,
+.combat-odds td {
+  padding: 7px 8px;
+  border: 1px solid #36515a;
+  text-align: right;
+  white-space: nowrap;
+}
+.combat-odds th {
+  background: #132a32;
+  color: #dbe4dc;
+  font-weight: 700;
+}
+.combat-odds th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+}
+.combat-odds td {
+  background: #0c222a;
+  color: #bcd0ce;
+}
+.combat-odds td.even-odds {
+  background: #54492e;
+  color: #fff0c8;
+  font-weight: 800;
 }
 .handbook summary:focus-visible {
   outline: 2px solid #e6be68;
@@ -396,6 +450,21 @@
 .perk-demonstration .example-dice {
   gap: 6px;
   font-size: 10px;
+}
+.black-white-example {
+  padding: 7px 10px;
+  border: 1px solid #b89b66;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.black-white-example.black {
+  background: #080808;
+  color: #fff;
+}
+.black-white-example.white {
+  background: #faf8f1;
+  color: #111;
 }
 .whirlpool-example {
   display: flex;

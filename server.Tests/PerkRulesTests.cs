@@ -61,6 +61,49 @@ public partial class GameRulesTests
         Assert.Equal(1, s.RemainingMovement); Assert.Equal(6, Assert.Single(dice.Sides));
     }
 
+    [Theory] [InlineData(1, "black", true)] [InlineData(2, "white", false)]
+    public void Black_and_white_replaces_all_dice_with_one_even_public_draw(int draw, string result, bool holderWins)
+    {
+        var (s, holder, opponent) = Duel("black-and-white"); var dice = new ControlledDice([draw]);
+        new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal(new[] { 2 }, dice.Sides); Assert.All(s.Combat.Rolls.Values, Assert.Empty);
+        Assert.Equal(result, s.Combat.BlackWhiteResult); Assert.Equal(holder.OwnerId, s.Combat.BlackWhiteOwnerId);
+        Assert.Equal(holderWins ? holder.OwnerId : opponent.OwnerId, s.Combat.WinnerId);
+        var publicDraw = s.Events.Last(e => e.Kind == "roll");
+        Assert.Null(publicDraw.Rolls); Assert.Equal(result, publicDraw.BlackWhiteResult);
+        Assert.Equal(holder.OwnerId, publicDraw.BlackWhiteOwnerId); Assert.Contains(result, publicDraw.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact] public void Removing_the_black_and_white_helper_restores_normal_dice_for_the_next_exchange()
+    {
+        var s = Playing(); var trigger = Add(s, 0, Open); var opponent = Add(s, 1, Offset(Open, 2));
+        var holder = Add(s, 0, Offset(Open, -1)); holder.Perk = "black-and-white"; s.RemainingMovement = 1;
+        Rules(s).Act(s.ActivePlayerId!, new("move", ShipId: trigger.Id, Q: Open.Q + 1, R: Open.R));
+        if (s.Combat is null) Rules(s).Act(s.ActivePlayerId!, new("choose-combat", ChoiceId: s.CombatChoices.First().Id));
+        var dice = new ControlledDice([2, 6, 1]); var rules = new GameRules(s, dice, new(), Now);
+        rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal("white", s.Combat.BlackWhiteResult); Assert.Equal(trigger.OwnerId, s.Combat.LosingPlayerId);
+        rules.Act(holder.OwnerId, new("remove-ship", CombatId: s.Combat.Id, ShipId: holder.Id));
+        Assert.Equal("awaiting-roll", s.Combat.Status);
+        rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat.Id));
+        Assert.Null(s.Combat.BlackWhiteResult); Assert.Null(s.Combat.BlackWhiteOwnerId);
+        Assert.Equal(new[] { 6 }, s.Combat.Rolls[trigger.OwnerId]); Assert.Equal(new[] { 1 }, s.Combat.Rolls[opponent.OwnerId]);
+        Assert.Equal(new[] { 2, 6, 6 }, dice.Sides);
+    }
+
+    [Theory] [InlineData(1, true)] [InlineData(2, false)]
+    public void Black_and_white_overrides_port_dice_and_defense_modifiers(int draw, bool captures)
+    {
+        var s = Playing(); var port = s.Ports[3]; var attacker = Add(s, 0, BoardDefinition.Harbor(port.Id)[0]);
+        attacker.Perk = "black-and-white"; port.DefenseWeakness = 10;
+        var originalOwner = port.OwnerId; var dice = new ControlledDice([draw]); var rules = new GameRules(s, dice, new(), Now);
+        rules.Act(attacker.OwnerId, new("attack-port", ShipId: attacker.Id, PortId: port.Id));
+        rules.Act(attacker.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal(new[] { 2 }, dice.Sides); Assert.All(s.Combat.Rolls.Values, Assert.Empty);
+        Assert.Equal(captures ? attacker.OwnerId : originalOwner, port.OwnerId);
+        Assert.Equal(captures ? 0 : 11, port.DefenseWeakness);
+    }
+
     [Theory] [InlineData(0, true)] [InlineData(99, true)] [InlineData(100, false)] [InlineData(999, false)]
     public void Pearl_conversion_has_exact_threshold_retains_position_and_perk_and_adds_no_actions(int chance, bool converts)
     {

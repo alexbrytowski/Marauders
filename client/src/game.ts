@@ -55,6 +55,8 @@ export type Battle = {
   losingPlayerId: string | null
   winnerId: string | null
   rolls: Record<string, number[]>
+  blackWhiteResult: 'black' | 'white' | null
+  blackWhiteOwnerId: string | null
   defenseModifier: number
   round: number
   message: string
@@ -66,6 +68,8 @@ export type GameEvent = {
   kind: string
   message: string
   rolls: Record<string, number[]> | null
+  blackWhiteResult: 'black' | 'white' | null
+  blackWhiteOwnerId: string | null
 }
 export type Game = {
   id: string
@@ -131,6 +135,11 @@ export const perks: Record<string, { name: string; symbol: string; description: 
     name: 'Mouth to Feed',
     symbol: '+1',
     description: 'Adds one population slot to this ship’s captain while carried, anywhere at sea.',
+  },
+  'black-and-white': {
+    name: 'Black and White',
+    symbol: '◐',
+    description: 'Replaces a participating battle exchange with one 50/50 black-or-white result.',
   },
 }
 export const key = (h: Hex) => `${h.q},${h.r}`

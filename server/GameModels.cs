@@ -92,11 +92,14 @@ public sealed class CombatState
     public string? LosingPlayerId { get; set; }
     public string? WinnerId { get; set; }
     public Dictionary<string, List<int>> Rolls { get; set; } = [];
+    public string? BlackWhiteResult { get; set; }
+    public string? BlackWhiteOwnerId { get; set; }
     public int DefenseModifier { get; set; }
     public int Round { get; set; }
     public string Message { get; set; } = "All captains are watching.";
 }
-public sealed record GameEvent(string Id, DateTimeOffset At, int Turn, string Kind, string Message, Dictionary<string, List<int>>? Rolls = null);
+public sealed record GameEvent(string Id, DateTimeOffset At, int Turn, string Kind, string Message,
+    Dictionary<string, List<int>>? Rolls = null, string? BlackWhiteResult = null, string? BlackWhiteOwnerId = null);
 public sealed record GameCommand(string Type, string? PortId = null, string? ShipId = null, int? Q = null, int? R = null,
     string? CombatId = null, string? ChoiceId = null, string? FirstPlayerId = null, long? ExpectedRevision = null, string? MapId = null,
     bool? IsReady = null, string? LobbyVersion = null);

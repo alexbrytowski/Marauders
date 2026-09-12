@@ -9,6 +9,7 @@ from 0 through 8. Keep the requested effects for the first playtest.
 | Glass Cannon | Strong combat advantage, with risk | A 0–8 holder wins 56.25% of decisive one-on-one exchanges against d6. A 7 or 8 beats any number of unmodified d6 ships; friendly helpers soften its zero-roll downside. |
 | Loaded Dice | Consistent, moderate power | Wins 60% of decisive one-on-one exchanges against d6. Its value falls in large battles because only the highest allied roll matters. |
 | Mouth to Feed | A small persistent population bonus | Replaces Architect. Each holder adds one fleet-capacity slot anywhere at sea. Losing or recruiting the holder transfers that economic advantage; construction still takes two future owner rounds. |
+| Black and White | Extreme equalizer with symmetric risk | Replaces the whole exchange with a 50/50 result, so one carrier can erase a large fleet or fortified port's normal advantage. The same override can also discard its own side's favorable odds. Track whether players use it primarily for low-risk attacks from behind. |
 
 These percentages enumerate every equally likely pair of rolls and exclude ties,
 which reroll. They describe one exchange, not the chance to win an entire battle
@@ -17,7 +18,7 @@ The revised 0–8 version has a lower average (4 versus 4.5), but retains powerf
 high results. Loaded Dice has an average result of 4.
 
 One perk per ship prevents a stacked combat powerhouse. No fleet limit lets a
-captain assemble a varied fleet, but concentrating all four pickups should take
+captain assemble a varied fleet, but concentrating all five pickups should take
 movement and expose ships to opponents. Initial distribution is one of each perk,
 without timed respawns. Dropped perks remain in play.
 

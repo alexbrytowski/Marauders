@@ -12,8 +12,8 @@ type Frame = {
 export function useRollPresentation(latest: Game | null, live: boolean) {
   const [frame, setFrame] = useState<Frame>({ source: latest, shown: latest, rolling: null, rollKey: '' })
   if (frame.source !== latest) {
-    const previousRoll = frame.source?.events.findLast((event) => event.rolls)
-    const nextRoll = latest?.events.findLast((event) => event.rolls)
+    const previousRoll = frame.source?.events.findLast((event) => event.rolls || event.blackWhiteResult)
+    const nextRoll = latest?.events.findLast((event) => event.rolls || event.blackWhiteResult)
     const sameTurn = latest?.id === frame.source?.id && latest?.turnNumber === frame.source?.turnNumber
     const animate =
       live &&

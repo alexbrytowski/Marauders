@@ -26,7 +26,7 @@ public partial class GameRulesTests
         Assert.Equal("lobby", s.Phase);
         ReadyCaptain(s, 1);
         Assert.Equal("draft", s.Phase); Assert.Equal(s.HostPlayerId, s.ActivePlayerId);
-        Assert.Equal(4, s.PerkPickups.Count); Assert.Single(s.Events, e => e.Kind == "draft");
+        Assert.Equal(5, s.PerkPickups.Count); Assert.Single(s.Events, e => e.Kind == "draft");
         Assert.Throws<RuleException>(() => ReadyCaptain(s, 1));
         Assert.Throws<RuleException>(() => ReadyCaptain(s, 1, false));
         Assert.Throws<RuleException>(() => Rules(s).Act(s.HostPlayerId!, new("set-first-player", FirstPlayerId: s.Players[1].Id)));
@@ -89,7 +89,7 @@ public partial class GameStateStoreTests
         Assert.All(results, result => Assert.True(result.Success, result.Error));
         var draft = await Store(directory, password).ReadAsync();
         Assert.Equal("draft", draft.Phase); Assert.Equal(restored.FirstPlayerId, draft.ActivePlayerId);
-        Assert.Single(draft.Events, e => e.Kind == "draft"); Assert.Equal(4, draft.PerkPickups.Count);
+        Assert.Single(draft.Events, e => e.Kind == "draft"); Assert.Equal(5, draft.PerkPickups.Count);
         var late = await store.ActAsync("browser-3", new("set-ready", IsReady: true, LobbyVersion: restored.LobbyVersion));
         Assert.False(late.Success); Assert.Equal(draft.Revision, (await store.ReadAsync()).Revision);
         var reset = await store.ResetAsync(new(password, draft.Id, draft.Revision));
