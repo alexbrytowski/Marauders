@@ -36,10 +36,11 @@ at most 640 by 800 pixels, under `server/wwwroot/characters/`. Originals remain
 intact. The site serves the copies at `/characters/`; Vite proxies that path to
 the API during development. Missing images fall back to a named compass.
 
-The original folder and generated photos are Git-ignored. A fresh checkout
-needs the owner's original folder and this preparation step to show photos.
-Installed web portraits are included in `dotnet publish` output, so prepare them
-before publishing. Everyone with access to the game can view the names/photos.
+The owner approved the eight optimized web JPEGs for public distribution on
+September 11. They are included in Git and release builds, so a fresh checkout
+can serve every portrait. The original `Characters/` folder remains Git-ignored
+and untouched. Release publishing with `RequireReleaseAssets=true` rejects a
+missing portrait. Everyone with access to the game can view the names/photos.
 
 ## Optional local overrides
 

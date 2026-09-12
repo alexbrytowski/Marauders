@@ -21,8 +21,8 @@ server/data/game-state-v2.json*
 server/data/keys/
 server/data/backups/
 server/characters.local.json
-server/wwwroot/characters/
-Characters/
+# The owner approved the optimized web portraits for the public release.
+/Characters/
 .env
 .env.*
 !.env.example

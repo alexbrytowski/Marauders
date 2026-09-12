@@ -6,6 +6,10 @@ public battles, and server-enforced rules. See [GAME_RULES.md](GAME_RULES.md),
 
 Requires a .NET 10 SDK and current Node.js/npm (Node 24 is used in CI).
 
+For Railway, follow [DEPLOY.md](DEPLOY.md). The Dockerfile builds the UI and API
+together and includes all eight approved web portraits. One persistent `/data`
+volume holds the single JSON game, browser keys and reset archives.
+
 ## Run locally
 
 On Windows, double-click **Start-Marauders.cmd** in the project folder. Or run
@@ -135,9 +139,10 @@ retain browser seats across server restarts. Neither belongs in version control.
 The original `game-state.json` is preserved and is not migrated onto the new grid.
 The owner chose one small game with open joining and browser identity. There is
 no invitation gate; reset remains password-protected. The current local store is
-JSON. Before hosting, resolve the earlier JSON decision against AGENTS.md's public
-release database requirement; SQLite is proposed, not yet implemented. Keep a
-single server process and back up its data and keys. See the
+JSON. On September 11 the owner confirmed retaining that single-game design for
+Railway, superseding the database prerequisite. The hosted game starts fresh;
+local saves are excluded from the container. Keep one server process and back up
+its persistent data and keys. See the
 [launch checklist](TASKLIST.md) and [launch review](LAUNCH_REVIEW.md).
 
 ## Same-origin build

@@ -6,6 +6,13 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+// Railway supplies PORT; bind the public-facing container interface explicitly.
+if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } portValue)
+{
+    if (!int.TryParse(portValue, out var port) || port is < 1 or > 65535)
+        throw new InvalidOperationException("PORT must be an integer between 1 and 65535.");
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 builder.Services.AddOptions<GameOptions>().BindConfiguration("Game")
     .Validate(o => o.TurnSeconds >= 10 && o.ActionSeconds >= 5, "Game timers must be at least 10/5 seconds.")
     .Validate(o => o.ResetPassword is null || o.ResetPassword.Length is >= 12 and <= 1024, "The reset password must contain 12–1024 characters when configured.").ValidateOnStart();
@@ -22,6 +29,7 @@ builder.Services.AddSingleton<GameHubNotifier>();
 builder.Services.AddHostedService<TurnTimerService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
+builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
 var dataDirectory = builder.Configuration["Game:DataDirectory"] ?? Path.Combine(builder.Environment.ContentRootPath, "data");
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(dataDirectory, "keys"))).SetApplicationName("Marauders");
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
@@ -62,7 +70,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
-if (!app.Environment.IsDevelopment()) { app.UseHsts(); app.UseHttpsRedirection(); }
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    // Railway's readiness probe uses internal HTTP, without a forwarded scheme.
+    app.UseWhen(context => context.Request.Path != "/api/health", branch => branch.UseHttpsRedirection());
+}
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();

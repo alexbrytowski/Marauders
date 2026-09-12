@@ -18,4 +18,12 @@
     <Content Include="../client/dist/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <Target Name="ValidateReleaseAssets" BeforeTargets="PrepareForPublish" Condition="'$(RequireReleaseAssets)' == 'true'">
+    <ItemGroup>
+      <RequiredPortrait Include="alex-the-merciless;alyssa-the-witch;dylan-the-salty-dog;hayven-the-merchant;jacob-the-vengeful;jared-the-oil-baron;josh-the-phantom;steven-the-cruel" />
+    </ItemGroup>
+    <Error Condition="!Exists('../client/dist/index.html')" Text="Build the client with npm ci and npm run build before publishing a release." />
+    <Error Condition="!Exists('wwwroot/characters/%(RequiredPortrait.Identity).jpg')" Text="Required release portrait is missing: %(RequiredPortrait.Identity).jpg" />
+  </Target>
+
 </Project>

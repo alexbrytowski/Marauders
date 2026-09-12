@@ -3,9 +3,10 @@
 This small open-join game currently uses one server process and one JSON save.
 Do not run two servers against the same data directory. Keep a persistent writable
 directory across updates. The owner declined an invitation gate; normal play keeps
-signed browser seats, and only reset requires the owner's secret. Hosted storage
-is still a decision: the earlier JSON scope and AGENTS.md's public-release database
-requirement must be reconciled before deployment. See [TASKLIST.md](TASKLIST.md).
+signed browser seats, and only reset requires the owner's secret. On September 11
+the owner confirmed the single-game JSON setup for Railway, superseding the earlier
+database prerequisite. No local save import is needed. See [DEPLOY.md](DEPLOY.md)
+for the container, persistent volume, variables and deployment checks.
 
 ## Passwords and reset
 
@@ -107,5 +108,7 @@ version needed to reproduce the issue, without publishing private saves or passw
 
 Once a host is chosen, configure managed HTTPS, persistent storage, WebSocket
 support, a single application instance, uptime/error alerts, and provider-managed
-secrets. Keep deployment URLs/secrets out of Git. Provider-specific deployment and
-alert setup remain pending; no external resources have been created.
+secrets. Keep deployment URLs/secrets out of Git. Provider-specific deployment
+instructions are in [DEPLOY.md](DEPLOY.md). The owner is configuring Railway;
+hosted alert and recovery verification remain pending. Code preparation does not
+verify the provider's live configuration.

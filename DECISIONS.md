@@ -1,5 +1,26 @@
 # Implementation decisions
 
+## 2026-09-11: Railway release preparation
+
+- The owner requested deployment-ready code, confirmed local saves are not
+  needed, and clarified that this app has no database and runs one game at a
+  time. Retain the existing JSON persistence on a Railway volume and start the
+  hosted game fresh; do not import or upload local saves. This explicit choice
+  supersedes AGENTS.md's database requirement for this single-game deployment.
+- Use one process and one persistent volume. Preserve browser signing keys and
+  reset archives beside the game across redeploys. Back up the stopped service's
+  data directory to protected off-host storage; restore save and keys together
+  while stopped. No database dependency, migration, or local deletion is needed.
+- Retain the owner's explicit open-join/browser-seat decision above. Preparing
+  deployment does not add managed visitor accounts or an invitation gate.
+- Build the React UI and .NET 10 API into one Linux container. Keep private photos,
+  secrets, local tools, and saves out of the Docker/Git upload context. The owner
+  explicitly approved making the optimized character JPEGs public in the build:
+  track those eight web assets and fail packaging if any is missing. Original
+  full-size images remain excluded. This supersedes the earlier exclusion of web
+  portraits from Git. Hosting configuration and live verification remain separate
+  from local release checks.
+
 ## 2026-09-10: launch planning and open access
 
 - The owner prioritizes avoiding surprise hosting bills. Require a verified

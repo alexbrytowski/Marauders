@@ -7,7 +7,7 @@ permissions:
 jobs:
   rules-and-multiplayer:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,11 +24,13 @@ jobs:
         working-directory: client
       - run: dotnet build Marauders.slnx --configuration Release
       - run: dotnet test Marauders.slnx --configuration Release --no-build
-      - run: dotnet publish server/Marauders.Server.csproj --configuration Release --output artifacts/publish
+      - run: dotnet publish server/Marauders.Server.csproj --configuration Release --output artifacts/publish -p:RequireReleaseAssets=true
       - run: npx playwright install --with-deps chromium
         working-directory: client
       - run: npm run test:e2e
         working-directory: client
+      - run: docker build --tag marauders:verify .
+      - run: node tools/verify-container.mjs marauders:verify
       - uses: actions/upload-artifact@v4
         if: always()
         with:

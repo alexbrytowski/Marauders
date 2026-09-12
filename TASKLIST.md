@@ -1,6 +1,6 @@
 # Marauders launch checklist
 
-Updated 2026-09-10. Target: one game, four captains plus approximately three
+Updated 2026-09-11. Target: one game, four captains plus approximately three
 spectators, desktop-first. Joining is open; the owner explicitly declined an
 invitation gate. Reset stays password-protected. No hard spectator cap is
 implemented or required by this planning assumption.
@@ -10,7 +10,8 @@ See [LAUNCH_REVIEW.md](LAUNCH_REVIEW.md) for findings and hosting options,
 [DECISIONS.md](DECISIONS.md) for scope, and [OPERATIONS.md](OPERATIONS.md) for recovery.
 
 Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
-not certify the hosted environment. No hosting resources have been created.
+not certify the hosted environment. The owner has started Railway setup;
+provider settings and a live deployment have not been verified by the agent.
 
 ## 1. Reliable reset and connection recovery — before launch
 
@@ -38,9 +39,8 @@ not certify the hosted environment. No hosting resources have been created.
 
 ## 2. Choose and package the host
 
-- [ ] Owner selects provider/budget. Updated recommendation: Railway Hobby with
-  its provider-enforced spending shutdown; Render is secondary because its fixed
-  compute price still permits bandwidth overages. See the dated comparison.
+- [x] Owner selected Railway and started connecting the repository. Budget and
+  usage-limit verification remain the separate gate below.
 - [ ] Before any paid deployment, verify and record the correct workspace's hard
   usage limit and alert. Proposed: $10 compute hard limit (documented minimum),
   $5 alert; confirm the owner's amount and all bill components. Account separately
@@ -49,23 +49,25 @@ not certify the hosted environment. No hosting resources have been created.
 - [ ] Document spending-limit shutdown/recovery: the game and reset endpoint go
   offline at the limit. Restore through the provider only after owner approval
   or the billing-cycle reset; retain backups and verify how restart is performed.
-- [ ] Resolve storage scope before implementation: AGENTS.md requires a database
-  for public release, while earlier private-game notes retain JSON. Proposed:
-  single-instance SQLite on the same persistent disk; do not silently waive the
-  requirement or migrate an existing save. Approve backup/migration/rollback first.
-- [ ] Add a reproducible Linux .NET 10 + Node 24 build/container, same-origin UI/API/
-  hub, non-root runtime, provider port binding, and a build-context allowlist that
-  excludes saves, keys, secrets, original photos, and local tooling. Fail a release
-  package if the client bundle or required portraits are missing.
-- [ ] Arrange a private, repeatable way to supply all eight optimized portraits
-  to release builds. They are Git-ignored; plain checkout-based CI only has named
-  fallbacks. Never solve packaging by committing the original personal photos.
+- [x] Owner confirmed keeping one game with JSON storage and no database, and
+  starting the hosted game fresh without local saves. Record this explicit
+  exception to the earlier database prerequisite in DECISIONS.md.
+- [x] Add Linux .NET 10 + Node 24 Docker build, same-origin UI/API/hub, runtime
+  privilege drop, provider port binding and a context allowlist excluding saves,
+  keys, secrets, original photos and tools. Release publish checks the client
+  bundle and all eight portraits. Local publish passes; Linux container execution
+  remains a CI check because Docker is unavailable on this workstation.
+- [x] Owner approved the eight optimized character JPEGs as public build assets.
+  Include them in Git and the release image; keep original full-size photos out.
+- [x] Add DEPLOY.md with Railway variables, volume, health check and service
+  settings. Use dashboard settings rather than deprecated railway.json files.
 - [ ] Mount persistent writable storage for state, signing keys, and reset archives;
   keep it outside static files. Configure one process/replica, no scale-to-zero,
   and no overlapping writers during deployment. Keep staging data separate.
 - [ ] Run remote CI on the exact release commit and retain a known-good artifact.
-  Verify Production behind HTTPS; current browser tests run in Development,
-  including the published-client scenario.
+  Verify Production behind HTTPS; existing gameplay tests run in Development,
+  including the old published-client scenario. A new Production HTTPS/proxy
+  seven-browser regression now passes locally; remote Linux CI remains pending.
 
 ## 3. Release rehearsal and operations
 
@@ -86,12 +88,16 @@ not certify the hosted environment. No hosting resources have been created.
   games: persistent-disk services briefly stop, and stored turn deadlines do not
   pause during downtime or when everyone closes their browser.
 - [ ] Record the owner's go/no-go after desktop/map/perk/timer playtesting and
-  confirm public display of supplied portraits plus any desired contact wording.
+  any desired contact wording. Public display of the optimized portraits was
+  explicitly approved on September 11.
 
 ## Current review evidence
 
 - [x] Release solution build: zero warnings/errors; all 133 server tests pass.
 - [x] Client lint and production build pass; same-origin Release publish succeeds.
+- [x] Production HTTPS proxy regression passes: seven browsers, eight portrait
+  reads, secure cookies, WebSockets, spectator rejection, reset synchronization,
+  reset archive and game/browser-seat persistence across server restart.
 - [x] npm audit (including development dependencies) and NuGet transitive package
   audit report no known vulnerabilities in their current feeds.
 - [x] Isolated seven-browser smoke: four distinct captains, three spectators,
@@ -99,9 +105,13 @@ not certify the hosted environment. No hosting resources have been created.
 - [x] Fault injection reproduced the initial-resync failure, then regression
   coverage verified the repair returns Live after a retry. Review probe is
   retained under ignored `artifacts/launch-review-probe.mjs`.
-- [x] All 13 browser regression scenarios pass in Release (4.6 minutes), including
-  password reset and same-origin publish. Evidence is under ignored
-  `artifacts/launch-review-e2e/`. These do not cover the new fault-injection finding.
+- [x] All 15 browser regressions pass in Release (4.7 minutes), including
+  Production HTTPS with seven browsers, password reset, same-origin publish and
+  initial-refresh fault injection. Current results are under ignored
+  `client/test-results/`; the older launch-review evidence remains in artifacts.
+- [x] Release asset validation rejects missing UI and missing portraits and passes
+  with all eight JPEGs. Public JPEGs contain no EXIF metadata. Docker entrypoint
+  and container-smoke script pass local syntax checks; Linux execution is pending CI.
 
 ## Deferred unless playtesting finds a blocker
 
