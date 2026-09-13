@@ -478,15 +478,18 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var holder = state.Ships.Where(s => s.OwnerId == loser && s.Perk == "cheat-death" &&
             battle.ParticipantShipIds.Contains(s.Id)).OrderBy(s => s.Number).FirstOrDefault();
         if (holder is null) return false;
-        Log("roll", $"{Name(loser)} lost the exchange. Ship {holder.Number} uses Cheat Death to reroll it before any losses or port effects.",
+        Log("roll", $"{Name(loser)} lost the exchange. Ship {holder.Number} uses Cheat Death, forcing a public reroll before any losses or port effects.",
             battle.Rolls, battle.BlackWhiteResult, battle.BlackWhiteOwnerId);
         holder.Perk = null;
         battle.Ships = battle.Ships.Select(s => s.Id == holder.Id ? s with { Perk = null } : s).ToList();
         var pickup = PerkPlacement.Respawn("cheat-death", state, dice);
         state.PerkPickups.Add(pickup);
         Log("perk", $"Ship {holder.Number} consumed Cheat Death. The perk reappeared in open water at {pickup.Q}, {pickup.R}.");
-        RollBattle(battle.Id);
-        battle.Message = $"Ship {holder.Number} used Cheat Death and rerolled. {battle.Message}";
+        battle.Status = "awaiting-roll";
+        battle.WinnerId = null;
+        battle.LosingPlayerId = null;
+        battle.Message = $"{Name(loser)} lost the exchange, but ship {holder.Number} used Cheat Death. Roll the exchange again.";
+        ActionClock();
         return true;
     }
     private bool ResolveOnlyLoss(string? result = null)

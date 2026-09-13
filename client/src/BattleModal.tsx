@@ -300,7 +300,8 @@ export function BattleModal({
       )}
       <p className="battle-note">
         {game.isEndingRound && 'Resolve launch battles before the next captain’s turn begins. '}
-        Ties reroll. Helpers never chain. Battle results remain in the captain’s log.
+        Ties reroll. Cheat Death forces a public reroll. Helpers never chain. Battle results remain in the
+        captain’s log.
       </p>
     </dialog>
   )

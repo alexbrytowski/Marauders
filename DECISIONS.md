@@ -1,5 +1,15 @@
 # Implementation decisions
 
+## 2026-09-13: public Cheat Death rerolls
+
+- Playtesting showed that resolving Cheat Death's replacement exchange inside
+  the original roll request hid the reroll and made the perk feel uneventful.
+  When its carrier loses, consume and respawn the perk before consequences, keep
+  the rejected result visible to every viewer, and require the battle controller
+  to start the replacement exchange with the normal public reroll control. This
+  uses the same awaiting-roll state as a tie. Timeouts may still perform the
+  required roll through the existing battle-timeout rule.
+
 ## 2026-09-13: battles caused by completed construction
 
 - The playtest exposed construction launching ships before the turn advanced,

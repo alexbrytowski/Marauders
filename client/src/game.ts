@@ -147,7 +147,8 @@ export const perks: Record<string, { name: string; symbol: string; description: 
   'cheat-death': {
     name: 'Cheat Death',
     symbol: '↻',
-    description: 'Rerolls the first losing exchange this ship participates in, then respawns in open water.',
+    description:
+      'Forces a public reroll after the first losing exchange this ship participates in, then respawns in open water.',
   },
 }
 export const key = (h: Hex) => `${h.q},${h.r}`

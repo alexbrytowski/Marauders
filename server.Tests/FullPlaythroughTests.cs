@@ -96,7 +96,14 @@ public partial class GameRulesTests
         var (s, a, b) = Duel(defending ? null : "cheat-death", defending ? "cheat-death" : null);
         var holder = defending ? b : a; var opponent = defending ? a : b;
         var random = new PlaythroughDice(defending ? [6, 1, 1, 6] : [1, 6, 6, 1]);
-        new GameRules(s, random, new(), Now).Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        var rules = new GameRules(s, random, new(), Now);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal(1, s.Combat.Round); Assert.Equal("awaiting-roll", s.Combat.Status);
+        Assert.Null(s.Combat.WinnerId); Assert.Contains(holder, s.Ships); Assert.Contains(opponent, s.Ships);
+        Assert.Contains("Roll the exchange again", s.Combat.Message);
+        Assert.Single(s.Events, e => e.Kind == "roll");
+        Assert.DoesNotContain(s.Events, e => e.Kind == "casualty");
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat.Id));
         Assert.Equal(2, s.Combat.Round); Assert.Equal(holder.OwnerId, s.Combat.WinnerId);
         Assert.Contains(holder, s.Ships); Assert.DoesNotContain(opponent, s.Ships); Assert.Null(holder.Perk);
         Assert.Null(s.Combat.Ships.Single(ship => ship.Id == holder.Id).Perk);
@@ -105,13 +112,15 @@ public partial class GameRulesTests
         Assert.DoesNotContain(s.Ships, ship => ship.Hex == new Hex(pickup.Q, pickup.R));
         Assert.Equal(2, s.Events.Count(e => e.Kind == "roll"));
         Assert.Single(s.Events, e => e.Kind == "casualty" && e.Message.Contains("lost ship"));
-        Assert.Contains("Cheat Death", s.Combat.Message);
     }
 
     [Fact] public void Cheat_death_is_spent_once_and_second_loss_applies_normally()
     {
         var (s, a, b) = Duel("cheat-death");
-        new GameRules(s, new PlaythroughDice([1, 6, 1, 6]), new(), Now).Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        var rules = new GameRules(s, new PlaythroughDice([1, 6, 1, 6]), new(), Now);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Contains(a, s.Ships); Assert.Equal("awaiting-roll", s.Combat.Status);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat.Id));
         Assert.DoesNotContain(a, s.Ships); Assert.Contains(b, s.Ships);
         Assert.Equal(2, s.Combat.Round); Assert.Single(s.PerkPickups); Assert.Null(a.Perk);
     }
@@ -129,7 +138,10 @@ public partial class GameRulesTests
         var s = Playing(); var a = Add(s, 0, Open); var helper = Add(s, 0, Offset(Open, -2));
         helper.Perk = "cheat-death"; var b = Add(s, 1, Offset(Open, 1));
         StartEncounter(s, a, b);
-        new GameRules(s, new PlaythroughDice([1, 1, 6, 6, 1, 2]), new(), Now).Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        var rules = new GameRules(s, new PlaythroughDice([1, 1, 6, 6, 1, 2]), new(), Now);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal("awaiting-roll", s.Combat.Status); Assert.Contains(b, s.Ships);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat.Id));
         Assert.Null(helper.Perk); Assert.Contains(a, s.Ships); Assert.Contains(helper, s.Ships);
         Assert.DoesNotContain(b, s.Ships); Assert.Equal(2, s.Combat.Round);
         Assert.Equal(new[] { 6, 1 }, s.Combat.Rolls[a.OwnerId]);
@@ -141,8 +153,11 @@ public partial class GameRulesTests
         var s = Playing(); var port = s.Ports[3]; var originalOwner = port.OwnerId;
         var a = Add(s, 0, BoardDefinition.Harbor(port.Id)[0]); a.Perk = "cheat-death";
         Rules(s).Act(a.OwnerId, new("attack-port", ShipId: a.Id, PortId: port.Id));
-        new GameRules(s, new PlaythroughDice(captures ? [1, 6, 6, 1] : [1, 6, 1, 6]), new(), Now)
-            .Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        var rules = new GameRules(s, new PlaythroughDice(captures ? [1, 6, 6, 1] : [1, 6, 1, 6]), new(), Now);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal("awaiting-roll", s.Combat.Status); Assert.Equal(originalOwner, port.OwnerId);
+        Assert.Equal(0, port.DefenseWeakness);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat.Id));
         Assert.Equal(captures ? a.OwnerId : originalOwner, port.OwnerId);
         Assert.Equal(captures ? 0 : 1, port.DefenseWeakness);
         Assert.Contains(a, s.Ships); Assert.Null(a.Perk); Assert.Equal(1, s.RemainingActions);
@@ -151,7 +166,11 @@ public partial class GameRulesTests
     [Fact] public void Cheat_death_rerolls_black_and_white_and_prevents_the_original_loss()
     {
         var (s, a, b) = Duel("black-and-white", "cheat-death");
-        new GameRules(s, new PlaythroughDice([1, 2]), new(), Now).Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        var rules = new GameRules(s, new PlaythroughDice([1, 2]), new(), Now);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal("awaiting-roll", s.Combat.Status); Assert.Equal("black", s.Combat.BlackWhiteResult);
+        Assert.Contains(a, s.Ships); Assert.Contains(b, s.Ships);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat.Id));
         Assert.Contains(b, s.Ships); Assert.DoesNotContain(a, s.Ships); Assert.Null(b.Perk);
         Assert.Equal("white", s.Combat.BlackWhiteResult); Assert.Equal(2, s.Combat.Round);
         Assert.Equal(new[] { "black", "white" }, s.Events.Where(e => e.Kind == "roll").Select(e => e.BlackWhiteResult));
@@ -162,7 +181,9 @@ public partial class GameRulesTests
     {
         var (s, a, b) = Duel("black-pearl", "cheat-death");
         var random = new PlaythroughDice([6, 1, 3, 3]);
-        new GameRules(s, random, new(), Now).Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        var rules = new GameRules(s, random, new(), Now);
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat.Id));
         Assert.Contains(a, s.Ships); Assert.Contains(b, s.Ships);
         Assert.Equal("awaiting-roll", s.Combat.Status); Assert.Null(s.Combat.WinnerId); Assert.Null(s.Combat.LosingPlayerId);
         Assert.DoesNotContain(1000, random.DrawSizes); Assert.Single(s.PerkPickups);

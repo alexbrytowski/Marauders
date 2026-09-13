@@ -1027,6 +1027,8 @@ test('full playthrough changes synchronize port support, Cheat Death respawns an
     }
     const consumed = game.events.filter((event) => event.message.includes('consumed Cheat Death')).length
     expect(consumed).toBeGreaterThan(0)
+    expect(game.combat?.status).toBe('awaiting-roll')
+    expect(game.combat?.message).toContain('used Cheat Death')
     expect(game.perkPickups.filter((pickup) => pickup.kind === 'cheat-death')).toHaveLength(consumed)
     for (const pickup of game.perkPickups) {
       expect(board.cells.find((cell) => key(cell) === key(pickup))?.terrain).toBe('water')
@@ -1036,6 +1038,19 @@ test('full playthrough changes synchronize port support, Cheat Death respawns an
       await expect(page.locator('.battle-result')).toHaveText(game.combat!.message)
       await expect(page.locator('.captains-log')).toContainText('consumed Cheat Death')
       await expect(page.locator('.sea-map [data-perk="cheat-death"]')).toHaveCount(consumed)
+      expect((await state(page)).combat).toEqual(game.combat)
+    }
+    await pages[4].screenshot({ path: testInfo.outputPath('cheat-death-forced-reroll.png'), fullPage: true })
+    const rejectedRound = game.combat!.round
+    const publicRolls = game.events.filter((event) => event.kind === 'roll').length
+    await expect(pages[0].getByRole('button', { name: 'Roll next exchange' })).toBeVisible()
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: 'Roll next exchange' }).click(),
+    )
+    expect(game.combat!.round).toBe(rejectedRound + 1)
+    expect(game.events.filter((event) => event.kind === 'roll')).toHaveLength(publicRolls + 1)
+    for (const page of pages) {
+      await expect(page.locator('.battle-result')).toHaveText(game.combat!.message)
       expect((await state(page)).combat).toEqual(game.combat)
     }
     await pages[4].screenshot({ path: testInfo.outputPath('cheat-death-port-support.png'), fullPage: true })

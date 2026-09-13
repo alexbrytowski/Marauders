@@ -39,7 +39,8 @@ provider settings and a live deployment have not been verified by the agent.
 - [x] Fix port assistance to use two-hex distance from its owner's triggering
   ship, including outside harbor water, with no helper chaining.
 - [x] Add Cheat Death as the sixth pickup: consume on any losing participating
-  exchange, reroll before consequences, and respawn in empty open water.
+  exchange, show the rejected result, require a public reroll before
+  consequences, and respawn in empty open water.
 - [x] Forfeited ports remain neutral, retain usable harbors, reset their defense,
   and can be captured normally. Update rules, handbook, lobby, and forfeit copy.
 - [x] Show each uncollected perk's name and effect on hover and keyboard focus.

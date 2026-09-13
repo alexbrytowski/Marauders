@@ -802,9 +802,9 @@ function Perks() {
         <li>Movement rolls are always 4, 5, or 6, unaffected by perks.</li>
         <li>Black and White replaces all dice and modifiers in an exchange with one 50/50 result.</li>
         <li>
-          Cheat Death automatically rerolls any losing exchange its carrier joins, including as a helper or
-          port attacker. It is consumed before losses or port effects, then respawns in empty open water. Ties
-          do not consume it.
+          Cheat Death forces a public reroll after any losing exchange its carrier joins, including as a helper
+          or port attacker. Everyone sees the rejected result before the next exchange is rolled. It is consumed
+          before losses or port effects, then respawns in empty open water. Ties do not consume it.
         </li>
       </ul>
       <details>
