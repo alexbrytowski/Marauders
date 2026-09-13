@@ -395,7 +395,17 @@ test('automatic rebuilding, six-die clocks and final-opponent forfeit synchroniz
     const manual = game.constructions[0]
     await expect(pages[0].locator('.command-buttons')).toContainText('random ports for any left at turn end')
     await pages[0].screenshot({ path: testInfo.outputPath('automatic-build-hint.png'), fullPage: true })
-    game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Finish round/ }).click())
+    await pages[0].getByRole('button', { name: 'Finish round →', exact: true }).click()
+    const endReview = pages[0].getByRole('dialog', { name: 'Finish this round?' })
+    await expect(endReview).toContainText('4 ships without a chosen build port')
+    await expect(endReview).toContainText('Any unassigned builds will start at randomly chosen ports you own')
+    await endReview.getByRole('button', { name: 'Keep playing' }).click()
+    expect((await state(pages[0])).revision).toBe(game.revision)
+    await pages[0].getByRole('button', { name: 'Finish round →', exact: true }).click()
+    await pages[0].screenshot({ path: testInfo.outputPath('unfinished-builds-confirmation.png') })
+    game = await clickAction(pages[0], () =>
+      endReview.getByRole('button', { name: 'Finish round anyway' }).click(),
+    )
     expect(game.activePlayerId).toBe(ids[1])
     expect(game.remainingActions).toBe(6)
     const started = new Date(game.events.findLast((e) => e.kind === 'turn')!.at).getTime()
@@ -559,6 +569,322 @@ test.beforeEach(async () => {
 })
 test.afterEach(async () => {
   await stopServer()
+})
+
+test('early endings confirm unused dice and movement while other browsers and timeouts stay in sync', async ({
+  browser,
+}, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({ viewport: { width: 1366, height: 900 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    const errors: string[] = []
+    for (let i = 0; i < pages.length; i++) {
+      pages[i].on('pageerror', (error) => errors.push(error.message))
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4)
+        expect(
+          (
+            await pages[i].request.post('/api/game/players', {
+              headers,
+              data: { name: `Careful captain ${i + 1}`, color: colors[i], character: characterIds[i] },
+            })
+          ).status(),
+        ).toBe(200)
+    }
+    let game = await readyCrew(pages)
+    const ids = game.players.map((player) => player.id)
+    const actor = pages[0]
+    const endActions = actor.getByRole('button', { name: 'End actions', exact: true })
+    const review = actor.getByRole('dialog', { name: 'End actions early?' })
+    let endRequests = 0
+    actor.on('request', (request) => {
+      if (request.url().endsWith('/api/game/action') && request.postDataJSON()?.type === 'end-turn')
+        endRequests++
+    })
+    for (const page of pages.slice(1))
+      await expect(page.getByRole('button', { name: 'End actions', exact: true })).toHaveCount(0)
+    await endActions.click()
+    await expect(review).toContainText('2 unused action dice')
+    await expect(review.getByRole('listitem')).toHaveCount(1)
+    await expect(review.getByRole('button', { name: 'Keep playing' })).toBeFocused()
+    await actor.keyboard.press('Enter')
+    await expect(review).not.toBeVisible()
+    await expect(endActions).toBeFocused()
+    await endActions.click()
+    await actor.keyboard.press('Escape')
+    await expect(review).not.toBeVisible()
+    expect(endRequests).toBe(0)
+    expect((await state(actor)).revision).toBe(game.revision)
+    for (const page of pages.slice(1)) {
+      await expect(page.getByRole('dialog')).not.toBeVisible()
+      await expect(page.getByLabel('Turn status')).toContainText('Careful captain 1 has the helm')
+    }
+
+    // A same-seat tab can act while the first tab is reviewing. The old review must close.
+    const sibling = await contexts[0].newPage()
+    await sibling.goto('/')
+    await expect(sibling.locator('.connection')).toHaveText('Live')
+    await endActions.click()
+    game = await clickAction(sibling, () => sibling.getByRole('button', { name: 'Roll to sail' }).click())
+    await expect(review).not.toBeVisible()
+    expect(endRequests).toBe(0)
+    await endActions.click()
+    await expect(review).toContainText('1 unused action die')
+    await expect(review).toContainText(`${game.remainingMovement} movement points`)
+    await actor.screenshot({ path: testInfo.outputPath('unused-actions-confirmation.png') })
+    game = await clickAction(actor, () => review.getByRole('button', { name: 'End actions anyway' }).click())
+    expect(endRequests).toBe(1)
+    expect(game.activePlayerId).toBe(ids[1])
+    expect(game.turnNumber).toBe(2)
+    await expect(review).not.toBeVisible()
+    for (const page of [actor, ...pages.slice(2), sibling])
+      await expect(page.getByLabel('Turn status')).toContainText('Careful captain 2 has the helm')
+
+    // The last die has been rolled, but its remaining movement still needs confirmation.
+    const second = pages[1]
+    await clickAction(second, () => second.getByRole('button', { name: 'Roll to sail' }).click())
+    await clickAction(second, () => second.getByRole('button', { name: 'Pass movement' }).click())
+    game = await clickAction(second, () => second.getByRole('button', { name: 'Roll to sail' }).click())
+    expect(game.remainingActions).toBe(0)
+    await second.getByRole('button', { name: 'End actions', exact: true }).click()
+    const movementReview = second.getByRole('dialog', { name: 'End actions early?' })
+    await expect(movementReview.getByRole('listitem')).toHaveText(`${game.remainingMovement} movement points`)
+    game = await clickAction(second, () =>
+      movementReview.getByRole('button', { name: 'End actions anyway' }).click(),
+    )
+    expect(game.activePlayerId).toBe(ids[2])
+
+    // Review is local UI; it cannot hold up the authoritative action clock.
+    await stopServer()
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    const saved = JSON.parse(await readFile(savePath, 'utf8'))
+    saved.game.actionEndsAt = new Date(Date.now() + 15_000).toISOString()
+    const missingShip = game.ships.find((ship) => ship.ownerId === ids[3])!
+    saved.game.ships = saved.game.ships.filter((ship: { id: string }) => ship.id !== missingShip.id)
+    saved.game.revision++
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    await pages[2].getByRole('button', { name: 'End actions', exact: true }).click()
+    const timeoutReview = pages[2].getByRole('dialog', { name: 'End actions early?' })
+    await expect(timeoutReview).toBeVisible()
+    await expect(timeoutReview).not.toBeVisible({ timeout: 20_000 })
+    game = await state(pages[2])
+    expect(game.activePlayerId).toBe(ids[3])
+    expect(game.turnNumber).toBe(4)
+    for (const page of pages.slice(0, 3).concat(pages[4]))
+      await expect(page.getByLabel('Turn status')).toContainText('Careful captain 4 has the helm')
+
+    // Once the captain has used every die and assigned every build, finishing needs no extra click.
+    const fourth = pages[3]
+    for (let i = 0; i < 2; i++) {
+      await clickAction(fourth, () => fourth.getByRole('button', { name: 'Roll to sail' }).click())
+      game = await clickAction(fourth, () => fourth.getByRole('button', { name: 'Pass movement' }).click())
+    }
+    expect(game.isBuildPhase).toBe(true)
+    expect(game.availableBuilds).toBe(1)
+    const buildPort = game.ports.find((port) => port.ownerId === ids[3])!
+    await fourth.locator(`.sea-map [data-port="${buildPort.id}"]`).click()
+    game = await clickAction(fourth, () => fourth.getByRole('button', { name: /^Build at / }).click())
+    expect(game.availableBuilds).toBe(0)
+    game = await clickAction(fourth, () =>
+      fourth.getByRole('button', { name: 'Finish round →', exact: true }).click(),
+    )
+    expect(game.activePlayerId).toBe(ids[0])
+    expect(game.turnNumber).toBe(5)
+    await expect(fourth.getByRole('dialog')).not.toBeVisible()
+    expect(errors).toEqual([])
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
+})
+
+test('construction battles stay with the finishing captain through restart before the next turn begins', async ({
+  browser,
+}, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({ viewport: { width: 1366, height: 900 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    const errors: string[] = []
+    for (let i = 0; i < pages.length; i++) {
+      pages[i].on('pageerror', (error) => errors.push(error.message))
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4)
+        expect(
+          (
+            await pages[i].request.post('/api/game/players', {
+              headers,
+              data: { name: `Launch captain ${i + 1}`, color: colors[i], character: characterIds[i] },
+            })
+          ).status(),
+        ).toBe(200)
+    }
+    let game = await state(pages[0])
+    const ids = game.players.map((player) => player.id)
+    const board: Board = await (await pages[0].request.get('/api/board')).json()
+    const harbor = board.cells.filter((cell) => cell.harborId === 'port-4')
+    expect(harbor.length).toBeGreaterThan(2)
+    const distant = board.cells.find((cell) => cell.terrain === 'water' && distance(cell, harbor[0]) > 8)!
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    const saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      phase: 'playing',
+      activePlayerId: ids[1],
+      turnOrder: ids,
+      turnNumber: 10,
+      remainingActions: 0,
+      remainingMovement: 0,
+      isBuildPhase: true,
+      isEndingRound: false,
+      turnEndsAt: new Date(Date.now() + 600_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 600_000).toISOString(),
+      ships: [
+        ...harbor.slice(0, 2).map((cell, i) => ({
+          id: `launch-enemy-${i}`,
+          ownerId: ids[0],
+          portId: 'port-1',
+          number: i + 1,
+          q: cell.q,
+          r: cell.r,
+        })),
+        { id: 'next-captain', ownerId: ids[2], portId: 'port-7', number: 3, q: distant.q, r: distant.r },
+      ],
+      constructions: [
+        { id: 'due-launch', ownerId: ids[1], portId: 'port-4', remainingOwnerTurns: 1, startedTurnNumber: 2 },
+        {
+          id: 'later-launch',
+          ownerId: ids[1],
+          portId: 'port-5',
+          remainingOwnerTurns: 2,
+          startedTurnNumber: 6,
+        },
+      ],
+      perkPickups: [],
+      combat: null,
+      combatChoices: [],
+      revision: saved.game.revision + 1,
+    })
+    saved.game.ports.forEach((port: { ownerId: string | null }, i: number) => {
+      port.ownerId = i < 12 ? ids[Math.floor(i / 3)] : null
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    const builder = pages[1]
+    await builder.getByRole('button', { name: 'Finish round →', exact: true }).click()
+    game = await clickAction(builder, () =>
+      builder.getByRole('button', { name: 'Finish round anyway' }).click(),
+    )
+    expect(game.activePlayerId).toBe(ids[1])
+    expect(game.turnNumber).toBe(10)
+    expect(game.isEndingRound).toBe(true)
+    expect(game.combatPlayerId).toBe(ids[1])
+    expect(game.combat?.attackerId).toBe(ids[1])
+    expect(game.combat?.defenderId).toBe(ids[0])
+    expect(game.turnEndsAt).toBeNull()
+    expect(game.availableBuilds).toBe(0)
+    expect(game.constructions.find((build) => build.id === 'later-launch')?.remainingOwnerTurns).toBe(1)
+    expect(game.roundHistory).toHaveLength(0)
+    const builds = game.constructions
+    const battleId = game.combat!.id
+    for (const page of pages) {
+      await expect(page.getByRole('dialog', { name: 'Battle on the high seas' })).toBeVisible()
+      await expect(page.locator('.battle-note')).toContainText('before the next captain’s turn begins')
+    }
+    for (const i of [0, 2, 3, 4]) {
+      await expect(pages[i].getByRole('button', { name: 'Roll battle dice', exact: true })).toHaveCount(0)
+      await expect(pages[i].locator('.battle-actions')).toContainText('Waiting for Launch captain 2 to roll')
+      expect(
+        (
+          await pages[i].request.post('/api/game/action', {
+            headers,
+            data: {
+              type: 'roll-combat',
+              combatId: battleId,
+              playerId: ids[1],
+              expectedRevision: game.revision,
+            },
+          })
+        ).status(),
+      ).toBe(400)
+    }
+    expect((await state(builder)).revision).toBe(game.revision)
+    await builder
+      .getByRole('dialog', { name: 'Battle on the high seas' })
+      .screenshot({ path: testInfo.outputPath('construction-battle-controller.png') })
+    await stopServer()
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      const restored = await state(page)
+      expect(restored.combat?.id).toBe(battleId)
+      expect(restored.isEndingRound).toBe(true)
+      expect(restored.combatPlayerId).toBe(ids[1])
+      expect(restored.availableBuilds).toBe(0)
+      expect(restored.constructions).toEqual(builds)
+      expect(restored.turnEndsAt).toBeNull()
+    }
+    for (let exchanges = 0; game.isEndingRound; exchanges++) {
+      expect(exchanges).toBeLessThan(30)
+      if (game.combat!.status === 'awaiting-roll') {
+        game = await clickAction(builder, () =>
+          builder.getByRole('button', { name: /Roll (battle dice|next exchange)/ }).click(),
+        )
+      } else if (game.combat!.status === 'choose-loss') {
+        const loser = pages[ids.indexOf(game.combat!.losingPlayerId!)]
+        const casualty = game.ships.find(
+          (ship) =>
+            ship.ownerId === game.combat!.losingPlayerId && game.combat!.participantShipIds.includes(ship.id),
+        )!
+        await loser
+          .locator('.battle-fleet')
+          .getByRole('button', { name: new RegExp(`^Ship ${casualty.number} `) })
+          .click()
+        game = await clickAction(loser, () =>
+          loser.getByRole('button', { name: `Lose ship ${casualty.number}` }).click(),
+        )
+      } else {
+        await expect(pages[2].getByRole('button', { name: /Continue the voyage/ })).toHaveCount(0)
+        game = await clickAction(builder, () =>
+          builder.getByRole('button', { name: /Continue the voyage/ }).click(),
+        )
+      }
+    }
+    expect(game.activePlayerId).toBe(ids[2])
+    expect(game.turnNumber).toBe(11)
+    expect(game.constructions.filter((build) => build.ownerId === ids[1])).toEqual(builds)
+    expect(game.events.filter((event) => event.message.includes('launched a ship'))).toHaveLength(1)
+    expect(game.roundHistory).toHaveLength(1)
+    const started = new Date(game.events.findLast((event) => event.kind === 'turn')!.at).getTime()
+    expect(new Date(game.turnEndsAt!).getTime() - started).toBe(1_800_000)
+    expect(new Date(game.actionEndsAt!).getTime() - started).toBe(900_000)
+    for (const page of pages) {
+      await expect(page.getByRole('dialog', { name: 'Battle on the high seas' })).not.toBeVisible()
+      expect((await state(page)).turnNumber).toBe(11)
+    }
+    await expect(pages[2].getByRole('button', { name: 'Roll to sail' })).toBeEnabled()
+    expect(errors).toEqual([])
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
 })
 
 test('full playthrough changes synchronize port support, Cheat Death respawns and neutral port capture', async ({

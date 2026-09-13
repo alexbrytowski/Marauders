@@ -187,7 +187,11 @@ public partial class GameRulesTests
         Assert.Equal(1, build.RemainingOwnerTurns);
         s.ActivePlayerId = owner; s.IsBuildPhase = true;
         Rules(s).Act(owner, new("end-turn"));
-        Assert.DoesNotContain(build, s.Constructions); Assert.Equal(1, s.RoundHistory.Last().Teams.Single(t => t.PlayerId == owner).Ships);
+        Assert.DoesNotContain(build, s.Constructions);
+        Assert.True(s.IsEndingRound); Assert.NotNull(s.Combat);
+        Rules(s, 6, 1).Act(owner, new("roll-combat", CombatId: s.Combat.Id));
+        Rules(s).Act(owner, new("continue-combat", CombatId: s.Combat.Id));
+        Assert.Equal(1, s.RoundHistory.Last().Teams.Single(t => t.PlayerId == owner).Ships);
     }
 
     [Fact] public void Round_history_records_timeouts_and_final_capture_without_mutable_references()

@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { BoardView } from './BoardView'
 import { BattleModal } from './BattleModal'
 import { LeaveGame } from './LeaveGame'
+import { EndTurn } from './EndTurn'
 import { PlayerCard } from './PlayerCard'
 import { CharacterPortrait } from './CharacterPortrait'
 import { JoinCrew } from './JoinCrew'
@@ -323,7 +324,7 @@ export default function App() {
                       ? `PORT DRAFT · PICK ${game.draftPickNumber + 1} / 12`
                       : game.phase === 'placement'
                         ? 'LAUNCHING FLEETS'
-                        : `ROUND ${game.turnNumber} · ${game.isBuildPhase ? 'CONSTRUCTION' : 'THE VOYAGE'}`}
+                        : `ROUND ${game.turnNumber} · ${game.isEndingRound ? 'LAUNCH BATTLES' : game.isBuildPhase ? 'CONSTRUCTION' : 'THE VOYAGE'}`}
                   </span>
                   <h1>
                     {game.phase === 'finished'
@@ -359,8 +360,8 @@ export default function App() {
                       </div>
                     )}
                     <div className="timers">
-                      <Countdown until={latest?.turnEndsAt ?? game.turnEndsAt} label="round" />
-                      <Countdown until={latest?.actionEndsAt ?? game.actionEndsAt} label="action" />
+                      <Countdown until={latest ? latest.turnEndsAt : game.turnEndsAt} label="round" />
+                      <Countdown until={latest ? latest.actionEndsAt : game.actionEndsAt} label="action" />
                     </div>
                   </>
                 )}
@@ -496,13 +497,6 @@ export default function App() {
                           Roll to sail
                         </button>
                       )}
-                      <button
-                        className="secondary"
-                        disabled={disabled}
-                        onClick={() => void act({ type: 'end-turn' })}
-                      >
-                        End actions
-                      </button>
                     </>
                   )}
                   {game.phase === 'playing' && myTurn && game.isBuildPhase && (
@@ -516,14 +510,14 @@ export default function App() {
                         <Icon name="hammer" />
                         Build at {port?.name ?? 'selected port'}
                       </button>
-                      <button
-                        className="secondary"
-                        disabled={disabled}
-                        onClick={() => void act({ type: 'end-turn' })}
-                      >
-                        Finish round →
-                      </button>
                     </>
+                  )}
+                  {game.phase === 'playing' && myTurn && (
+                    <EndTurn
+                      game={game}
+                      disabled={disabled || !!game.combat || game.combatChoices.length > 0}
+                      act={act}
+                    />
                   )}
                   {!myTurn && game.phase !== 'finished' && (
                     <span className="watching-note">

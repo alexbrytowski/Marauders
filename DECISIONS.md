@@ -1,5 +1,27 @@
 # Implementation decisions
 
+## 2026-09-13: battles caused by completed construction
+
+- The playtest exposed construction launching ships before the turn advanced,
+  but checking their encounters only afterward. An unrelated next captain then
+  controlled the battle and spent their turn time on it.
+- Clarify the previously unspecified handoff: complete construction once, then
+  resolve every resulting mandatory encounter before starting the next turn.
+  The finishing captain chooses encounter order and rolls; losing captains still
+  choose their own casualties. Construction stays closed, with no new movement
+  or rebuilding of casualties during this handoff. Snapshot the completed round
+  and advance whirlpools once, after its battles finish.
+- During these launch battles, use the normal action interval for each decision;
+  the completed round's clock is retired and the next captain's full turn budget
+  begins only after the handoff. A timeout automatically resolves outstanding
+  battles, including battles caused by that timeout's construction, then advances.
+  Persist the pending handoff so restarting cannot complete construction twice.
+- Battle controls belong to the active captain when they are a combatant,
+  otherwise to the attacking captain. For encounter choices with no active
+  combatant, the first listed triggering captain chooses. This also lets older
+  saved battles between other captains finish without granting an unrelated
+  captain control. Casualty permissions remain with the losing captain.
+
 ## 2026-09-13: first full playthrough follow-up
 
 - These owner-requested changes supersede the earlier setup, action-dice,

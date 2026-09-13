@@ -32,7 +32,8 @@ export function BattleModal({
     if (!open && node?.open) node.close()
   }, [open])
   const battle = game.combat,
-    active = playerId === game.activePlayerId
+    active = !!playerId && playerId === game.combatPlayerId
+  const controllingCaptain = game.players.find((p) => p.id === game.combatPlayerId)?.name
   const exchange = `${battle?.id}-${battle?.round}`
   const selected =
     selection.exchange === exchange
@@ -184,7 +185,7 @@ export function BattleModal({
               </button>
             )
           })}
-          {!active && <p>The active captain is choosing which encounter resolves first.</p>}
+          {!active && <p>{controllingCaptain} is choosing which encounter resolves first.</p>}
         </div>
       ) : (
         <>
@@ -258,7 +259,7 @@ export function BattleModal({
                       : 'Roll battle dice'}
                 </button>
               ) : (
-                <p>Waiting for {game.players.find((p) => p.id === game.activePlayerId)?.name} to roll.</p>
+                <p>Waiting for {controllingCaptain} to roll.</p>
               ))}
             {battle.status === 'choose-loss' &&
               (battle.losingPlayerId === playerId ? (
@@ -292,12 +293,13 @@ export function BattleModal({
                   Continue {game.phase === 'finished' ? 'to victory' : 'the voyage'} →
                 </button>
               ) : (
-                <p>Waiting for the active captain to continue.</p>
+                <p>Waiting for {controllingCaptain} to continue.</p>
               ))}
           </div>
         </>
       )}
       <p className="battle-note">
+        {game.isEndingRound && 'Resolve launch battles before the next captain’s turn begins. '}
         Ties reroll. Helpers never chain. Battle results remain in the captain’s log.
       </p>
     </dialog>

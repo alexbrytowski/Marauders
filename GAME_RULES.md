@@ -94,6 +94,14 @@ When a port is captured, ownership transfers immediately. Any ships it was build
 
 For each ship they are below their population cap, including ships already under construction, the player may choose an owned port at which to begin construction. When the round ends, including on timeout, the server automatically starts every unchosen build at a randomly selected owned port. Each ship's port is chosen independently with equal chances. Manual choices and existing builds stay in place; automatic builds also need two future owner rounds to finish.
 
+If completed ships launch into combat, resolve those battles before the next
+captain's turn begins. The finishing captain chooses battle order and rolls;
+each losing captain chooses their own casualty. Construction has already
+finished, so those losses can be rebuilt on a later turn. The normal action
+clock applies to each battle decision; the next captain keeps their full turn
+time. On timeout, the server resolves these battles automatically before
+advancing. An unrelated captain never controls another team's battle rolls.
+
 ### Miscellaneous
 
 If a player is over their population cap, they do not lose active ships, but cannot build more until they are below it.

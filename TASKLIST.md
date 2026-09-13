@@ -15,6 +15,22 @@ provider settings and a live deployment have not been verified by the agent.
 
 ## September 13: first full playthrough follow-up
 
+- [x] Resolve battles caused by completed construction before starting the next
+  captain's turn. Keep dice controls with a combatant, preserve the next turn's
+  clock, and resume pending launch battles safely after restart. Timing and
+  compatibility decisions are recorded in DECISIONS.md.
+  Ten server regressions cover battle ownership, casualty choices, multiple
+  encounters, timeouts, forfeits, old saves, and exactly-once construction.
+  The five-browser reproduction passes, including restart and forged-roll
+  rejection; the battle dialog was also visually checked.
+- [x] Confirm early endings when unused action dice, movement, or unassigned
+  builds remain. Owner-requested UI decision: list what is left, default to
+  keeping the turn, and require a second click to continue. Completed actions
+  need no confirmation; existing construction and timeout rules still apply.
+  Dismiss an open confirmation when the authoritative game state changes.
+  Verified both dialogs visually and in two five-browser regressions, including
+  cancellation, same-seat updates, timeouts, and finishing with nothing left.
+  Lint, client/solution builds, and all 175 server tests pass.
 - [x] Double whirlpool spawn chance to 10% per completed captain turn.
 - [x] Replace new-game drafting with three random ports per captain and two
   starting ships per owned port. Fix the neutral central port on each map.
@@ -29,11 +45,12 @@ provider settings and a live deployment have not been verified by the agent.
 - [x] Show each uncollected perk's name and effect on hover and keyboard focus.
   Visually verified all six hover explanations and keyboard focus in the
   existing five-browser scenario.
-- [x] Server regressions: 165 passing tests; lint, client build, solution build,
+- [x] Server regressions: 175 passing tests; lint, client build, solution build,
   and Release publish pass. Dedicated five-browser regression covers port
   support, Cheat Death consumption/respawn, restart recovery, neutral capture,
   and spectator rejection.
-- [x] All 16 browser regressions pass after updating the old setup, forfeit,
+- [x] All 18 browser regressions pass, including early-ending confirmation and
+  construction battle handoff, after updating the old setup, forfeit,
   and movement-animation expectations. Reviewed battle and handbook screenshots;
   the focused five-browser flow also passes with the added pickup explanations.
 

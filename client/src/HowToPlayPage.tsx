@@ -696,6 +696,10 @@ function Building({ board }: { board?: Board }) {
         <li>At the end of your round, choose owned ports to build missing ships. It costs no action dice.</li>
         <li>Any unchosen builds start automatically at random owned ports when you finish or time out.</li>
         <li>A port can build several ships, but a build cannot switch ports.</li>
+        <li>
+          If newly launched ships trigger battles, finish those battles before the next captain's turn. The
+          finishing captain rolls; the next captain keeps their full turn time.
+        </li>
       </ul>
       <details>
         <summary>Blocked harbors & losing capacity</summary>

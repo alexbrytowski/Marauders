@@ -2564,7 +2564,8 @@
   padding-block: 2px;
   line-height: 16px;
 }
-.leave-dialog {
+.leave-dialog,
+.end-turn-dialog {
   max-width: 460px;
   padding: 26px;
   color: #eee2c6;
@@ -2572,18 +2573,33 @@
   border: 1px solid #a38c66;
   border-radius: 12px;
 }
-.leave-dialog::backdrop {
+.leave-dialog::backdrop,
+.end-turn-dialog::backdrop {
   background: #031117bb;
 }
-.leave-dialog h2 {
+.leave-dialog h2,
+.end-turn-dialog h2 {
   margin-top: 0;
 }
-.leave-dialog p {
+.leave-dialog p,
+.end-turn-dialog p,
+.end-turn-dialog li {
   line-height: 1.6;
 }
-.leave-actions {
+.leave-actions,
+.end-turn-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
   margin-top: 20px;
+}
+.end-turn-dialog {
+  width: min(460px, calc(100vw - 32px));
+  font-size: 1rem;
+}
+.end-turn-dialog p {
+  margin-top: 12px;
+}
+.end-turn-actions {
+  flex-wrap: wrap;
 }

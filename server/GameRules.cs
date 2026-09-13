@@ -14,9 +14,11 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private Port Port(string? id) => state.Ports.SingleOrDefault(p => p.Id == id) ?? throw new RuleException("Choose a port on the map.");
     private int Capacity(string id) => state.Ports.Count(p => p.OwnerId == id) * 2 + state.Ships.Count(s => s.OwnerId == id && s.Perk == "mouth-to-feed");
     private int FreeBuilds(string id) => Math.Max(0, Capacity(id) - state.Ships.Count(s => s.OwnerId == id) - state.Constructions.Count(b => b.OwnerId == id));
+    private bool HasTime => state.ActionEndsAt > now && (state.IsEndingRound || state.TurnEndsAt > now);
     public void RefreshBuildCapacity()
     {
-        if (state.IsBuildPhase && state.ActivePlayerId is { } owner) state.AvailableBuilds = FreeBuilds(owner);
+        if (state.IsBuildPhase && state.ActivePlayerId is { } owner)
+            state.AvailableBuilds = state.IsEndingRound ? 0 : FreeBuilds(owner);
     }
     private void Log(string kind, string message, Dictionary<string, List<int>>? rolls = null,
         string? blackWhiteResult = null, string? blackWhiteOwnerId = null)
@@ -48,14 +50,16 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(state.Players.Any(p => p.Id == playerId), "Spectators cannot control a captain.");
         if (command.Type == "forfeit") { Forfeit(playerId); return; }
         Require(!state.Players.Single(p => p.Id == playerId).HasForfeited, "This captain has forfeited.");
-        if (state.Phase == "playing") Require(state.TurnEndsAt > now && state.ActionEndsAt > now, "The clock has expired. Wait for the next round.");
+        if (state.Phase == "playing") Require(HasTime, "The clock has expired. Wait for the next round.");
         if (command.Type == "vote-map") { VoteMap(playerId, command.MapId); return; }
         if (command.Type == "set-first-player") { SetFirstPlayer(playerId, command.FirstPlayerId); return; }
         if (command.Type == "set-ready") { SetReady(playerId, command); return; }
         if (command.Type == "draft") { Draft(playerId, command.PortId); return; }
         Require(state.Phase == "playing" || (state.Phase == "finished" && command.Type == "continue-combat"), "The game is not in play.");
         if (command.Type == "remove-ship") { RemoveLoss(playerId, command.CombatId, command.ShipId); return; }
-        Require(state.ActivePlayerId == playerId, "It is another captain's turn.");
+        if (command.Type is "choose-combat" or "roll-combat" or "continue-combat")
+            Require(state.CombatPlayerId == playerId, "Only the captain controlling this battle can choose, roll, or continue.");
+        else Require(state.ActivePlayerId == playerId, "It is another captain's turn.");
         switch (command.Type)
         {
             case "choose-combat":
@@ -68,7 +72,11 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             case "continue-combat":
                 Require(state.Combat is not null && state.Combat.Id == command.CombatId && state.Combat.Status == "resolved", "That battle is not ready to close.");
                 state.Combat = null;
-                if (state.Phase == "playing") { RefreshEncounters(); SettleActions(); }
+                if (state.Phase == "playing")
+                {
+                    RefreshEncounters();
+                    if (state.IsEndingRound) FinishRound(); else SettleActions();
+                }
                 break;
             case "roll-movement":
                 Ready();
@@ -94,7 +102,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
                 break;
             case "build":
                 NoBattle();
-                Require(state.IsBuildPhase, "Construction starts at the end of your round.");
+                Require(state.IsBuildPhase && !state.IsEndingRound, "Construction selection is closed until your next round.");
                 var port = Port(command.PortId);
                 Require(port.OwnerId == playerId, "Choose one of your own ports.");
                 Require(FreeBuilds(playerId) > 0, "Your fleet and construction already fill your population cap.");
@@ -568,7 +576,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (!keepBattle) state.Combat = null;
         state.CombatChoices.Clear();
         state.RemainingActions = 0; state.RemainingMovement = 0;
-        state.IsBuildPhase = false; state.AvailableBuilds = 0;
+        state.IsBuildPhase = false; state.IsEndingRound = false; state.AvailableBuilds = 0;
         state.TurnEndsAt = null; state.ActionEndsAt = null;
         Log("victory", drafting
             ? $"{remaining[0].Name} is the last captain and wins Marauders!"
@@ -613,15 +621,30 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private void FinishRound()
     {
         var owner = state.ActivePlayerId!;
-        var ports = state.Ports.Where(p => p.OwnerId == owner).ToArray();
-        var unchosen = FreeBuilds(owner);
-        for (var i = 0; i < unchosen && ports.Length > 0; i++)
+        if (!state.IsEndingRound)
         {
-            var port = ports[dice.Next(ports.Length)];
-            state.Constructions.Add(new() { OwnerId = owner, PortId = port.Id, StartedTurnNumber = state.TurnNumber });
-            Log("construction", $"{Name(owner)} automatically started a ship at randomly selected {port.Name}; ready in two owner rounds.");
+            // This boundary can pause for launch battles and survive a restart.
+            // Build assignment and progression must happen exactly once.
+            state.IsEndingRound = true; state.IsBuildPhase = true;
+            state.RemainingActions = 0; state.RemainingMovement = 0; state.AvailableBuilds = 0;
+            var ports = state.Ports.Where(p => p.OwnerId == owner).ToArray();
+            var unchosen = FreeBuilds(owner);
+            for (var i = 0; i < unchosen && ports.Length > 0; i++)
+            {
+                var port = ports[dice.Next(ports.Length)];
+                state.Constructions.Add(new() { OwnerId = owner, PortId = port.Id, StartedTurnNumber = state.TurnNumber });
+                Log("construction", $"{Name(owner)} automatically started a ship at randomly selected {port.Name}; ready in two owner rounds.");
+            }
+            CompleteConstruction(owner);
+            RefreshEncounters();
         }
-        CompleteConstruction(owner);
+        if (state.Combat is not null || state.CombatChoices.Count > 0)
+        {
+            // Only the battle decision clock runs; the next turn has not begun.
+            state.TurnEndsAt = null;
+            ActionClock();
+            return;
+        }
         SnapshotRound();
         AdvanceWhirlpool();
         AdvanceTurn(owner);
@@ -698,8 +721,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         else
         {
             RefreshEncounters();
-            if (state.IsBuildPhase) state.AvailableBuilds = FreeBuilds(state.ActivePlayerId!);
-            SettleActions();
+            RefreshBuildCapacity();
+            if (state.IsEndingRound) FinishRound(); else SettleActions();
         }
     }
     private void SnapshotRound(bool isFinal = false) => state.RoundHistory.Add(new(
@@ -711,7 +734,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.ActivePlayerId = owner;
         state.RemainingActions = ActionCount(state.Ships.Count(s => s.OwnerId == owner));
         state.RemainingMovement = 0; state.LastRoll = null;
-        state.IsBuildPhase = false; state.AvailableBuilds = 0;
+        state.IsBuildPhase = false; state.IsEndingRound = false; state.AvailableBuilds = 0;
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
@@ -734,7 +757,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
         if (state.Phase == "draft" && state.PerkPickups.Count == 0) { RevealPerks(); return true; }
         // Older saves can contain several options for the same forces.
-        if (state.Phase == "playing" && state.TurnEndsAt > now && state.ActionEndsAt > now && state.Combat is null && state.CombatChoices.Count > 0)
+        if (state.Phase == "playing" && HasTime && state.Combat is null && state.CombatChoices.Count > 0)
         {
             var count = state.CombatChoices.Count;
             RefreshEncounters(state.CombatChoices[0].TriggerShipId);
@@ -742,15 +765,26 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
         // Resume an older saved single-casualty choice without waiting for a captain.
         // Already expired rounds continue through the normal timeout path below.
-        if (state.Phase == "playing" && state.TurnEndsAt > now && state.ActionEndsAt > now && ResolveOnlyLoss()) return true;
-        if (state.Phase != "playing" || (state.TurnEndsAt > now && state.ActionEndsAt > now)) return false;
+        if (state.Phase == "playing" && HasTime && ResolveOnlyLoss()) return true;
+        if (state.Phase != "playing" || HasTime) return false;
         Log("timeout", $"{Name(state.ActivePlayerId!)} ran out of time. The round is ending.");
         // Resolve mandatory battles with public server rolls and deterministic
         // casualty choices before using the normal construction/advance path.
         var exchanges = 0;
-        while (state.Combat is not null || state.CombatChoices.Count > 0)
+        var endingTurn = state.TurnNumber;
+        while (state.Phase == "playing" && state.TurnNumber == endingTurn)
         {
-            if (++exchanges > 512) { ActionClock(); state.TurnEndsAt = now.AddSeconds(options.TurnSeconds); return true; }
+            if (state.Combat is null && state.CombatChoices.Count == 0)
+            {
+                FinishRound();
+                if (state.TurnNumber != endingTurn) return true;
+            }
+            if (++exchanges > 512)
+            {
+                ActionClock();
+                if (!state.IsEndingRound) state.TurnEndsAt = now.AddSeconds(options.TurnSeconds);
+                return true;
+            }
             if (state.Combat is null) StartBattle(state.CombatChoices[0]);
             var battle = state.Combat!;
             if (battle.Status == "awaiting-roll") RollBattle(battle.Id);
@@ -762,7 +796,6 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             else { state.Combat = null; RefreshEncounters(); }
             if (state.Phase == "finished") return true;
         }
-        FinishRound();
         return true;
     }
 }

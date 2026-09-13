@@ -98,9 +98,11 @@ export type Game = {
   turnEndsAt: string | null
   actionEndsAt: string | null
   isBuildPhase: boolean
+  isEndingRound: boolean
   availableBuilds: number
   combat: Battle | null
   combatChoices: Encounter[]
+  combatPlayerId: string | null
   events: GameEvent[]
   roundHistory: RoundSnapshot[]
   perkPickups: (Hex & { kind: string })[]

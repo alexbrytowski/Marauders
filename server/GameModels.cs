@@ -28,9 +28,22 @@ public sealed class GameState
     public DateTimeOffset? TurnEndsAt { get; set; }
     public DateTimeOffset? ActionEndsAt { get; set; }
     public bool IsBuildPhase { get; set; }
+    public bool IsEndingRound { get; set; }
     public int AvailableBuilds { get; set; }
     public CombatState? Combat { get; set; }
     public List<CombatChoice> CombatChoices { get; set; } = [];
+    public string? CombatPlayerId
+    {
+        get
+        {
+            if (Combat is { } battle)
+                return ActivePlayerId == battle.AttackerId || ActivePlayerId == battle.DefenderId
+                    ? ActivePlayerId : battle.AttackerId;
+            var captains = CombatChoices.SelectMany(c => new[] { c.TriggerShipId, c.OpponentShipId })
+                .Select(id => Ships.FirstOrDefault(s => s.Id == id)?.OwnerId).OfType<string>().ToArray();
+            return captains.Contains(ActivePlayerId) ? ActivePlayerId : captains.FirstOrDefault();
+        }
+    }
     public List<GameEvent> Events { get; set; } = [];
     public List<RoundSnapshot> RoundHistory { get; set; } = [];
     public List<PerkPickup> PerkPickups { get; set; } = [];
