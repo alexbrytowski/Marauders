@@ -8,7 +8,7 @@ public partial class GameRulesTests
     private static void ReadyCaptain(GameState state, int seat, bool ready = true)
         => Rules(state).Act(state.Players[seat].Id, new("set-ready", IsReady: ready, LobbyVersion: state.LobbyVersion));
 
-    [Fact] public void Only_four_explicit_ready_captains_start_one_draft_with_public_first_player()
+    [Fact] public void Only_four_explicit_ready_captains_start_one_game_with_public_first_player()
     {
         var s = Lobby(); var version = s.LobbyVersion;
         Assert.All(s.Players, p => Assert.False(p.IsReady));
@@ -25,12 +25,12 @@ public partial class GameRulesTests
         ReadyCaptain(s, 1, false); ReadyCaptain(s, 3);
         Assert.Equal("lobby", s.Phase);
         ReadyCaptain(s, 1);
-        Assert.Equal("draft", s.Phase); Assert.Equal(s.HostPlayerId, s.ActivePlayerId);
-        Assert.Equal(5, s.PerkPickups.Count); Assert.Single(s.Events, e => e.Kind == "draft");
+        Assert.Equal("playing", s.Phase); Assert.Equal(s.HostPlayerId, s.ActivePlayerId);
+        Assert.Equal(6, s.PerkPickups.Count); Assert.Single(s.Events, e => e.Message.StartsWith("Three ports were randomly assigned"));
         Assert.Throws<RuleException>(() => ReadyCaptain(s, 1));
         Assert.Throws<RuleException>(() => ReadyCaptain(s, 1, false));
         Assert.Throws<RuleException>(() => Rules(s).Act(s.HostPlayerId!, new("set-first-player", FirstPlayerId: s.Players[1].Id)));
-        Assert.Single(s.Events, e => e.Kind == "draft");
+        Assert.Single(s.Events, e => e.Message.StartsWith("Three ports were randomly assigned"));
     }
 
     [Fact] public void Setup_changes_invalidate_old_ready_clicks_and_reset_the_affected_captains()
@@ -68,7 +68,7 @@ public partial class GameRulesTests
 
 public partial class GameStateStoreTests
 {
-    [Fact] public async Task Concurrent_ready_commands_persist_and_start_the_draft_exactly_once()
+    [Fact] public async Task Concurrent_ready_commands_persist_and_start_the_game_exactly_once()
     {
         var directory = Directory.CreateTempSubdirectory("marauders-ready-").FullName;
         var password = Guid.NewGuid().ToString("N"); var store = Store(directory, password);
@@ -88,8 +88,9 @@ public partial class GameStateStoreTests
             new("set-ready", IsReady: true, LobbyVersion: restored.LobbyVersion))));
         Assert.All(results, result => Assert.True(result.Success, result.Error));
         var draft = await Store(directory, password).ReadAsync();
-        Assert.Equal("draft", draft.Phase); Assert.Equal(restored.FirstPlayerId, draft.ActivePlayerId);
-        Assert.Single(draft.Events, e => e.Kind == "draft"); Assert.Equal(5, draft.PerkPickups.Count);
+        Assert.Equal("playing", draft.Phase); Assert.Equal(restored.FirstPlayerId, draft.ActivePlayerId);
+        Assert.Single(draft.Events, e => e.Message.StartsWith("Three ports were randomly assigned")); Assert.Equal(6, draft.PerkPickups.Count);
+        Assert.Equal(24, draft.Ships.Count); Assert.All(draft.Players, p => Assert.Equal(3, draft.Ports.Count(port => port.OwnerId == p.Id)));
         var late = await store.ActAsync("browser-3", new("set-ready", IsReady: true, LobbyVersion: restored.LobbyVersion));
         Assert.False(late.Success); Assert.Equal(draft.Revision, (await store.ReadAsync()).Revision);
         var reset = await store.ResetAsync(new(password, draft.Id, draft.Revision));
@@ -112,6 +113,6 @@ public partial class GameStateStoreTests
         store = Store(directory); var legacy = await store.ReadAsync();
         Assert.All(legacy.Players, p => Assert.False(p.IsReady));
         var started = await ReadyCrewAsync(store);
-        Assert.Equal("draft", started.Phase); Assert.Equal(legacy.HostPlayerId, started.ActivePlayerId);
+        Assert.Equal("playing", started.Phase); Assert.Equal(legacy.HostPlayerId, started.ActivePlayerId);
     }
 }

@@ -57,8 +57,8 @@ public partial class GameRulesTests
     [Fact] public void Combat_perks_do_not_change_shared_movement_rolls()
     {
         var s = Playing(); Add(s, 0, Open).Perk = "glass-cannon"; Add(s, 0, Offset(Open, 1)).Perk = "loaded-dice";
-        var dice = new ControlledDice([1]); new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("roll-movement"));
-        Assert.Equal(1, s.RemainingMovement); Assert.Equal(6, Assert.Single(dice.Sides));
+        Rules(s).Act(s.ActivePlayerId!, new("roll-movement"));
+        Assert.Equal(4, s.RemainingMovement);
     }
 
     [Theory] [InlineData(1, "black", true)] [InlineData(2, "white", false)]

@@ -84,7 +84,7 @@ export function BattleModal({
           {port
             ? '1 port die'
             : `${ships.length} ship${ships.length === 1 ? '' : 's'} · ${ships.length + support} ${ships.length + support === 1 ? 'die' : 'dice'}`}
-          {support > 0 && ' (includes harbor defense)'}
+          {support > 0 && ' (includes port support within two hexes)'}
         </p>
         <div className="battle-dice" key={`${battle?.id}-${battle?.round}`}>
           {rolling ? (

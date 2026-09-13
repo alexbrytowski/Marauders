@@ -83,6 +83,8 @@ export function BoardView({
   const inspectedShip = inspected ? ships.get(key(inspected)) : undefined
   const inspectedPort = inspected?.portId ? ports.get(inspected.portId) : undefined
   const inspectedPerk = inspectedShip?.perk ? perks[inspectedShip.perk] : undefined
+  const inspectedPickup = inspected && !inspectedShip ? pickups.get(key(inspected)) : undefined
+  const inspectedPickupPerk = inspectedPickup ? perks[inspectedPickup.kind] : undefined
   const inspectedExit = inspected ? whirlpoolExit(game, inspected) : null
   const buildsAt = (portId: string) => game.constructions.filter((build) => build.portId === portId)
   const buildDescription = (portId: string) =>
@@ -207,7 +209,7 @@ export function BoardView({
               ? `${owner?.name}'s ship ${ship.number}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
               : port
                 ? `${port.name}, port ${portNumber(port.id)}, ${owner?.name ?? 'unclaimed'}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
-                : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup, ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
+                : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup. ${perks[pickup.kind]?.description} ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
             return (
               <g
                 key={key(cell)}
@@ -325,16 +327,24 @@ export function BoardView({
           </g>
         </svg>
       </div>
-      {!preview && (inspectedShip || inspectedPort || inspectedExit) && (
+      {!preview && (inspectedShip || inspectedPort || inspectedPickupPerk || inspectedExit) && (
         <aside className="board-inspection" role="tooltip">
           <strong>
             {inspectedShip
               ? `Ship ${inspectedShip.number} · ${players.get(inspectedShip.ownerId)?.name}`
-              : (inspectedPort?.name ?? 'Whirlpool passage')}
+              : (inspectedPort?.name ?? inspectedPickupPerk?.name ?? 'Whirlpool passage')}
           </strong>
           {inspectedShip && (
             <span>
               {inspectedPerk ? `${inspectedPerk.name} — ${inspectedPerk.description}` : 'No perk aboard.'}
+            </span>
+          )}
+          {inspectedPickupPerk && <span>{inspectedPickupPerk.description}</span>}
+          {inspectedPort && (
+            <span>
+              {inspectedPort.ownerId
+                ? 'Adds one combat die when its owner’s triggering ship is within two hexes, including open water.'
+                : 'Neutral port: attack from its harbor to capture it. It does not assist ship battles.'}
             </span>
           )}
           {inspectedPort && (

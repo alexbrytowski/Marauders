@@ -1,8 +1,9 @@
 # Marauders maps
 
 New matches offer **Classic**, **The Choke**, and **Serpent's Coil**. All start
-with thirteen ports, the same snake draft, two ships per owned port, and the same
-rules. Captains vote before the draft; each vote is one
+with thirteen ports, three randomly assigned ports per captain, two ships per owned port, and the same
+rules. Blackwater (Classic), Northgate (The Choke), and Serpent's Heart (Serpent's
+Coil) always begin neutral. Captains vote before play; each vote is one
 ticket in a server-drawn lottery. With no votes, all three maps have equal odds.
 
 ## Classic
@@ -26,7 +27,7 @@ A small island in the north of the western bay and one in the south of the
 eastern bay split open-water routes. Sail around either side to approach the
 ring of ports; neither island creates another crossing or adds a port.
 
-Drafting both sides protects access if a rival blocks the crossing. Drafting
+Owning ports on both sides protects access if a rival blocks the crossing. Starting
 near a gate gives direct pressure on it, at the cost of a small harbor and
 potential contact with enemy ships coming through. Whirlpools can temporarily
 change access across the land divide.
@@ -71,7 +72,7 @@ Versions 2, 3, and 4 are preserved in the corresponding `narrows-v*.json` and
 `shattered-isles-v*.json` files. Saved matches keep
 their exact terrain, with a legacy label. Version 2 retains the names The
 Narrows and Shattered Isles; version 3 retains The Choke and Serpent's Coil.
-They can continue without moving ships or resetting saves. New drafts use
+They can continue without moving ships or resetting saves. New matches use
 version 5. Unknown versions and versions belonging to another map fail
 explicitly. The API and client load the version saved in the match;
 perk-placement caches are also version-specific. No live save is reset.
@@ -89,5 +90,5 @@ two launch hexes each, automatic fleets, spillover, perk access, lottery rules,
 and saved versions. The Choke has an explicit three-cell cut test; the Coil has
 distance tests for all three cuts, including passage past one blocked southern
 entrance hex. Island tests preserve all port positions and harbor cells. The five-browser map scenario
-covers voting, drafting, sailing, shared state, and restart persistence on both
+covers voting, random setup, sailing, shared state, and restart persistence on both
 maps, plus loading all six legacy layouts.

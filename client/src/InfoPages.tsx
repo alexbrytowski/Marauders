@@ -121,7 +121,7 @@ export function ControllerPage({
                   setReview(null)
                   void send('/api/game/reset', request).then((ok) => {
                     if (ok)
-                      setMessage('The game has been reset. Return to the voyage to join or begin the draft.')
+                      setMessage('The game has been reset. Return to the voyage to join or ready up.')
                   })
                 }}
               >

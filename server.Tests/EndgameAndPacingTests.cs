@@ -29,7 +29,7 @@ public partial class GameRulesTests
         Rules(s).Act(s.Players[1].Id, new("forfeit"));
         Assert.Equal("finished", s.Phase); Assert.Equal(winner, s.WinnerId);
         Assert.Equal(3, s.Players.Count(p => !p.HasForfeited));
-        Assert.Equal(11, s.Ports.Count(p => p.OwnerId is null));
+        Assert.Equal(12, s.Ports.Count(p => p.OwnerId is null));
         Assert.Empty(s.Constructions); Assert.Empty(s.CombatChoices); Assert.Null(s.Combat);
         Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
         Assert.True(Assert.Single(s.RoundHistory).IsFinal); Assert.False(Rules(s).Expire());
@@ -47,7 +47,7 @@ public partial class GameRulesTests
 
     [Fact] public void Draft_does_not_eliminate_captains_who_have_not_picked_yet()
     {
-        var s = Lobby(); ReadyCrew(s);
+        var s = LegacyDraft();
         Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[0].Id));
         Rules(s).Act(s.Players[3].Id, new("forfeit"));
         Assert.Equal("draft", s.Phase); Assert.Null(s.WinnerId); Assert.False(Rules(s).Expire());
@@ -103,7 +103,7 @@ public partial class GameRulesTests
     }
 
     [Theory] [InlineData(0, 135)] [InlineData(1, 135)] [InlineData(6, 135)]
-    [InlineData(8, 180)] [InlineData(16, 270)] [InlineData(24, 360)]
+    [InlineData(7, 180)] [InlineData(8, 180)] [InlineData(15, 270)] [InlineData(16, 315)] [InlineData(24, 405)]
     public void Turn_budget_scales_with_starting_dice_and_includes_one_planning_interval(int ships, int seconds)
     {
         var s = Playing(); s.IsBuildPhase = true;

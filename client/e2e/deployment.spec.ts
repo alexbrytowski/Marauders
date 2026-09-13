@@ -210,7 +210,7 @@ test('Production HTTPS, portraits, seven browsers, reset and persistent seats su
       ).toBe(200)
     }
     const draft = await game()
-    expect(draft.phase).toBe('draft')
+    expect(draft.phase).toBe('playing')
     for (let i = 4; i < 7; i++)
       expect(
         (

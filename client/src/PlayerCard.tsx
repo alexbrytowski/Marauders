@@ -81,7 +81,7 @@ export function PlayerCard({
           </button>
         ))}
         {!ports.length && (
-          <small>{game.phase === 'lobby' ? 'Ports chosen in the draft' : 'No ports held'}</small>
+          <small>{game.phase === 'lobby' ? 'Three random ports at game start' : 'No ports held'}</small>
         )}
       </div>
       <div className="captain-foot">

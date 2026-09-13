@@ -20,25 +20,25 @@ Before joining, each player enters a name and explicitly picks one of eight pict
 
 The game is played with four players. Additional players are spectators only and cannot make moves. Players should be reliably identified by their browsers.
 
-The players decide who goes first; the host selects that captain in the lobby (the first seated captain is the default). Each of the four captains must press **Ready**. The fourth ready automatically starts the port draft. Captains may undo readiness before then. Changing your map vote clears your readiness; changing the first captain or the seated crew clears everyone's readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
+The players decide who goes first; the host selects that captain in the lobby (the first seated captain is the default). Each of the four captains must press **Ready**. The fourth ready automatically draws the map, assigns ports, launches ships, and starts play. Captains may undo readiness before then. Changing your map vote clears your readiness; changing the first captain or the seated crew clears everyone's readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
 
-Captains then pick ports using a snake draft. With four players and 13 ports, each player picks three ports and one port remains unowned. The unowned port can be captured during the game.
+The server randomly deals three ports to each captain. The fixed central port always starts unowned: Blackwater on Classic, Northgate on The Choke, and Serpent's Heart on Serpent's Coil. It can be captured during the game. There is no port draft in new games.
 
-Before the draft, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Serpent’s Coil has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
+Before play, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Serpent’s Coil has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
-The five perk pickups appear on the selected map before the first port pick, so captains can plan their ports around them. Their locations and types stay fixed throughout the draft.
+Six perk pickups appear in open water on the selected map as part of setup.
 
-When the final port is picked, the server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
+The server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. Each captain begins with six ships. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
 
 ## Game rules
 
 ### Dice, actions, and ports
 
-The number of ships on the water determines the number of dice, and therefore actions, a player gets. If a player has 1-3 ships, they get 1 die; 4-7 ships gets 2 dice; 8-11 gets 3 dice; and each additional four ships grants one more die.
+The number of ships on the water determines the number of dice, and therefore actions, a player gets. Divide ships by three and round up: 1-3 ships get 1 die, 4-6 get 2 dice, 7-9 get 3 dice, and so on. Zero ships means zero action dice. Each participating ship still rolls one combat die.
 
 Each die is one action. With an action, a player may choose one of the following:
 
-1. **Move ships:** Roll the die and distribute its movement value among any number of their ships. For example, a roll of 5 may move one ship five hexes, or several ships whose total movement is five hexes. Combat triggered by movement does not consume movement. If combat ends, the player may continue using any remaining movement from that roll.
+1. **Move ships:** Roll an equally likely 4, 5, or 6 and distribute its movement value among any number of their ships. The result appears immediately, without a rolling animation. For example, a roll of 5 may move one ship five hexes, or several ships whose total movement is five hexes. Combat triggered by movement does not consume movement. If combat ends, the player may continue using any remaining movement from that roll.
 2. **Attack a port:** If eligible, attack an enemy or unowned port. This consumes the die rolled; its numeric value is not used for movement.
 
 Once a player is out of actions or ships, their round ends.
@@ -74,7 +74,7 @@ Examples:
 
 The losing team must choose a participating ship to remove from battle. If only one of its ships participated, the server automatically resolves that casualty, including any perk effects. If a helper is removed, it must be removed before the next dice roll; the battle then continues because the two triggering ships remain adjacent. If a triggering ship is removed and the opposing triggering ship is no longer adjacent to an enemy, the battle ends.
 
-When ship-vs.-ship combat occurs in a port's dark-blue water, that port may contribute one additional die for its owner. The port cannot be removed if its side loses that battle.
+In ship-vs.-ship combat, each port within two hexes of its owner's triggering ship contributes one additional die for that owner. This uses direct hex distance, just like assisting ships, and works outside dark-blue harbor water. It does not chain through helpers. Neutral ports and ports owned by a third team do not assist. The port cannot be removed if its side loses that battle.
 
 #### Port vs. ship
 
@@ -106,22 +106,24 @@ There is a countdown for each turn and action so the game cannot take too long. 
 
 ### Perks
 
-Updated from the owner's September 10 notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, its perk drops at its hex and can be collected again, including on arrival at a whirlpool exit.
+Updated from the owner's September 13 playthrough notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, any unconsumed perk drops at its hex and can be collected again, including on arrival at a whirlpool exit.
 
 - **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, there is a 10% chance to recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
 - **Glass Cannon:** This ship's combat roll is uniformly distributed from 0 through 8, including both endpoints. This replaces its normal d6 combat roll.
 - **Loaded Dice:** This ship's combat results of 1 or 2 become 3.
 - **Mouth to Feed:** Adds one population slot to the captain of the ship carrying it, anywhere at sea. Each holder adds one slot. The bonus follows the ship’s owner; losing the perk never removes existing ships or cancels construction.
 - **Black and White:** When this ship participates in a combat exchange, all numbered ship and port dice and defense modifiers are replaced by one server-generated black-or-white result. Black wins for this ship's team; white wins for the opposing side. This applies in ship battles and port attacks, including when the holder helps. If the holder is removed and the ship battle continues, later exchanges return to normal dice.
+- **Cheat Death:** The first time this ship participates on the losing side of a combat exchange, consume the perk and automatically reroll the entire exchange before any casualty, recruitment, capture, or defense weakening. This includes helpers, port attackers, and Black and White results. Ties do not consume it. The perk immediately respawns in a random empty ordinary-water hex, avoiding other pickups and whirlpools. The new result applies normally; another losing participant carrying Cheat Death can then use its own perk.
 
-Combat perks work for participating helpers and port attackers. Shared movement rolls remain normal d6s. Port defense rolls remain normal d6s unless Black and White replaces the entire exchange. The initial playtest uses one pickup of each type and no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
+Combat perks work for participating helpers and port attackers. Shared movement rolls are always 4-6 and unaffected by perks. Port defense rolls remain normal d6s unless Black and White replaces the entire exchange. Games start with one pickup of each of the six types. Only consumed Cheat Death respawns; there are no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
 
 ### Forfeit and leave
 
-A captain may forfeit during drafting or play after confirming. Their ports,
-ships, carried perks, and construction vanish. Former port hexes become
-impassable land and their harbor water becomes ordinary water without port
-support. Their remaining draft picks and turns are skipped; they watch as a
+A captain may forfeit during play (or a legacy draft) after confirming. Their
+ships, carried perks, and construction vanish. Their ports stay on the map as
+unclaimed neutral ports with defense weakness reset to zero. Harbors remain
+usable and others may attack and capture these ports normally. Their turns
+and any remaining legacy draft picks are skipped; they watch as a
 spectator and cannot rejoin that match. During play, the only captain still
 owning ports wins immediately, even if neutral ports and previously eliminated
 captains remain. During drafting, the last nonforfeited captain wins; captains
@@ -130,7 +132,7 @@ preserves its result.
 
 ### Whirlpools
 
-After each completed captain turn, including a timeout, there is a 5% chance
+After each completed captain turn, including a timeout, there is a 10% chance
 to spawn one pair of whirlpools if none exists. That is four independent chances
 per full four-player cycle. They appear in two empty ordinary-blue water hexes
 at least ten hexes apart, never in a port’s dark-blue water or on ships/pickups.

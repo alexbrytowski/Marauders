@@ -35,6 +35,14 @@ public partial class GameRulesTests
         foreach (var player in state.Players)
             rules.Act(player.Id, new("set-ready", IsReady: true, LobbyVersion: state.LobbyVersion));
     }
+    private static GameState LegacyDraft()
+    {
+        var state = Lobby(); ReadyCrew(state);
+        state.Phase = "draft"; state.Ships.Clear(); state.TurnNumber = 0;
+        state.TurnEndsAt = null; state.ActionEndsAt = null;
+        foreach (var port in state.Ports) port.OwnerId = null;
+        return state;
+    }
     private static Hex Offset(Hex h, int q, int r = 0) => new(h.Q + q, h.R + r);
     private static readonly Hex Open = BoardDefinition.Cells.First(c => c.Terrain == "water" &&
         Enumerable.Range(-4, 9).All(q => Enumerable.Range(-1, 3).All(r => BoardDefinition.Cell(new(c.Q + q, c.R + r))?.Terrain == "water"))).Hex;
@@ -62,27 +70,19 @@ public partial class GameRulesTests
         }
     }
     [Theory]
-    [InlineData(0, 0)] [InlineData(1, 1)] [InlineData(3, 1)] [InlineData(4, 2)] [InlineData(7, 2)] [InlineData(8, 3)] [InlineData(11, 3)] [InlineData(12, 4)]
+    [InlineData(0, 0)] [InlineData(1, 1)] [InlineData(3, 1)] [InlineData(4, 2)] [InlineData(6, 2)] [InlineData(7, 3)] [InlineData(9, 3)] [InlineData(10, 4)] [InlineData(12, 4)] [InlineData(13, 5)]
     public void Dice_follow_population_bands(int ships, int expected) => Assert.Equal(expected, GameRules.ActionCount(ships));
 
-    [Fact] public void Host_selects_first_and_snake_draft_reveals_perks_then_launches_fleets_automatically()
+    [Fact] public void Host_selects_first_and_ready_deals_ports_reveals_perks_and_launches_fleets_automatically()
     {
         var s = Lobby(); var first = s.Players[2].Id;
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("start-draft", FirstPlayerId: first)));
         ReadyCrew(s, first);
-        Assert.Equal(5, s.PerkPickups.Count); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
-        var pickups = s.PerkPickups.ToArray();
-        var picks = new List<string>();
-        for (var i = 0; i < 12; i++)
-        {
-            Assert.Throws<RuleException>(() => Rules(s).Act(s.Players.First(p => p.Id != s.ActivePlayerId).Id, new("draft", PortId: s.Ports[i].Id)));
-            picks.Add(s.ActivePlayerId!); Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
-            Assert.Equal(pickups, s.PerkPickups);
-            if (i < 11) { Assert.Equal("draft", s.Phase); Assert.Empty(s.Ships); Assert.Null(s.TurnEndsAt); }
-        }
-        var order = s.TurnOrder;
-        Assert.Equal(new[] { order[0], order[1], order[2], order[3], order[3], order[2], order[1], order[0], order[0], order[1], order[2], order[3] }, picks);
+        Assert.Equal(6, s.PerkPickups.Count);
+        Assert.All(s.Players, player => Assert.Equal(3, s.Ports.Count(p => p.OwnerId == player.Id)));
+        Assert.Throws<RuleException>(() => Rules(s).Act(first, new("draft", PortId: "port-7")));
         var unowned = Assert.Single(s.Ports, p => p.OwnerId is null);
+        Assert.Equal("port-7", unowned.Id);
         Assert.DoesNotContain(s.Ships, ship => ship.PortId == unowned.Id);
         foreach (var port in s.Ports.Where(p => p.OwnerId is not null))
         {
@@ -101,7 +101,6 @@ public partial class GameRulesTests
     [Fact] public void Default_action_deadline_ends_the_round_and_custom_timers_are_respected()
     {
         var s = Lobby(); ReadyCrew(s);
-        for (var i = 0; i < 12; i++) Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports[i].Id));
         Assert.False(new GameRules(s, new FixedDice(), new(), Now.AddSeconds(44)).Expire());
         Assert.Throws<RuleException>(() => new GameRules(s, new FixedDice(), new(), Now.AddSeconds(45)).Act(s.ActivePlayerId!, new("roll-movement")));
         var configured = new GameOptions { TurnSeconds = 150, ActionSeconds = 45 };

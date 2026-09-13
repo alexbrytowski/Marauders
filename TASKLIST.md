@@ -1,6 +1,6 @@
 # Marauders launch checklist
 
-Updated 2026-09-12. Target: one game, four captains plus approximately three
+Updated 2026-09-13. Target: one game, four captains plus approximately three
 spectators, desktop-first. Joining is open; the owner explicitly declined an
 invitation gate. Reset stays password-protected. No hard spectator cap is
 implemented or required by this planning assumption.
@@ -12,6 +12,30 @@ See [LAUNCH_REVIEW.md](LAUNCH_REVIEW.md) for findings and hosting options,
 Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
+
+## September 13: first full playthrough follow-up
+
+- [x] Double whirlpool spawn chance to 10% per completed captain turn.
+- [x] Replace new-game drafting with three random ports per captain and two
+  starting ships per owned port. Fix the neutral central port on each map.
+- [x] Award one action die per three ships, rounding up; movement rolls are
+  uniformly 4–6 and reveal immediately while combat keeps its animation.
+- [x] Fix port assistance to use two-hex distance from its owner's triggering
+  ship, including outside harbor water, with no helper chaining.
+- [x] Add Cheat Death as the sixth pickup: consume on any losing participating
+  exchange, reroll before consequences, and respawn in empty open water.
+- [x] Forfeited ports remain neutral, retain usable harbors, reset their defense,
+  and can be captured normally. Update rules, handbook, lobby, and forfeit copy.
+- [x] Show each uncollected perk's name and effect on hover and keyboard focus.
+  Visually verified all six hover explanations and keyboard focus in the
+  existing five-browser scenario.
+- [x] Server regressions: 165 passing tests; lint, client build, solution build,
+  and Release publish pass. Dedicated five-browser regression covers port
+  support, Cheat Death consumption/respawn, restart recovery, neutral capture,
+  and spectator rejection.
+- [x] All 16 browser regressions pass after updating the old setup, forfeit,
+  and movement-animation expectations. Reviewed battle and handbook screenshots;
+  the focused five-browser flow also passes with the added pickup explanations.
 
 ## 1. Reliable reset and connection recovery — before launch
 
@@ -74,7 +98,7 @@ provider settings and a live deployment have not been verified by the agent.
 - [ ] Choose a region near the players and a stable hostname. A provider hostname
   is sufficient initially; custom domain purchase is optional. Browser seats are
   hostname/browser-specific—plan any domain change before claiming real seats.
-- [ ] Run a full hosted match with four players and three spectators: draft,
+- [ ] Run a full hosted match with four players and three spectators: random setup,
   moves, public battles, timeout, forfeit, victory, reconnect, and controller reset.
   Include separate devices/networks and a long-match CPU/RAM/payload check; the
   local seven-browser smoke is not a capacity benchmark.
@@ -93,12 +117,12 @@ provider settings and a live deployment have not been verified by the agent.
 
 ## Current review evidence
 
-- [x] Black and White perk: five-perk layouts on every map, server-side 50/50
+- [x] Black and White perk: six-perk layouts on every map, server-side 50/50
   resolution, port and helper behavior, persistence, dedicated public UI, and
   five-browser synchronization are covered by server and browser regressions.
 - [x] Combat handbook includes the supplied one-exchange and cumulative encounter
   probability tables, with desktop and narrow-screen browser verification.
-- [x] Solution build: zero warnings/errors; all 138 server tests pass.
+- [x] Solution build: zero warnings/errors; all 165 server tests pass.
 - [x] Client lint and production build pass; same-origin Release publish succeeds.
 - [x] Production HTTPS proxy regression passes: seven browsers, eight portrait
   reads, secure cookies, WebSockets, spectator rejection, reset synchronization,
@@ -110,7 +134,7 @@ provider settings and a live deployment have not been verified by the agent.
 - [x] Fault injection reproduced the initial-resync failure, then regression
   coverage verified the repair returns Live after a retry. Review probe is
   retained under ignored `artifacts/launch-review-probe.mjs`.
-- [x] All 15 browser regressions pass (5.4 minutes), including Black and White
+- [x] All 16 browser regressions pass, including Cheat Death, Black and White
   synchronization/persistence, Production HTTPS with seven browsers, password
   reset, same-origin publish and initial-refresh fault injection. Current results
   are under ignored `client/test-results/`; the older launch-review evidence

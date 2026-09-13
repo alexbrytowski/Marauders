@@ -9,7 +9,7 @@ import './HowToPlayPage.css'
 
 const chapters = [
   { id: 'basics', title: 'Meet the board', level: 'Start here', icon: 'compass' },
-  { id: 'setup', title: 'Ready, draft, launch', level: 'Getting started', icon: 'flag' },
+  { id: 'setup', title: 'Ready, deal, launch', level: 'Getting started', icon: 'flag' },
   { id: 'sailing', title: 'Take your turn', level: 'The essentials', icon: 'ship' },
   { id: 'battles', title: 'Fight ship battles', level: 'The essentials', icon: 'battle' },
   { id: 'ports', title: 'Capture a port', level: 'Build your strategy', icon: 'port' },
@@ -224,57 +224,56 @@ function Basics({ board }: { board?: Board }) {
 }
 
 function Setup({ board }: { board?: Board }) {
-  const [pick, setPick] = useState(0)
-  const order = [0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3]
+  const [deal, setDeal] = useState(0)
+  const orders = [
+    [0, 2, 1, 3, 2, 0, 3, 1, 1, 3, 0, 2],
+    [3, 1, 2, 0, 1, 3, 0, 2, 2, 0, 3, 1],
+  ]
+  const order = orders[deal % orders.length]
   return (
     <Lesson
-      takeaway="Ready up, pick three ports, and your six starting ships launch automatically."
+      takeaway="Ready up, receive three random ports, and your six starting ships launch automatically."
       visual={
         <>
-          <span className="example-label">TRY THE SNAKE DRAFT</span>
+          <span className="example-label">EXAMPLE RANDOM PORT DEAL</span>
           <div className="draft-example">
             {order.map((captain, i) => (
               <span
                 key={i}
-                className={i <= pick ? 'draft-revealed' : ''}
+                className="draft-revealed"
                 style={{ '--crew': colors[captain] } as React.CSSProperties}
               >
-                <small>Pick {i + 1}</small>
-                <b>{i <= pick ? `Captain ${captain + 1}` : '·'}</b>
+                <small>Port {i + 1}</small>
+                <b>Captain {captain + 1}</b>
               </span>
             ))}
           </div>
           <div className="example-controls">
-            <button disabled={pick === 11} onClick={() => setPick(pick + 1)}>
-              Next draft pick
-            </button>
-            <button onClick={() => setPick(0)}>Reset example</button>
+            <button onClick={() => setDeal(deal + 1)}>Show another deal</button>
+            <button onClick={() => setDeal(0)}>Reset example</button>
           </div>
           <p className="example-feedback" role="status">
-            {pick === 11
-              ? 'Three ports each. One unclaimed port remains. Your fleets now launch!'
-              : `Pick ${pick + 1}: Captain ${order[pick] + 1}. The order reverses after every four picks.`}
+            Three ports each. The central port stays neutral. Two ships launch at every owned port.
           </p>
-          {pick === 11 && <TeachingChart board={board} captured />}
+          <TeachingChart board={board} captured />
         </>
       }
     >
       <h3>Assemble your crew</h3>
       <ol>
         <li>
-          Choose a name, an available color, and a pictured character. No duplicate characters or colors.
-          Use a separate browser profile or device for each
-          captain. Extra visitors watch.
+          Choose a name, an available color, and a pictured character. No duplicate characters or colors. Use
+          a separate browser profile or device for each captain. Extra visitors watch.
         </li>
-        <li>Vote for a map. The host chooses who picks first.</li>
+        <li>Vote for a map. The host chooses who takes the first turn.</li>
         <li>
-          Each captain presses <strong>Ready to sail</strong>. The fourth ready draws the map and begins the
-          draft.
+          Each captain presses <strong>Ready to sail</strong>. The fourth ready draws the map, deals the
+          ports, launches the ships, and starts play.
         </li>
       </ol>
       <p>
-        Draft first → fourth, fourth → first, then first → fourth. Perk pickups are already visible, so plan
-        around them. The draft has no clock.
+        Each captain receives three random ports and six ships. Blackwater on Classic, Northgate on The Choke,
+        and Serpent’s Heart on Serpent’s Coil always start neutral. Six perk pickups await at sea.
       </p>
       <details>
         <summary>Map votes & changing your mind</summary>
@@ -283,7 +282,7 @@ function Setup({ board }: { board?: Board }) {
           map. With no votes, all three maps have equal chances.
         </p>
         <p>
-          You can undo ready before the draft. Changing your vote clears your readiness; changing the first
+          You can undo ready before play starts. Changing your vote clears your readiness; changing the first
           captain or the crew clears everyone’s. Refreshing keeps your seat and ready status.
         </p>
       </details>
@@ -355,7 +354,8 @@ function Sailing({ board }: { board?: Board }) {
         value={fleet}
         onChange={(e) => setFleet(Number(e.target.value))}
       />
-      <p>1–3 ships: 1 die. 4–7: 2 dice. 8–11: 3 dice. Each additional four ships adds a die.</p>
+      <p>1–3 ships: 1 die. 4–6: 2 dice. 7–9: 3 dice. One action die per three ships, rounding up.</p>
+      <p>Movement rolls are equally likely to be 4, 5, or 6, and appear immediately.</p>
       <ol>
         <li>
           Choose <strong>Roll to sail</strong>.
@@ -532,7 +532,10 @@ function Battles({ board }: { board?: Board }) {
           Allies within <strong>two hexes of their team’s triggering ship</strong> help. Assistance does not
           chain.
         </li>
-        <li>Every participating ship rolls a die. The harbor may add one die for its owner.</li>
+        <li>
+          Every participating ship rolls a die. Each port within two hexes of its owner’s triggering ship adds
+          one die, even outside the harbor. Support does not chain through helpers.
+        </li>
         <li>The higher top result wins. On a tie, reroll.</li>
         <li>The loser chooses a participating ship to remove. A sole eligible casualty is automatic.</li>
       </ul>
@@ -550,10 +553,15 @@ function Battles({ board }: { board?: Board }) {
           These are your chances when every participating ship uses a normal six-sided die and ties reroll.
           Harbor support, port attacks, and perks are excluded.
         </p>
-        <CombatOddsTable caption="Chance to win one exchange" firstColumn="Your team" rows={singleExchangeOdds} />
+        <CombatOddsTable
+          caption="Chance to win one exchange"
+          firstColumn="Your team"
+          rows={singleExchangeOdds}
+        />
         <p>
           The cumulative table assumes the fight continues after every casualty until one team has no ships
-          left. A live battle can end sooner when removing a triggering ship leaves no opposing ships adjacent.
+          left. A live battle can end sooner when removing a triggering ship leaves no opposing ships
+          adjacent.
         </p>
         <CombatOddsTable
           caption="Chance to win the full encounter"
@@ -744,6 +752,13 @@ function Perks() {
         <span className="black-white-example white">WHITE</span>
       </>
     ),
+    'cheat-death': (
+      <>
+        <strong>Losing exchange</strong>
+        <span>→</span>
+        <strong>Consume & reroll</strong>
+      </>
+    ),
   }
   return (
     <Lesson
@@ -771,17 +786,22 @@ function Perks() {
         </>
       }
     >
-      <h3>Five pickups. Five different edges.</h3>
+      <h3>Six pickups. Six different edges.</h3>
       <p>
-        One of each perk appears in open water before the draft. Each ship can carry <strong>one perk</strong>
-        ; a fleet can hold several.
+        One of each perk appears in open water at game start. Each ship can carry <strong>one perk</strong>; a
+        fleet can hold several.
       </p>
       <ul>
         <li>A ship already carrying a perk sails past other pickups.</li>
         <li>Destroyed ships drop their perk where they sank.</li>
         <li>Combat perks work for participating helpers and port attackers.</li>
-        <li>Movement uses an ordinary six-sided die.</li>
+        <li>Movement rolls are always 4, 5, or 6, unaffected by perks.</li>
         <li>Black and White replaces all dice and modifiers in an exchange with one 50/50 result.</li>
+        <li>
+          Cheat Death automatically rerolls any losing exchange its carrier joins, including as a helper or
+          port attacker. It is consumed before losses or port effects, then respawns in empty open water. Ties
+          do not consume it.
+        </li>
       </ul>
       <details>
         <summary>Recruitment & population details</summary>
@@ -849,9 +869,9 @@ function Extras() {
       <details>
         <summary>When whirlpools appear & fade</summary>
         <p>
-          After each completed captain turn, including a timeout, there is a 5% chance to spawn a pair if none
-          exists. Endpoints are empty ordinary water, at least ten hexes apart, away from ships, harbors, and
-          pickups.
+          After each completed captain turn, including a timeout, there is a 10% chance to spawn a pair if
+          none exists. Endpoints are empty ordinary water, at least ten hexes apart, away from ships, harbors,
+          and pickups.
         </p>
         <p>
           A pair lasts twice the living captain count at spawn: eight subsequent turns with four captains. The
@@ -866,9 +886,9 @@ function Extras() {
           choices and the round ends, including due construction. Unchosen builds start at random owned ports.
         </p>
         <p>
-          Forfeit and leave requires confirmation. Your ports, ships, carried perks, and builds vanish; former
-          ports become impassable land and their harbors become ordinary water. You watch as a spectator and
-          cannot rejoin that match. Your remaining picks and turns are skipped.
+          Forfeit and leave requires confirmation. Your ships, carried perks, and builds vanish. Your ports
+          remain neutral with full defense and usable harbors, ready for others to capture. You watch as a
+          spectator and cannot rejoin that match. Your remaining turns are skipped.
         </p>
         <p>
           The only captain with ports wins even if neutral ports remain. Leaving the lobby releases your seat

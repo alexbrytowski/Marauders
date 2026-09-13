@@ -1,9 +1,20 @@
 namespace Marauders.Server;
 
-/// <summary>Terrain-based sailing distances and randomized pickup layouts revealed before drafting.</summary>
+/// <summary>Terrain-based sailing distances and randomized open-water pickups.</summary>
 public static class PerkPlacement
 {
-    public static readonly string[] Kinds = ["black-pearl", "glass-cannon", "loaded-dice", "mouth-to-feed", "black-and-white"];
+    public static readonly string[] Kinds = ["black-pearl", "glass-cannon", "loaded-dice", "mouth-to-feed", "black-and-white", "cheat-death"];
+    public static PerkPickup Respawn(string kind, GameState state, IDice random)
+    {
+        var board = MapCatalog.Resolve(state.MapId, state.BoardVersion);
+        var candidates = board.Cells.Where(c => c.Terrain == "water" &&
+            !state.Ships.Any(s => s.Hex == c.Hex) &&
+            !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R) &&
+            state.Whirlpool?.Exit(c.Hex) is null).ToArray();
+        if (candidates.Length == 0) throw new RuleException("No empty open water is available for the perk.");
+        var cell = candidates[random.Next(candidates.Length)];
+        return new(kind, cell.Q, cell.R);
+    }
     private sealed class MapDistances(BoardMap board)
     {
         public Dictionary<string, Dictionary<Hex, int>> Ports { get; } = board.Ports.ToDictionary(p => p.Id, p => HarborDistances(board, p.Id));

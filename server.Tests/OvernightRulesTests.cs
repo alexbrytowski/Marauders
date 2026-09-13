@@ -50,8 +50,8 @@ public partial class GameRulesTests
         Assert.Equal(2, s.Ships.Count); Assert.Equal(6, s.Constructions.Count);
     }
 
-    [Theory] [InlineData(0, true)] [InlineData(49, true)] [InlineData(50, false)] [InlineData(999, false)]
-    public void Whirlpool_draw_is_exactly_five_percent_and_spawn_respects_terrain_distance_and_occupancy(int chance, bool spawns)
+    [Theory] [InlineData(0, true)] [InlineData(99, true)] [InlineData(100, false)] [InlineData(999, false)]
+    public void Whirlpool_draw_is_exactly_ten_percent_and_spawn_respects_terrain_distance_and_occupancy(int chance, bool spawns)
     {
         var s = Playing(); Add(s, 0, Open); s.PerkPickups.Add(new("loaded-dice", Open.Q + 1, Open.R));
         var dice = new WhirlpoolDice(chance); s.IsBuildPhase = true;
@@ -126,14 +126,15 @@ public partial class GameRulesTests
     }
 
     [Theory] [InlineData(false)] [InlineData(true)]
-    public void Forfeit_removes_assets_perks_and_ports_clears_involved_combat_and_skips_active_captain(bool active)
+    public void Forfeit_removes_fleet_neutralizes_ports_clears_involved_combat_and_skips_active_captain(bool active)
     {
         var (s, a, b) = Duel("mouth-to-feed", "black-pearl"); var actor = active ? a.OwnerId : b.OwnerId;
         var turn = s.TurnNumber; var deadline = s.TurnEndsAt;
         s.Constructions.Add(new() { OwnerId = actor, PortId = s.Ports.First(p => p.OwnerId == actor).Id });
         Rules(s).Act(actor, new("forfeit"));
         Assert.DoesNotContain(s.Ships, ship => ship.OwnerId == actor);
-        Assert.DoesNotContain(s.Ports, port => port.OwnerId == actor); Assert.Equal(10, s.Ports.Count);
+        Assert.DoesNotContain(s.Ports, port => port.OwnerId == actor); Assert.Equal(13, s.Ports.Count);
+        Assert.Equal(4, s.Ports.Count(p => p.OwnerId is null));
         Assert.Empty(s.Constructions); Assert.Empty(s.PerkPickups); Assert.Null(s.Combat);
         Assert.True(s.Players.Single(p => p.Id == actor).HasForfeited);
         Assert.Equal(active ? turn + 1 : turn, s.TurnNumber);
@@ -155,22 +156,22 @@ public partial class GameRulesTests
 
     [Fact] public void Draft_forfeit_skips_remaining_picks_and_launches_surviving_fleets()
     {
-        var s = Lobby(); ReadyCrew(s);
+        var s = LegacyDraft();
         var left = s.ActivePlayerId!; Rules(s).Act(left, new("draft", PortId: s.Ports[0].Id));
         Rules(s).Act(left, new("forfeit"));
         while (s.Phase == "draft") Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports.First(p => p.OwnerId is null).Id));
-        Assert.Equal("playing", s.Phase); Assert.Equal(18, s.Ships.Count); Assert.Equal(12, s.Ports.Count);
+        Assert.Equal("playing", s.Phase); Assert.Equal(18, s.Ships.Count); Assert.Equal(13, s.Ports.Count);
         Assert.DoesNotContain(s.Ships, ship => ship.OwnerId == left); Assert.NotEqual(left, s.ActivePlayerId);
     }
 
-    [Fact] public void Forfeited_port_harbor_no_longer_triggers_remote_combat_or_restores_defense()
+    [Fact] public void Forfeited_port_keeps_harbor_combat_but_has_no_allied_support()
     {
         var s = Playing(); var port = s.Ports[3]; var harbor = BoardDefinition.Harbor(port.Id);
         var aHex = harbor.First(a => harbor.Any(b => a.DistanceTo(b) > 1)); var bHex = harbor.First(b => aHex.DistanceTo(b) > 1);
         var a = Add(s, 0, aHex); var b = Add(s, 2, bHex);
         Assert.True(GameRules.Triggers(a, b, BoardDefinition.Classic, s.Ports));
         Rules(s).Act(s.Players[1].Id, new("forfeit"));
-        Assert.False(GameRules.Triggers(a, b, BoardDefinition.Classic, s.Ports));
-        Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
+        Assert.True(GameRules.Triggers(a, b, BoardDefinition.Classic, s.Ports));
+        Assert.NotNull(s.Combat); Assert.Empty(s.CombatChoices); Assert.Empty(s.Combat.SupportingPortIds);
     }
 }

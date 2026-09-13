@@ -41,7 +41,7 @@ npm run dev
 
 Open `http://localhost:5173`. Four separate browser profiles/devices claim the four
 seats. Another tab in the same browser remains the same captain. Additional visitors
-watch as spectators. The first captain hosts and chooses who drafts first.
+watch as spectators. The first captain hosts and chooses who takes the first turn.
 
 If an already-open terminal still says `dotnet` is not recognized, use
 `& C:\Marauders\.dotnet-sdk\dotnet.exe run` from `server`, or use the launcher
@@ -75,12 +75,13 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 ## Play
 
 1. Join with a name, color, and cosmetic character. Vote for Classic, The Choke,
-   or Serpent's Coil; you can change or clear your vote before the draft.
-2. The host chooses who picks first, then all four captains press **Ready to sail**.
-   The fourth ready starts the snake draft. The server draws the map with one ticket per vote
-   (equal chances if nobody votes) and reveals the perks. Select a port, then confirm the pick.
-3. The final pick automatically launches two ships per owned port and starts play.
-4. Roll to sail, select a ship, choose a highlighted destination, and confirm its
+   or Serpent's Coil; you can change or clear your vote before play starts.
+2. The host chooses who goes first, then all four captains press **Ready to sail**.
+   The fourth ready draws the map with one ticket per vote (equal chances if nobody votes)
+   and reveals six perks. Each captain receives three random ports. Blackwater on
+   Classic, Northgate on The Choke, and Serpent's Heart on Serpent's Coil stay neutral.
+3. Two ships automatically launch at every owned port and play begins immediately.
+4. Roll 4–6 to sail, select a ship, choose a highlighted destination, and confirm its
    route. A route stops when combat triggers. Unused movement can be split among ships.
 5. Select a ship in an enemy harbor to attack that port with an unused action.
 6. Everyone watches the battle dialog. The active captain rolls; only the losing
@@ -91,8 +92,11 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 
 Hover ports to inspect shipbuilding and ships to read their perks. Black Pearl
 now recruits at 10%; Mouth to Feed replaces Architect and adds one population
-slot. **Forfeit and leave** asks for confirmation, removes your ports and fleet,
-and releases your browser seat. The last remaining captain wins.
+slot. Cheat Death rerolls the first losing exchange its carrier joins, then respawns
+in open water. Ships grant one action die per three ships, rounding up. Ports assist
+their owner's triggering ship from up to two hexes away, even outside harbor water.
+**Forfeit and leave** asks for confirmation, removes your fleet, leaves your ports
+neutral with full defense, and releases your browser seat. The last remaining port owner wins.
 
 The whole map fits the monitor by default, with the original corner captain cards,
 controls underneath, and personal Ports/Fleet/Shipyards tabs. Zoom is optional;

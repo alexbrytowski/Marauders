@@ -139,7 +139,13 @@ export const perks: Record<string, { name: string; symbol: string; description: 
   'black-and-white': {
     name: 'Black and White',
     symbol: '◐',
-    description: 'Replaces a participating battle exchange with one 50/50 black-or-white result.',
+    description:
+      'Replaces the whole combat exchange with a 50/50 draw: black wins for this ship’s team; white wins for the opponent.',
+  },
+  'cheat-death': {
+    name: 'Cheat Death',
+    symbol: '↻',
+    description: 'Rerolls the first losing exchange this ship participates in, then respawns in open water.',
   },
 }
 export const key = (h: Hex) => `${h.q},${h.r}`
@@ -153,7 +159,7 @@ export const directions = [
   { q: -1, r: 1 },
   { q: 0, r: 1 },
 ]
-export const actionCount = (ships: number) => (ships === 0 ? 0 : Math.floor(ships / 4) + 1)
+export const actionCount = (ships: number) => Math.ceil(ships / 3)
 export const portNumber = (id: string) => id.replace('port-', '')
 export const capacity = (game: Game, ownerId: string) =>
   game.ports.filter((p) => p.ownerId === ownerId).length * 2 +

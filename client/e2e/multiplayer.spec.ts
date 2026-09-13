@@ -240,7 +240,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     ).toBe(400)
     await pages[1].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
     await expect(pages[1].getByRole('dialog', { name: 'Forfeit this voyage?' })).toContainText(
-      '3 ports, 2 ships',
+      '3 ports will become neutral with full defense. Your 2 ships',
     )
     await pages[1].getByRole('button', { name: 'Keep playing' }).click()
     expect((await state(pages[0])).ports).toHaveLength(13)
@@ -256,12 +256,12 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     game = await clickAction(pages[1], () =>
       pages[1].getByRole('button', { name: 'Confirm forfeit' }).click(),
     )
-    expect(game.ports).toHaveLength(10)
+    expect(game.ports).toHaveLength(13)
     expect(game.ships).toHaveLength(2)
     expect(game.turnNumber).toBe(turn)
     expect(game.combat).toBeNull()
     for (const page of pages) {
-      await expect(page.locator('.sea-map [data-port]')).toHaveCount(10)
+      await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
       await expect(page.getByLabel('Battle close-up')).toHaveCount(0)
     }
     await expect(pages[1].locator('.identity')).toContainText('Spectating')
@@ -289,7 +289,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     )
     expect(game.phase).toBe('finished')
     expect(game.winnerId).toBe(ids[2])
-    expect(game.ports).toHaveLength(4)
+    expect(game.ports).toHaveLength(13)
     await stopServer()
     await startServer()
     await pages[4].reload()
@@ -301,7 +301,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
   }
 })
 
-test('automatic rebuilding, five-die clocks and final-opponent forfeit synchronize and persist', async ({
+test('automatic rebuilding, six-die clocks and final-opponent forfeit synchronize and persist', async ({
   browser,
 }, testInfo) => {
   const contexts = await Promise.all(
@@ -397,9 +397,9 @@ test('automatic rebuilding, five-die clocks and final-opponent forfeit synchroni
     await pages[0].screenshot({ path: testInfo.outputPath('automatic-build-hint.png'), fullPage: true })
     game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Finish round/ }).click())
     expect(game.activePlayerId).toBe(ids[1])
-    expect(game.remainingActions).toBe(5)
+    expect(game.remainingActions).toBe(6)
     const started = new Date(game.events.findLast((e) => e.kind === 'turn')!.at).getTime()
-    expect(new Date(game.turnEndsAt!).getTime() - started).toBe(270_000)
+    expect(new Date(game.turnEndsAt!).getTime() - started).toBe(315_000)
     expect(new Date(game.actionEndsAt!).getTime() - started).toBe(45_000)
     expect(game.constructions).toHaveLength(5)
     expect(game.constructions.find((b) => b.id === manual.id)).toEqual(manual)
@@ -423,7 +423,7 @@ test('automatic rebuilding, five-die clocks and final-opponent forfeit synchroni
       expect(restored.turnEndsAt).toBe(budget)
       expect(restored.constructions).toEqual(builds)
     }
-    // Expire an unfinished five-die turn; the server fills its two missing ships.
+    // Expire an unfinished six-die turn; the server fills its two missing ships.
     await stopServer()
     const expired = JSON.parse(await readFile(savePath, 'utf8'))
     expired.game.actionEndsAt = new Date(Date.now() - 1_000).toISOString()
@@ -445,7 +445,7 @@ test('automatic rebuilding, five-die clocks and final-opponent forfeit synchroni
     expect(game.phase).toBe('finished')
     expect(game.winnerId).toBe(ids[0])
     expect(game.players.filter((p) => !p.hasForfeited)).toHaveLength(3)
-    expect(game.ports.filter((p) => p.ownerId === null)).toHaveLength(1)
+    expect(game.ports.filter((p) => p.ownerId === null)).toHaveLength(10)
     expect(game.turnEndsAt).toBeNull()
     expect(game.actionEndsAt).toBeNull()
     expect(game.roundHistory.filter((h) => h.isFinal)).toHaveLength(1)
@@ -559,6 +559,216 @@ test.beforeEach(async () => {
 })
 test.afterEach(async () => {
   await stopServer()
+})
+
+test('full playthrough changes synchronize port support, Cheat Death respawns and neutral port capture', async ({
+  browser,
+}, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({
+        viewport: { width: 1920, height: 1080 },
+        reducedMotion: 'reduce',
+      }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    const errors: string[] = []
+    for (let i = 0; i < pages.length; i++) {
+      pages[i].on('pageerror', (error) => errors.push(error.message))
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4)
+        expect(
+          (
+            await pages[i].request.post('/api/game/players', {
+              headers,
+              data: { name: `Playthrough ${i + 1}`, color: colors[i], character: characterIds[i] },
+            })
+          ).status(),
+        ).toBe(200)
+    }
+    expect(
+      (
+        await pages[0].request.post('/api/game/action', {
+          headers,
+          data: { type: 'vote-map', mapId: 'classic' },
+        })
+      ).status(),
+    ).toBe(200)
+    let game = await readyCrew(pages)
+    const ids = game.players.map((player) => player.id)
+    expect(game.ports.filter((port) => port.ownerId === null).map((port) => port.id)).toEqual(['port-7'])
+    for (const kind of [
+      'black-pearl',
+      'glass-cannon',
+      'loaded-dice',
+      'mouth-to-feed',
+      'black-and-white',
+      'cheat-death',
+    ]) {
+      await pages[4].locator(`.sea-map [data-perk="${kind}"]`).hover()
+      await pages[4]
+        .getByRole('tooltip')
+        .screenshot({ path: testInfo.outputPath(`pickup-${kind}-hover.png`) })
+    }
+    await pages[4].locator('.chart-header').hover()
+    await pages[4].locator('.sea-map [data-perk="cheat-death"]').focus()
+    await pages[4].getByRole('tooltip').screenshot({ path: testInfo.outputPath('pickup-keyboard-focus.png') })
+    await pages[4].screenshot({ path: testInfo.outputPath('uncollected-perk-explanation.png') })
+    const board: Board = await (await pages[0].request.get('/api/board')).json()
+    const portHex = board.cells.find((cell) => cell.portId === 'port-1')!
+    const water = board.cells.filter((cell) => cell.terrain === 'water')
+    const position = water
+      .flatMap((a) =>
+        water
+          .filter((b) => distance(a, b) === 1 && distance(b, portHex) === 3)
+          .map((b) => ({
+            a,
+            b,
+            start: water.find((start) => distance(start, a) === 1 && distance(start, b) > 1),
+          })),
+      )
+      .find(({ a, start }) => distance(a, portHex) === 2 && start)!
+    expect(position).toBeTruthy()
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    const saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      remainingMovement: 1,
+      remainingActions: 2,
+      lastRoll: 4,
+      combat: null,
+      combatChoices: [],
+      perkPickups: [],
+      whirlpool: null,
+      isBuildPhase: false,
+      ships: [
+        {
+          id: 'death-a',
+          number: 1,
+          ownerId: ids[0],
+          portId: 'port-1',
+          q: position.start!.q,
+          r: position.start!.r,
+          perk: 'cheat-death',
+        },
+        {
+          id: 'death-b',
+          number: 2,
+          ownerId: ids[1],
+          portId: 'port-4',
+          q: position.b.q,
+          r: position.b.r,
+          perk: 'cheat-death',
+        },
+      ],
+      revision: game.revision + 1,
+    })
+    saved.game.ports.forEach(
+      (port: { ownerId: string | null }, i: number) =>
+        (port.ownerId = i < 12 ? ids[Math.floor(i / 3)] : null),
+    )
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    await pages[0].locator('[data-ship="death-a"]').click()
+    await pages[0].locator(`[data-hex="${key(position.a)}"]`).click()
+    game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Sail 1 hex/ }).click())
+    expect(game.combat?.supportingPortIds).toEqual(['port-1'])
+    for (const page of pages)
+      await expect(page.locator('.battle-modal')).toContainText('includes port support within two hexes')
+    expect(
+      (
+        await pages[4].request.post('/api/game/action', {
+          headers,
+          data: { type: 'roll-combat', combatId: game.combat!.id, playerId: ids[0] },
+        })
+      ).status(),
+    ).toBe(400)
+    for (
+      let attempt = 0;
+      attempt < 30 && !game.events.some((event) => event.message.includes('consumed Cheat Death'));
+      attempt++
+    ) {
+      game = await clickAction(pages[0], () =>
+        pages[0].getByRole('button', { name: /Roll (battle dice|next exchange)/ }).click(),
+      )
+    }
+    const consumed = game.events.filter((event) => event.message.includes('consumed Cheat Death')).length
+    expect(consumed).toBeGreaterThan(0)
+    expect(game.perkPickups.filter((pickup) => pickup.kind === 'cheat-death')).toHaveLength(consumed)
+    for (const pickup of game.perkPickups) {
+      expect(board.cells.find((cell) => key(cell) === key(pickup))?.terrain).toBe('water')
+      expect(game.ships.some((ship) => key(ship) === key(pickup))).toBe(false)
+    }
+    for (const page of pages) {
+      await expect(page.locator('.battle-result')).toHaveText(game.combat!.message)
+      await expect(page.locator('.captains-log')).toContainText('consumed Cheat Death')
+      await expect(page.locator('.sea-map [data-perk="cheat-death"]')).toHaveCount(consumed)
+      expect((await state(page)).combat).toEqual(game.combat)
+    }
+    await pages[4].screenshot({ path: testInfo.outputPath('cheat-death-port-support.png'), fullPage: true })
+    await stopServer()
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      expect((await state(page)).perkPickups).toEqual(game.perkPickups)
+      expect((await state(page)).combat).toEqual(game.combat)
+    }
+    // A third captain can forfeit while the result is open. Their neutral ports persist.
+    await pages[2].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
+    game = await clickAction(pages[2], () =>
+      pages[2].getByRole('button', { name: 'Confirm forfeit' }).click(),
+    )
+    expect(game.ports).toHaveLength(13)
+    expect(game.ports.filter((port) => port.ownerId === null)).toHaveLength(4)
+    for (const page of pages) await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
+    // Place a surviving ship in that neutral harbor and finish the previous encounter.
+    await stopServer()
+    const captureSave = JSON.parse(await readFile(savePath, 'utf8'))
+    const harbor = board.cells.find((cell) => cell.harborId === 'port-7')!
+    Object.assign(captureSave.game, {
+      combat: null,
+      combatChoices: [],
+      remainingMovement: 0,
+      remainingActions: 2,
+      ships: [
+        { id: 'neutral-attacker', number: 3, ownerId: ids[0], portId: 'port-1', q: harbor.q, r: harbor.r },
+      ],
+      revision: game.revision + 1,
+    })
+    // A previously weakened neutral port guarantees this scenario's capture.
+    captureSave.game.ports.find((port: { id: string }) => port.id === 'port-7').defenseWeakness = 6
+    await writeFile(savePath, JSON.stringify(captureSave))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    const attack = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'attack-port', shipId: 'neutral-attacker', portId: 'port-7' },
+    })
+    expect(attack.status()).toBe(200)
+    game = await attack.json()
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: /Roll battle dice/ }).click(),
+    )
+    expect(game.ports.find((port) => port.id === 'port-7')?.ownerId).toBe(ids[0])
+    for (const page of pages) {
+      await expect(page.locator('.battle-result')).toContainText('captured Blackwater')
+      expect((await state(page)).ports).toEqual(game.ports)
+    }
+    expect(errors).toEqual([])
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
 })
 
 test('portraits and required exclusive choices synchronize across browsers and survive restart', async ({
@@ -686,7 +896,7 @@ test('portraits and required exclusive choices synchronize across browsers and s
     expect(new Set(game.players.map((p) => p.color)).size).toBe(4)
     await expect(pages[4].getByRole('heading', { name: 'Watch the voyage.' })).toBeVisible()
     game = await readyCrew(pages)
-    expect(game.phase).toBe('draft')
+    expect(game.phase).toBe('playing')
     await expect(pages[4].locator('.captain-emblem')).toHaveCount(4)
     await pages[4].screenshot({ path: testInfo.outputPath('characters-draft.png'), fullPage: true })
   } finally {
@@ -694,7 +904,7 @@ test('portraits and required exclusive choices synchronize across browsers and s
   }
 })
 
-test('captains ready together, restore lobby setup, and automatically start one shared draft', async ({
+test('captains ready together, restore lobby setup, and automatically start one shared game', async ({
   browser,
 }, testInfo) => {
   const contexts = await Promise.all(
@@ -756,11 +966,11 @@ test('captains ready together, restore lobby setup, and automatically start one 
     )
     const oldVersion = game.lobbyVersion
     game = await clickAction(pages[0], async () => {
-      await pages[0].getByLabel('WHO PICKS FIRST?').selectOption(ids[2])
+      await pages[0].getByLabel('WHO GOES FIRST?').selectOption(ids[2])
     })
     expect(game.players.every((p) => !p.isReady)).toBe(true)
     for (const page of pages.slice(1))
-      await expect(page.getByLabel('Captain readiness')).toContainText('Ready captain 3 picks first')
+      await expect(page.getByLabel('Captain readiness')).toContainText('Ready captain 3 takes the first turn')
     expect(
       (await post(pages[1], { type: 'set-ready', isReady: true, lobbyVersion: oldVersion })).status(),
     ).toBe(400)
@@ -787,7 +997,7 @@ test('captains ready together, restore lobby setup, and automatically start one 
       await expect(page.locator('.connection')).toHaveText('Live')
       await expect(page.getByLabel('Captain readiness')).toContainText('2 / 4 captains ready')
     }
-    await expect(pages[0].getByLabel('WHO PICKS FIRST?')).toHaveValue(ids[2])
+    await expect(pages[0].getByLabel('WHO GOES FIRST?')).toHaveValue(ids[2])
     await pages[0].locator('.lobby-panel').screenshot({ path: testInfo.outputPath('ready-lobby.png') })
     // Two simultaneous clicks use the same setup version without revision collisions.
     await Promise.all(
@@ -798,28 +1008,23 @@ test('captains ready together, restore lobby setup, and automatically start one 
         ),
     )
     game = await state(pages[0])
-    expect(game.phase).toBe('draft')
+    expect(game.phase).toBe('playing')
     expect(game.activePlayerId).toBe(ids[2])
-    expect(game.events.filter((e) => e.kind === 'draft')).toHaveLength(1)
+    expect(
+      game.events.filter((e) => e.message.startsWith('Three ports were randomly assigned')),
+    ).toHaveLength(1)
     expect(game.mapId).toBe('classic')
-    expect(game.perkPickups).toHaveLength(5)
+    expect(game.perkPickups).toHaveLength(6)
     for (const page of [...pages, sameSeat]) {
-      await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
+      await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
       await expect(page.getByLabel('Captain readiness')).toHaveCount(0)
     }
     expect(
       (await post(pages[3], { type: 'set-ready', isReady: true, lobbyVersion: game.lobbyVersion })).status(),
     ).toBe(400)
-    // The normal twelve-pick snake draft still launches all fleets and starts play.
-    for (let pick = 0; pick < 12; pick++) {
-      const response = await post(pages[ids.indexOf(game.activePlayerId!)], {
-        type: 'draft',
-        portId: game.ports[pick].id,
-        expectedRevision: game.revision,
-      })
-      expect(response.status()).toBe(200)
-      game = await response.json()
-    }
+    // The fourth ready atomically deals all ports and launches the fleets.
+    expect(game.ports.filter((p) => !p.ownerId).map((p) => p.id)).toEqual(['port-7'])
+    for (const id of ids) expect(game.ports.filter((p) => p.ownerId === id)).toHaveLength(3)
     expect(game.phase).toBe('playing')
     expect(game.ships).toHaveLength(24)
     for (const page of pages) await expect(page.locator('.sea-map [data-ship]')).toHaveCount(24)
@@ -862,7 +1067,7 @@ test('paged handbook teaches with interactive game pieces without changing the v
     page.getByRole('navigation', { name: 'Chapter navigation' }).getByRole('link', { name: /^Next/ }).click()
   await next()
   await expect(page).toHaveURL(/how-to-play\/setup$/)
-  for (let i = 0; i < 11; i++) await chapter.getByRole('button', { name: 'Next draft pick' }).click()
+  await chapter.getByRole('button', { name: 'Show another deal' }).click()
   await expect(feedback).toContainText('Three ports each')
   await next()
   await chapter.getByLabel('Fleet size:').fill('8')
@@ -932,7 +1137,7 @@ test('paged handbook teaches with interactive game pieces without changing the v
   expect(errors).toEqual([])
 })
 
-test('four browser seats, predraft perks, automatic launch, permissions, reconnect, shared battles and persistence', async ({
+test('four browser seats, random ports and six perks, automatic launch, permissions, reconnect, shared battles and persistence', async ({
   browser,
 }, testInfo) => {
   const contexts: BrowserContext[] = [],
@@ -983,29 +1188,21 @@ test('four browser seats, predraft perks, automatic launch, permissions, reconne
     ).status(),
   ).toBe(403)
   game = await readyCrew(pages)
-  expect(game.phase).toBe('draft')
-  expect(game.ships).toHaveLength(0)
+  expect(game.phase).toBe('playing')
+  expect(game.ships).toHaveLength(24)
   const revealedPerks = game.perkPickups
-  expect(revealedPerks).toHaveLength(5)
-  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
+  expect(revealedPerks).toHaveLength(6)
+  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
   await stopServer()
   await startServer()
   for (const page of pages) {
     await page.reload()
     await expect(page.locator('.connection')).toHaveText('Live')
-    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
+    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
   }
   expect((await state(spectator)).perkPickups).toEqual(revealedPerks)
-  for (let pick = 0; pick < 12; pick++) {
-    const actor = pages[ids.indexOf(game.activePlayerId!)],
-      port = game.ports[pick]
-    await actor.locator(`[data-port="${port.id}"]`).click()
-    game = await clickAction(actor, () =>
-      actor.getByRole('button', { name: `Claim ${port.name}`, exact: true }).click(),
-    )
-    expect(game.perkPickups).toEqual(revealedPerks)
-    expect(game.phase).toBe(pick < 11 ? 'draft' : 'playing')
-  }
+  expect((await state(spectator)).ports).toEqual(game.ports)
+  for (const id of ids) expect(game.ports.filter((p) => p.ownerId === id)).toHaveLength(3)
   const board: Board = await (await pages[0].request.get('/api/board')).json()
   for (const port of game.ports) {
     const ships = game.ships.filter((s) => s.portId === port.id)
@@ -1031,7 +1228,8 @@ test('four browser seats, predraft perks, automatic launch, permissions, reconne
   const before = game.revision
   game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: 'Roll to sail' }).click())
   expect(game.revision).toBeGreaterThan(before)
-  expect(game.lastRoll).toBeGreaterThanOrEqual(1)
+  expect(game.lastRoll).toBeGreaterThanOrEqual(4)
+  expect(game.lastRoll).toBeLessThanOrEqual(6)
   for (const page of pages)
     await expect(page.locator('.captains-log')).toContainText(`rolled ${game.lastRoll} movement`)
   await pages[1].reload()
@@ -1233,16 +1431,6 @@ test('longer playtest clocks start at automatic launch and timeout synchronizes 
     let game = await state(pages[0])
     const ids = game.players.map((p) => p.id)
     game = await readyCrew(pages)
-    expect(game.turnEndsAt).toBeNull()
-    expect(game.actionEndsAt).toBeNull()
-    for (let pick = 0; pick < 12; pick++) {
-      const result = await pages[ids.indexOf(game.activePlayerId!)].request.post('/api/game/action', {
-        headers,
-        data: { type: 'draft', portId: game.ports[pick].id, expectedRevision: game.revision },
-      })
-      expect(result.status()).toBe(200)
-      game = await result.json()
-    }
     expect(game.phase).toBe('playing')
     const turnStarted = new Date(game.events.findLast((event) => event.kind === 'turn')!.at).getTime()
     expect(new Date(game.turnEndsAt!).getTime() - turnStarted).toBe(135_000)
@@ -1330,7 +1518,7 @@ test('password controller, eight profiles, help pages, and reset synchronization
     await pages[0].getByRole('link', { name: 'The voyage', exact: true }).click()
     await clickAction(pages[0], () =>
       pages[0]
-        .getByLabel('WHO PICKS FIRST?')
+        .getByLabel('WHO GOES FIRST?')
         .selectOption(game.players[3].id)
         .then(() => {}),
     )
@@ -1363,7 +1551,7 @@ test('password controller, eight profiles, help pages, and reset synchronization
       await expect(pages[i].getByText('Your seat is reserved.')).toBeVisible()
     }
     const newCrew = await state(controller)
-    await expect(pages[0].getByLabel('WHO PICKS FIRST?')).toHaveValue(newCrew.players[0].id)
+    await expect(pages[0].getByLabel('WHO GOES FIRST?')).toHaveValue(newCrew.players[0].id)
     game = await readyCrew(pages)
     await controller.setViewportSize({ width: 390, height: 844 })
     await controller.screenshot({ path: testInfo.outputPath('controller-mobile.png'), fullPage: true })
@@ -1708,7 +1896,8 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       expect(board.version).toBe(`${mapId}-v5`)
       expect(board.version).toBe(game.boardVersion)
       for (const p of pages) {
-        await expect(p.getByRole('region', { name: 'Selected map' })).toContainText(board.name)
+        await p.getByRole('button', { name: /^All \d+ events$/ }).click()
+        await expect(p.locator('.captains-log')).toContainText(`Map draw: ${board.name}`)
         await expect(p.locator('.chart-header')).toContainText(board.name.toUpperCase())
       }
       expect(
@@ -1719,24 +1908,14 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
           })
         ).status(),
       ).toBe(400)
-      const act = async (data: object) => {
-        const actor = pages[ids.indexOf(game.activePlayerId!)]
-        const result = await actor.request.post('/api/game/action', {
-          headers,
-          data: { ...data, expectedRevision: game.revision },
-        })
-        expect(result.status(), await result.text()).toBe(200)
-        game = await result.json()
-      }
       const revealed = game.perkPickups
-      expect(revealed).toHaveLength(5)
-      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(5)
-      for (let i = 0; i < 12; i++) await act({ type: 'draft', portId: game.ports[i].id })
+      expect(revealed).toHaveLength(6)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(6)
       expect(game.phase).toBe('playing')
       expect(game.perkPickups).toEqual(revealed)
       expect(game.ships).toHaveLength(24)
-      expect(game.perkPickups).toHaveLength(5)
-      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(5)
+      expect(game.perkPickups).toHaveLength(6)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(6)
       await pages[4].screenshot({ path: testInfo.outputPath(`${mapId}-board.png`), fullPage: true })
       const actor = pages[ids.indexOf(game.activePlayerId!)]
       game = await clickAction(actor, () =>
@@ -1836,7 +2015,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         await expect(page.locator('.connection')).toHaveText('Live')
         await expect(page.locator('.chart-header')).toContainText('(LEGACY)')
         await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
-        await expect(page.locator('.sea-map [data-perk]')).toHaveCount(5)
+        await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
       }
       const legacyBoard: Board = await (await pages[0].request.get('/api/board')).json()
       const latestBoard: Board = await (await pages[0].request.get(`/api/board?mapId=${mapId}`)).json()
@@ -2018,8 +2197,8 @@ test('playtest readability, public roll reveal, map casualty choices and discove
     }
     await pages[0].setViewportSize({ width: 1920, height: 1080 })
     game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: 'Roll to sail' }).click())
-    for (const i of [0, 1, 2, 4]) await expect(pages[i].getByLabel('Rolling movement dice')).toBeVisible()
-    await expect(pages[0].getByRole('button', { name: 'Roll to sail' })).toBeDisabled()
+    for (const page of pages) await expect(page.getByLabel('Rolling movement dice')).toHaveCount(0)
+    await expect(pages[0].getByRole('button', { name: 'Pass movement' })).toBeEnabled()
     await expect(pages[3].locator('.rolling-die')).toHaveCount(0)
     for (const page of pages)
       await expect(page.locator('.public-movement-roll')).toHaveAttribute(

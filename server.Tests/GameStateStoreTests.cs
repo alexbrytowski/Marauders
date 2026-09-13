@@ -91,10 +91,10 @@ public partial class GameStateStoreTests
         for (var i = 0; i < 4; i++) await store.JoinAsync($"browser-{i}", Captain(i));
         var game = await store.ReadAsync();
         game = await ReadyCrewAsync(store);
-        for (var i = 0; i < (phase == "draft" ? 3 : 12); i++)
+        if (phase == "draft")
         {
-            var browser = $"browser-{game.Players.FindIndex(p => p.Id == game.ActivePlayerId)}";
-            game = (await store.ActAsync(browser, new("draft", PortId: game.Ports[i].Id))).State!;
+            game.Ships.Clear(); game.DraftPickNumber = 3; game.ActivePlayerId = game.TurnOrder[3];
+            for (var i = 0; i < game.Ports.Count; i++) game.Ports[i].OwnerId = i < 3 ? game.TurnOrder[i] : null;
         }
         game.Phase = phase; game.PerkPickups.Clear(); game.TurnEndsAt = null; game.ActionEndsAt = null;
         game.Ships = game.Ships.Take(5).ToList();
@@ -105,7 +105,7 @@ public partial class GameStateStoreTests
         store = Store(directory);
         var resumed = await store.ExpireTurnAsync(); Assert.NotNull(resumed);
         Assert.Equal(game.Revision + 1, resumed.Revision); Assert.Equal(game.Id, resumed.Id);
-        Assert.Equal(5, resumed.PerkPickups.Count);
+        Assert.Equal(6, resumed.PerkPickups.Count);
         Assert.Equal(phase == "draft" ? "draft" : "playing", resumed.Phase);
         Assert.Equal(phase == "draft" ? 0 : 24, resumed.Ships.Count);
         Assert.All(originalShips, original => Assert.Contains(resumed.Ships, s => (s.Id, s.OwnerId, s.Hex) == original));
@@ -136,7 +136,7 @@ public partial class GameStateStoreTests
         var before = await store.ReadAsync();
         await ReadyCrewAsync(store, before.Players[2].Id);
         var restored = Store(directory); var after = await restored.ReadAsync();
-        Assert.Equal("draft", after.Phase); Assert.Equal(before.Players[2].Id, after.ActivePlayerId);
+        Assert.Equal("playing", after.Phase); Assert.Equal(before.Players[2].Id, after.ActivePlayerId);
         Assert.Equal(before.Players[0].Id, await restored.PlayerIdAsync("browser-0"));
         after.Players.Clear();
         Assert.Equal(4, (await restored.ReadAsync()).Players.Count);

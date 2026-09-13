@@ -5,6 +5,13 @@ namespace Marauders.Server;
 public sealed record MapOption(string Id, string Name, string Description, [property: JsonIgnore] BoardMap Board)
 {
     public string Version => Board.Version;
+    public string NeutralPortId => Id switch
+    {
+        "classic" => "port-7",
+        "narrows" => "port-12",
+        "shattered-isles" => "port-13",
+        _ => throw new RuleException("This map needs a designated neutral starting port.")
+    };
 }
 
 public static class MapCatalog

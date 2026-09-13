@@ -9,7 +9,6 @@ import { RoundHistory } from './RoundHistory'
 import { MapVotePanel } from './MapVotePanel'
 import { LobbyReady } from './LobbyReady'
 import { PortAttacks } from './PortAttacks'
-import { RollingDie } from './RollingDie'
 import { useRollPresentation } from './useRollPresentation'
 import { AboutPage, ControllerPage } from './InfoPages'
 import { HowToPlayPage } from './HowToPlayPage'
@@ -260,10 +259,16 @@ export default function App() {
                           <span className="seat-number" style={{ color: p?.color }}>
                             0{i + 1}
                           </span>
-                          {p && <CharacterPortrait profile={profiles.find((profile) => profile.id === p.character)} />}
+                          {p && (
+                            <CharacterPortrait
+                              profile={profiles.find((profile) => profile.id === p.character)}
+                            />
+                          )}
                           <span className="crew-identity">
                             {p?.name ?? 'Open seat'}
-                            {p && <small>{profiles.find((profile) => profile.id === p.character)?.name}</small>}
+                            {p && (
+                              <small>{profiles.find((profile) => profile.id === p.character)?.name}</small>
+                            )}
                           </span>
                           <small className={p?.isReady ? 'captain-is-ready' : ''}>
                             {p
@@ -343,16 +348,14 @@ export default function App() {
                       </strong>
                       <small>remaining</small>
                     </div>
-                    {(rolling === 'movement' || game.lastRoll !== null) && (
+                    {game.lastRoll !== null && (
                       <div
                         className="public-movement-roll"
                         role="status"
-                        aria-label={
-                          rolling === 'movement' ? 'Rolling movement dice' : `Movement roll: ${game.lastRoll}`
-                        }
+                        aria-label={`Movement roll: ${game.lastRoll}`}
                       >
-                        {rolling === 'movement' ? <RollingDie /> : <Die value={game.lastRoll!} />}
-                        <span>{rolling === 'movement' ? 'Rolling…' : 'Movement roll'}</span>
+                        <Die value={game.lastRoll} />
+                        <span>Movement roll</span>
                       </div>
                     )}
                     <div className="timers">

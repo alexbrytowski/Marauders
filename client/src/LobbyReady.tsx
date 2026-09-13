@@ -18,7 +18,7 @@ export function LobbyReady({
     <section className="lobby-ready" aria-label="Captain readiness">
       {me?.id === game.hostPlayerId ? (
         <div className="host-start">
-          <label htmlFor="first-player">WHO PICKS FIRST?</label>
+          <label htmlFor="first-player">WHO GOES FIRST?</label>
           <select
             id="first-player"
             value={first ?? ''}
@@ -35,14 +35,18 @@ export function LobbyReady({
         </div>
       ) : (
         <p>
-          <strong>{game.players.find((p) => p.id === first)?.name ?? 'The host'}</strong> picks first.
+          <strong>{game.players.find((p) => p.id === first)?.name ?? 'The host'}</strong> takes the first
+          turn.
         </p>
       )}
       <div className="readiness-count" role="status">
         <Icon name="flag" />
         <strong>{ready} / 4 captains ready</strong>
       </div>
-      <p>All four ready? The map is drawn and the port draft begins automatically.</p>
+      <p>
+        When all four are ready, each captain receives three random ports and six ships. The central port
+        stays neutral and play begins.
+      </p>
       {game.players.length < 4 && (
         <p>
           {4 - game.players.length} more captain{game.players.length === 3 ? '' : 's'} needed.

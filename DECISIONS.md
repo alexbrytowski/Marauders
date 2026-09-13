@@ -1,5 +1,45 @@
 # Implementation decisions
 
+## 2026-09-13: first full playthrough follow-up
+
+- These owner-requested changes supersede the earlier setup, action-dice,
+  movement, port-support, whirlpool-frequency, and forfeited-port rules.
+  The fourth ready captain now starts play immediately: the server shuffles
+  twelve ports and deals three to each captain, then launches two ships at each
+  owned port. The selected first captain still takes the first turn. Always
+  leave Blackwater (Classic, port-7), Northgate (The Choke, port-12), and
+  Serpent's Heart (Serpent's Coil, port-13) neutral. Northgate is the fixed
+  choice between The Choke's two equally central gate ports. Existing draft
+  saves can finish their original setup; existing playing saves keep ownership.
+- Action dice are ceiling(ship count / 3): 1–3 ships get one, 4–6 two, 7–9
+  three, and so on. Movement is uniformly 4, 5, or 6, revealed immediately.
+  Combat keeps its public roll animation and normal dice rules.
+- A port adds one die in a ship battle when its owner's triggering ship is
+  within two hexes of the port, independent of either ship's harbor membership.
+  Distance is direct hex distance, as for assisting ships, and does not chain
+  through helpers. Each qualifying owned port assists once; neutral and
+  third-party ports do not assist. Existing harbor terrain and port-attack
+  eligibility stay as authored; expanding harbor water is unnecessary for support.
+- Add the sixth pickup, Cheat Death. The owner confirmed it triggers on any
+  losing exchange involving its carrier, including helpers and port attacks.
+  Before casualties, recruitment, capture, or defense weakening, consume one
+  losing participant's perk and automatically reroll the entire exchange.
+  Ties do not consume it. Black and White is also rerolled. The consumed perk
+  immediately respawns uniformly in empty ordinary open water, avoiding ships,
+  other pickups, and active whirlpool endpoints. The new result applies normally;
+  if another participating carrier loses, its own perk can trigger next.
+  Public logs retain the rejected result, consumption, respawn, and new result.
+- Whirlpool spawn chance doubles from 5% to 10% per completed captain turn;
+  pair limits, placement, and lifetime are unchanged.
+- Forfeit removes the captain's ships, carried perks, and construction, but
+  leaves all their ports neutral with defense weakness reset to zero. The
+  harbor remains usable and the port can be attacked and captured normally.
+  Neutral ports still do not delay the last remaining owner's victory.
+- The owner's follow-up adds each uncollected pickup's effect to its hover
+  explanation, native title, and accessible label. Keyboard focus shows the
+  same explanation. All six use the shared perk descriptions, including the
+  Black and White color-to-winner mapping.
+
 ## 2026-09-12: Black and White perk
 
 - Add one **Black and White** pickup, bringing the initial layout to five perks.

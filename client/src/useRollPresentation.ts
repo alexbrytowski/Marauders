@@ -4,7 +4,7 @@ import type { Game } from './game'
 type Frame = {
   source: Game | null
   shown: Game | null
-  rolling: 'movement' | 'combat' | null
+  rolling: 'combat' | null
   rollKey: string
 }
 
@@ -20,16 +20,10 @@ export function useRollPresentation(latest: Game | null, live: boolean) {
       sameTurn &&
       frame.source &&
       nextRoll &&
+      nextRoll.kind === 'roll' &&
       nextRoll.id !== previousRoll?.id &&
       !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const rolling =
-      sameTurn && frame.rolling
-        ? frame.rolling
-        : animate
-          ? nextRoll.kind === 'movement'
-            ? 'movement'
-            : 'combat'
-          : null
+    const rolling = sameTurn && frame.rolling ? frame.rolling : animate ? 'combat' : null
     setFrame({
       source: latest,
       shown: rolling ? frame.shown : latest,
