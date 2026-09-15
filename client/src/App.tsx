@@ -15,7 +15,15 @@ import { AboutPage, ControllerPage } from './InfoPages'
 import { HowToPlayPage } from './HowToPlayPage'
 import { Die, Icon } from './Icons'
 import { useGame } from './useGame'
-import { firstEncounter, key, movementPaths, perks, portNumber, whirlpoolExit } from './game'
+import {
+  constructionOwnerTurns,
+  firstEncounter,
+  key,
+  movementPaths,
+  perks,
+  portNumber,
+  whirlpoolExit,
+} from './game'
 import type { Cell } from './game'
 import './App.css'
 
@@ -366,6 +374,27 @@ export default function App() {
                   </>
                 )}
               </section>
+              {game.phase === 'playing' && game.turnNumber >= 46 && (
+                <section
+                  className={`shipyard-warning whirlpool-warning ${game.turnNumber >= 50 ? 'active' : ''}`}
+                  role="status"
+                  aria-label="Late-game whirlpool frequency"
+                >
+                  <Icon name="compass" />
+                  <div>
+                    <strong>
+                      {game.turnNumber >= 50
+                        ? 'Whirlpool surge is active'
+                        : `Whirlpool surge in ${50 - game.turnNumber} round${50 - game.turnNumber === 1 ? '' : 's'}`}
+                    </strong>
+                    <span>
+                      {game.turnNumber >= 50
+                        ? 'Completed turns now have a 25% chance to spawn a pair when none exists.'
+                        : 'Starting when Round 50 ends, the spawn chance rises from 10% to 25%.'}
+                    </span>
+                  </div>
+                </section>
+              )}
               {game.phase === 'playing' && game.turnNumber >= 58 && (
                 <section
                   className={`shipyard-warning ${game.turnNumber >= 66 ? 'active' : ''}`}
@@ -630,7 +659,10 @@ export default function App() {
                               <span>
                                 {game.ports.find((p) => p.id === b.portId)?.name}
                                 <small>{b.remainingOwnerTurns} owner rounds until launch</small>
-                                <progress max="2" value={2 - b.remainingOwnerTurns} />
+                                <progress
+                                  max={constructionOwnerTurns(b)}
+                                  value={constructionOwnerTurns(b) - b.remainingOwnerTurns}
+                                />
                               </span>
                             </button>
                           ))

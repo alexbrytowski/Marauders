@@ -13,6 +13,16 @@ Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
 
+## September 15: round-50 whirlpool surge
+
+- [x] Increase the server-authoritative whirlpool spawn chance from 10% to 25%
+  starting when round 50 completes. Preserve the original rate through round 49,
+  existing-pair behavior, and pair lifetime; align the rules and handbook.
+- [x] Show a four-round public warning beginning at round 46, with a shared
+  countdown plus captain-log entries for the warning and round-50 activation.
+  Focused four-browser synchronization and visual checks pass; client lint/build,
+  Debug/Release solution builds, and all 190 server tests pass.
+
 ## September 15: endgame construction pacing
 
 - [x] Starting in round 66, make new manual, automatic, and timeout-started
@@ -21,7 +31,10 @@ provider settings and a live deployment have not been verified by the agent.
 - [x] Show an eight-round public warning beginning at round 58, log the warning
   and activation, and align the rules and handbook wording. Focused four-browser
   synchronization and visual checks pass; client lint/build, solution build,
-  and all 183 server tests pass.
+  and all 184 server tests pass.
+- [x] Add a Development-only local-crew launcher that starts fresh practice
+  matches at round 50 for quickly rehearsing the round-58 warning and round-66
+  construction slowdown without touching the main local save.
 
 ## September 15: Black Pearl balance
 

@@ -141,9 +141,12 @@ preserves its result.
 ### Whirlpools
 
 After each completed captain turn, including a timeout, there is a 10% chance
-to spawn one pair of whirlpools if none exists. That is four independent chances
-per full four-player cycle. They appear in two empty ordinary-blue water hexes
-at least ten hexes apart, never in a port’s dark-blue water or on ships/pickups.
+to spawn one pair of whirlpools if none exists through round 49. Starting with
+the completion of round 50, the chance is 25% (2.5 times the original rate).
+Every viewer receives a four-round public warning beginning at round 46. That
+is four independent chances per full four-player cycle. They appear in two
+empty ordinary-blue water hexes at least ten hexes apart, never in a port’s
+dark-blue water or on ships/pickups.
 Only one pair exists at a time. It lasts two full cycles: eight subsequent
 captain turns with four living captains, or twice the living captain count at
 spawn. It fades after that many turns without moving any ship resting there.

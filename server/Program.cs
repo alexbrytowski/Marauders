@@ -15,8 +15,10 @@ if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } portValue)
 }
 builder.Services.AddOptions<GameOptions>().BindConfiguration("Game")
     .Validate(o => o.TurnSeconds >= 10 && o.ActionSeconds >= 5, "Game timers must be at least 10/5 seconds.")
+    .Validate(o => o.StartingRound is >= 1 and <= 100_000, "Game__StartingRound must be between 1 and 100000.")
     .Validate(o => o.ResetPassword is null || o.ResetPassword.Length is >= 12 and <= 1024, "The reset password must contain 12–1024 characters when configured.").ValidateOnStart();
 builder.Services.AddOptions<GameOptions>()
+    .Validate(o => builder.Environment.IsDevelopment() || o.StartingRound == 1, "Game__StartingRound can only skip rounds in Development.")
     .Validate(o => builder.Environment.IsDevelopment() || !string.IsNullOrWhiteSpace(o.ResetPassword), "A production server requires Game__ResetPassword so its reset control is available.")
     .Validate(o => builder.Environment.IsDevelopment() || o.TrustForwardedHeaders, "A production server requires Game__TrustForwardedHeaders=true behind its trusted HTTPS proxy.");
 builder.Services.AddControllers();

@@ -134,6 +134,8 @@ public sealed class GameOptions
 {
     public int TurnSeconds { get; set; } = 135;
     public int ActionSeconds { get; set; } = 45;
+    // Local test harnesses can skip early rounds without changing saved games.
+    public int StartingRound { get; set; } = 1;
     public string? DataDirectory { get; set; }
     public string? ResetPassword { get; set; }
     // Opt in only when a trusted deployment proxy is the sole public entry point.

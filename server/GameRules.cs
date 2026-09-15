@@ -15,6 +15,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private int Capacity(string id) => state.Ports.Count(p => p.OwnerId == id) * 2 + state.Ships.Count(s => s.OwnerId == id && s.Perk == "mouth-to-feed");
     private int FreeBuilds(string id) => Math.Max(0, Capacity(id) - state.Ships.Count(s => s.OwnerId == id) - state.Constructions.Count(b => b.OwnerId == id));
     private int NewConstructionOwnerTurns => state.TurnNumber >= 66 ? 3 : 2;
+    private int WhirlpoolSpawnThreshold => state.TurnNumber >= 50 ? 250 : 100;
     private bool HasTime => state.ActionEndsAt > now && (state.IsEndingRound || state.TurnEndsAt > now);
     public void RefreshBuildCapacity()
     {
@@ -232,7 +233,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("setup", $"{Name(owner)} launched two ships at each of their ports.");
         }
         state.PlacementDone.Clear();
-        state.Phase = "playing"; state.TurnNumber = 1; BeginTurn(state.TurnOrder.First(id => state.Ports.Any(p => p.OwnerId == id)));
+        state.Phase = "playing"; state.TurnNumber = options.StartingRound; BeginTurn(state.TurnOrder.First(id => state.Ports.Any(p => p.OwnerId == id)));
     }
     private void NoBattle() => Require(state.Combat is null && state.CombatChoices.Count == 0, "Resolve the pending battle first.");
     private void Ready() { NoBattle(); Require(!state.IsBuildPhase, "The round is in construction selection."); }
@@ -677,7 +678,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             }
             return;
         }
-        if (dice.Next(1000) >= 100) return;
+        if (dice.Next(1000) >= WhirlpoolSpawnThreshold) return;
         var candidates = Board.Cells.Where(c => c.Terrain == "water" &&
             !state.Ships.Any(s => s.Hex == c.Hex) && !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R)).Select(c => c.Hex).ToArray();
         var starts = candidates.Where(a => candidates.Any(b => a.DistanceTo(b) >= 10)).ToArray();
@@ -747,6 +748,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
+        if (state.TurnNumber == 46)
+            Log("whirlpool", "Whirlpool warning: starting in four rounds, completed turns will have a 25% chance to spawn whirlpools instead of 10%.");
+        else if (state.TurnNumber == 50)
+            Log("whirlpool", "The whirlpool surge is now active: completed turns have a 25% chance to spawn whirlpools.");
         if (state.TurnNumber == 58)
             Log("construction", "Shipyard warning: starting in eight rounds, new construction will need 3 owner rounds. Existing construction will keep its timing.");
         else if (state.TurnNumber == 66)

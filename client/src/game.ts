@@ -38,7 +38,13 @@ export type Ship = Hex & {
   perk: string | null
   convertedTurnNumber: number | null
 }
-export type Construction = { id: string; ownerId: string; portId: string; remainingOwnerTurns: number }
+export type Construction = {
+  id: string
+  ownerId: string
+  portId: string
+  remainingOwnerTurns: number
+  startedTurnNumber: number
+}
 export type Encounter = { id: string; triggerShipId: string; opponentShipId: string; harborId: string | null }
 export type Battle = {
   id: string
@@ -125,6 +131,7 @@ export type Command = {
   lobbyVersion?: string
 }
 export const colors = ['#ed7866', '#69c5bc', '#b19bdf', '#e6be68']
+export const constructionOwnerTurns = (build: Construction) => (build.startedTurnNumber >= 66 ? 3 : 2)
 export const perks: Record<string, { name: string; symbol: string; description: string }> = {
   'black-pearl': {
     name: 'The Black Pearl',

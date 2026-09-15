@@ -1,5 +1,15 @@
 # Implementation decisions
 
+## 2026-09-15: round-50 whirlpool surge
+
+- The owner increased the whirlpool-pair spawn rate by 2.5 times starting in
+  round 50. A completed captain turn draws at 10% through round 49 and at exactly
+  25% from round 50 onward. Existing pairs still block new spawns and retain their
+  normal lifetime; no extra draw occurs when a pair expires.
+- Mirror the shipyard pacing notice with a four-round public warning beginning
+  at round 46. Show the countdown to every viewer and log both the initial warning
+  and round-50 activation in the captain's log.
+
 ## 2026-09-15: round-66 construction slowdown
 
 - To accelerate the endgame, construction started during displayed round 66 or

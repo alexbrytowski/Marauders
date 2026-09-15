@@ -68,6 +68,12 @@ Play-Local-Crew.cmd again starts a fresh practice match, as described above; it
 does not resume the previous practice game. Use Game controller for an in-app reset.
 On Linux, install Playwright Chromium first; the same launcher supports `--crew`.
 
+To rehearse the endgame pacing, double-click **Play-Local-Crew-Round-50.cmd**.
+It behaves like the normal local-crew launcher, but the fresh match begins at
+round 50 after all four captains ready up. This lets you see the warning appear
+at round 58 and the longer construction timing activate at round 66. It uses the
+same disposable local-crew save area and never changes the main local game.
+
 The launcher shows a newly generated local reset password in its terminal unless
 you already supplied `Game__ResetPassword`. Passwords are never stored in Git or
 the save. See [operations](OPERATIONS.md) for configuration, backup, and recovery.

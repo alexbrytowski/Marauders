@@ -26,6 +26,8 @@ const websiteUrl = `http://localhost:${clientPort}`
 const boardVersion = JSON.parse(readFileSync(path.join(serverDirectory, 'board.json'), 'utf8')).version
 const checkOnly = process.argv.includes('--check')
 const resetOnStart = process.argv.includes('--reset')
+const startingRoundIndex = process.argv.indexOf('--starting-round')
+const startingRound = startingRoundIndex < 0 ? 1 : Number(process.argv[startingRoundIndex + 1])
 const children = new Set()
 let crewContexts = []
 let stopping = false
@@ -89,7 +91,10 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
 })
 
 try {
+  if (!Number.isSafeInteger(startingRound) || startingRound < 1 || startingRound > 100_000)
+    throw new Error('--starting-round must be followed by an integer between 1 and 100000.')
   console.log('\nMARAUDERS — starting your local game\n')
+  if (startingRound !== 1) console.log(`Practice match will begin at round ${startingRound} after all captains ready up.\n`)
   if (await isOurGame(websiteUrl)) {
     if (resetOnStart) throw new Error('Close the existing launcher before starting with --reset.')
     console.log(`Marauders is already running. Open ${websiteUrl}\n`)
@@ -110,6 +115,7 @@ try {
     if (!environment.Game__ResetPassword && !checkOnly) console.log(`Local game controller password for this run: ${resetPassword}\n`)
     const api = launch(dotnet, [path.join(serverDirectory, 'bin', 'Release', 'net10.0', 'Marauders.Server.dll'), '--urls', apiUrl], serverDirectory, {
       ...environment, ASPNETCORE_ENVIRONMENT: 'Development', Game__ResetPassword: resetPassword,
+      ...(startingRoundIndex >= 0 ? { Game__StartingRound: String(startingRound) } : {}),
       ...(crewMode ? { Game__DataDirectory: path.join(root, 'artifacts', 'local-crew', 'data') } : {}),
     })
     const client = launch(process.execPath, [vite, '--host', 'localhost', '--port', String(clientPort), '--strictPort'], clientDirectory, {

@@ -113,6 +113,17 @@ public partial class GameRulesTests
         Assert.Contains(s.Events, e => e.Turn == announcedTurn && e.Kind == "construction" && e.Message.Contains(message));
     }
 
+    [Theory] [InlineData(45, 46, "starting in four rounds")] [InlineData(49, 50, "now active")]
+    public void Whirlpool_surge_is_announced_in_the_captains_log(int endingTurn, int announcedTurn, string message)
+    {
+        var s = Playing(); s.TurnNumber = endingTurn; s.IsBuildPhase = true;
+
+        Rules(s).Act(s.ActivePlayerId!, new("end-turn"));
+
+        Assert.Equal(announcedTurn, s.TurnNumber);
+        Assert.Contains(s.Events, e => e.Turn == announcedTurn && e.Kind == "whirlpool" && e.Message.Contains(message));
+    }
+
     [Theory] [InlineData(false)] [InlineData(true)]
     public void Either_timeout_automatically_rebuilds_even_before_construction_selection(bool turnExpired)
     {

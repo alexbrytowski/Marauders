@@ -98,6 +98,15 @@ public partial class GameRulesTests
         Assert.False(Rules(s).Expire()); Assert.Equal(24, s.Ships.Count);
     }
 
+    [Fact] public void Development_harness_can_start_a_new_match_at_a_later_round()
+    {
+        var s = Lobby();
+        var rules = new GameRules(s, new FixedDice(), new GameOptions { StartingRound = 50 }, Now);
+        ReadyCrew(s, rules: rules);
+        Assert.Equal("playing", s.Phase); Assert.Equal(50, s.TurnNumber);
+        Assert.Contains(s.Events, e => e.Turn == 50 && e.Kind == "turn" && e.Message.Contains("begins round 50"));
+    }
+
     [Fact] public void Default_action_deadline_ends_the_round_and_custom_timers_are_respected()
     {
         var s = Lobby(); ReadyCrew(s);

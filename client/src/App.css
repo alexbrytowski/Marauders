@@ -307,6 +307,17 @@
   border-color: #c87b5680;
   background: linear-gradient(90deg, #7e392b38, #1b292933);
 }
+.whirlpool-warning {
+  border-color: #4f9fb980;
+  background: linear-gradient(90deg, #24657d2e, #1b292933);
+}
+.whirlpool-warning.active {
+  border-color: #657bc880;
+  background: linear-gradient(90deg, #303f7e38, #1b292933);
+}
+.whirlpool-warning strong {
+  color: #a9dce9;
+}
 .shipyard-warning > .icon {
   width: 22px;
   height: 22px;

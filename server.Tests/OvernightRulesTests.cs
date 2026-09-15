@@ -51,7 +51,7 @@ public partial class GameRulesTests
     }
 
     [Theory] [InlineData(0, true)] [InlineData(99, true)] [InlineData(100, false)] [InlineData(999, false)]
-    public void Whirlpool_draw_is_exactly_ten_percent_and_spawn_respects_terrain_distance_and_occupancy(int chance, bool spawns)
+    public void Whirlpool_draw_is_exactly_ten_percent_before_round_fifty_and_spawn_respects_terrain_distance_and_occupancy(int chance, bool spawns)
     {
         var s = Playing(); Add(s, 0, Open); s.PerkPickups.Add(new("loaded-dice", Open.Q + 1, Open.R));
         var dice = new WhirlpoolDice(chance); s.IsBuildPhase = true;
@@ -66,6 +66,20 @@ public partial class GameRulesTests
             Assert.DoesNotContain(s.Ships, ship => ship.Hex == hex);
             Assert.DoesNotContain(s.PerkPickups, perk => new Hex(perk.Q, perk.R) == hex);
         }
+    }
+
+    [Theory]
+    [InlineData(49, 249, false)]
+    [InlineData(50, 249, true)]
+    [InlineData(50, 250, false)]
+    [InlineData(51, 249, true)]
+    public void Whirlpool_draw_is_exactly_twenty_five_percent_starting_round_fifty(int turn, int chance, bool spawns)
+    {
+        var s = Playing(); s.TurnNumber = turn; s.IsBuildPhase = true;
+        var dice = new WhirlpoolDice(chance);
+        new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("end-turn"));
+        Assert.Equal(1, dice.ChanceChecks);
+        Assert.Equal(spawns, s.Whirlpool is not null);
     }
 
     [Fact] public void Whirlpool_lasts_eight_subsequent_turns_with_no_overlapping_draw_or_expiry_respawn()

@@ -876,8 +876,9 @@ function Extras() {
         <summary>When whirlpools appear & fade</summary>
         <p>
           After each completed captain turn, including a timeout, there is a 10% chance to spawn a pair if
-          none exists. Endpoints are empty ordinary water, at least ten hexes apart, away from ships, harbors,
-          and pickups.
+          none exists through round 49. A four-round public warning begins at round 46. Starting when round
+          50 completes, the chance is 25%. Endpoints are empty ordinary water, at least ten hexes apart, away
+          from ships, harbors, and pickups.
         </p>
         <p>
           A pair lasts twice the living captain count at spawn: eight subsequent turns with four captains. The

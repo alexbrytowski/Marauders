@@ -571,7 +571,7 @@ test.afterEach(async () => {
   await stopServer()
 })
 
-test('round-66 construction timing and its eight-round warning synchronize across captains', async ({
+test('late-game whirlpool and construction warnings synchronize across captains', async ({
   browser,
 }, testInfo) => {
   const contexts = await Promise.all(
@@ -602,7 +602,7 @@ test('round-66 construction timing and its eight-round warning synchronize acros
       phase: 'playing',
       activePlayerId: ids[0],
       turnOrder: ids,
-      turnNumber: 58,
+      turnNumber: 46,
       remainingActions: 0,
       remainingMovement: 0,
       isBuildPhase: true,
@@ -620,6 +620,56 @@ test('round-66 construction timing and its eight-round warning synchronize acros
       (port: { ownerId: string | null }, i: number) =>
         (port.ownerId = i < 12 ? ids[Math.floor(i / 3)] : null),
     )
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText('Whirlpool surge in 4 rounds')
+    }
+    await pages[0].screenshot({ path: testInfo.outputPath('whirlpool-four-round-warning.png') })
+
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      turnNumber: 49,
+      isBuildPhase: true,
+      isEndingRound: false,
+      availableBuilds: 6,
+      constructions: [],
+      revision: saved.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText('Whirlpool surge in 1 round')
+    }
+    game = await state(pages[0])
+    let response = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'end-turn', expectedRevision: game.revision },
+    })
+    expect(response.status(), await response.text()).toBe(200)
+    game = await response.json()
+    expect(game.turnNumber).toBe(50)
+    for (const page of pages)
+      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText('Whirlpool surge is active')
+    expect(game.events.some((event) => event.turn === 50 && event.message.includes('now active'))).toBeTruthy()
+
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      turnNumber: 58,
+      isBuildPhase: true,
+      isEndingRound: false,
+      availableBuilds: 6,
+      constructions: [],
+      revision: saved.game.revision + 1,
+    })
     await writeFile(savePath, JSON.stringify(saved))
     await startServer()
     for (const page of pages) {
@@ -656,7 +706,7 @@ test('round-66 construction timing and its eight-round warning synchronize acros
       await expect(page.getByLabel('Late-game shipyard timing')).toContainText('Shipyards slow in 1 round')
     }
     game = await state(pages[0])
-    let response = await pages[0].request.post('/api/game/action', {
+    response = await pages[0].request.post('/api/game/action', {
       headers,
       data: { type: 'build', portId: 'port-2', expectedRevision: game.revision },
     })
@@ -683,6 +733,15 @@ test('round-66 construction timing and its eight-round warning synchronize acros
     expect(response.status(), await response.text()).toBe(200)
     game = await response.json()
     expect(game.constructions.find((build) => build.portId === 'port-4')?.remainingOwnerTurns).toBe(3)
+    const earlyProgress = pages[1].getByTestId('player-card-0').locator('.mini-builds progress')
+    await expect(earlyProgress.first()).toHaveAttribute('max', '2')
+    await expect(earlyProgress.first()).toHaveAttribute('value', '1')
+    const lateProgress = pages[1].getByTestId('player-card-1').locator('.mini-builds progress')
+    await expect(lateProgress).toHaveAttribute('max', '3')
+    await expect(lateProgress).toHaveAttribute('value', '0')
+    await pages[1].getByRole('button', { name: /Shipyards/ }).click()
+    await expect(pages[1].locator('.personal-content progress')).toHaveAttribute('max', '3')
+    await expect(pages[1].locator('.personal-content progress')).toHaveAttribute('value', '0')
     await pages[1].screenshot({ path: testInfo.outputPath('shipyard-round-66-active.png') })
   } finally {
     await Promise.all(contexts.map((context) => context.close()))

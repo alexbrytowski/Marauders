@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { actionCount, capacity, portNumber } from './game'
+import { actionCount, capacity, constructionOwnerTurns, portNumber } from './game'
 import type { CharacterProfile, Game, Player } from './game'
 import { CharacterPortrait } from './CharacterPortrait'
 import { Icon } from './Icons'
@@ -112,7 +112,10 @@ export function PlayerCard({
               title={`${game.ports.find((p) => p.id === b.portId)?.name}: ${b.remainingOwnerTurns} owner rounds left`}
             >
               <span>⚑ {portNumber(b.portId)}</span>
-              <progress max="2" value={2 - b.remainingOwnerTurns} />
+              <progress
+                max={constructionOwnerTurns(b)}
+                value={constructionOwnerTurns(b) - b.remainingOwnerTurns}
+              />
               <small>{b.remainingOwnerTurns}r</small>
             </div>
           ))}
