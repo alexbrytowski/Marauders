@@ -1,11 +1,11 @@
-# Perk playtest notes — September 10, 2026
+# Perk playtest notes — updated September 15, 2026
 
 The owner approved one perk per ship, no limit per fleet, and Glass Cannon results
 from 0 through 8. Keep the requested effects for the first playtest.
 
 | Perk | Initial assessment | What to watch |
 | --- | --- | --- |
-| The Black Pearl | Rare, dramatic, medium power | The owner increased recruitment to 10%. One check per casualty avoids multiplying the chance with helpers. Recruiting preserves an enemy ship and changes its owner instead of destroying it. |
+| The Black Pearl | Rare, dramatic, medium power | The owner increased recruitment from 10% to exactly 1 in 6 (about 16.7%). A roll of 1 recruits. One check per casualty avoids multiplying the chance with helpers. Recruiting preserves an enemy ship and changes its owner instead of destroying it. |
 | Glass Cannon | Strong combat advantage, with risk | A 0–8 holder wins 56.25% of decisive one-on-one exchanges against d6. A 7 or 8 beats any number of unmodified d6 ships; friendly helpers soften its zero-roll downside. |
 | Loaded Dice | Consistent, moderate power | Wins 60% of decisive one-on-one exchanges against d6. Its value falls in large battles because only the highest allied roll matters. |
 | Mouth to Feed | A small persistent population bonus | Replaces Architect. Each holder adds one fleet-capacity slot anywhere at sea. Losing or recruiting the holder transfers that economic advantage; construction still takes two future owner rounds. |

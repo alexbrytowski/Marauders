@@ -14,6 +14,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private Port Port(string? id) => state.Ports.SingleOrDefault(p => p.Id == id) ?? throw new RuleException("Choose a port on the map.");
     private int Capacity(string id) => state.Ports.Count(p => p.OwnerId == id) * 2 + state.Ships.Count(s => s.OwnerId == id && s.Perk == "mouth-to-feed");
     private int FreeBuilds(string id) => Math.Max(0, Capacity(id) - state.Ships.Count(s => s.OwnerId == id) - state.Constructions.Count(b => b.OwnerId == id));
+    private int NewConstructionOwnerTurns => state.TurnNumber >= 66 ? 3 : 2;
     private bool HasTime => state.ActionEndsAt > now && (state.IsEndingRound || state.TurnEndsAt > now);
     public void RefreshBuildCapacity()
     {
@@ -106,9 +107,11 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
                 var port = Port(command.PortId);
                 Require(port.OwnerId == playerId, "Choose one of your own ports.");
                 Require(FreeBuilds(playerId) > 0, "Your fleet and construction already fill your population cap.");
-                state.Constructions.Add(new() { OwnerId = playerId, PortId = port.Id, StartedTurnNumber = state.TurnNumber });
+                var ownerTurns = NewConstructionOwnerTurns;
+                state.Constructions.Add(new() { OwnerId = playerId, PortId = port.Id,
+                    StartedTurnNumber = state.TurnNumber, RemainingOwnerTurns = ownerTurns });
                 state.AvailableBuilds = FreeBuilds(playerId);
-                Log("construction", $"{Name(playerId)} started a ship at {port.Name}; ready in two owner rounds.");
+                Log("construction", $"{Name(playerId)} started a ship at {port.Name}; ready in {ownerTurns} owner rounds.");
                 break;
             default: throw new RuleException("Unknown game action.");
         }
@@ -518,9 +521,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var converted = false;
         if (pearl)
         {
-            var chance = dice.Next(1000);
-            converted = chance < 100;
-            Log("perk", $"Black Pearl conversion check: {chance + 1}/1000 (1–100 recruits). {(converted ? "Ship recruited." : "No conversion.")}");
+            var draw = dice.Next(6);
+            converted = draw == 0;
+            Log("perk", $"Black Pearl conversion check: {draw + 1}/6 (1 recruits; 2–6 do not). {(converted ? "Ship recruited." : "No conversion.")}");
         }
         if (converted)
         {
@@ -636,8 +639,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             for (var i = 0; i < unchosen && ports.Length > 0; i++)
             {
                 var port = ports[dice.Next(ports.Length)];
-                state.Constructions.Add(new() { OwnerId = owner, PortId = port.Id, StartedTurnNumber = state.TurnNumber });
-                Log("construction", $"{Name(owner)} automatically started a ship at randomly selected {port.Name}; ready in two owner rounds.");
+                var ownerTurns = NewConstructionOwnerTurns;
+                state.Constructions.Add(new() { OwnerId = owner, PortId = port.Id,
+                    StartedTurnNumber = state.TurnNumber, RemainingOwnerTurns = ownerTurns });
+                Log("construction", $"{Name(owner)} automatically started a ship at randomly selected {port.Name}; ready in {ownerTurns} owner rounds.");
             }
             CompleteConstruction(owner);
             RefreshEncounters();
@@ -742,6 +747,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
+        if (state.TurnNumber == 58)
+            Log("construction", "Shipyard warning: starting in eight rounds, new construction will need 3 owner rounds. Existing construction will keep its timing.");
+        else if (state.TurnNumber == 66)
+            Log("construction", "Late-game shipyards are now active: new construction needs 3 owner rounds. Existing construction keeps its timing.");
         RefreshEncounters();
         SettleActions();
     }

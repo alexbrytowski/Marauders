@@ -129,7 +129,7 @@ export const perks: Record<string, { name: string; symbol: string; description: 
   'black-pearl': {
     name: 'The Black Pearl',
     symbol: '●',
-    description: '10% chance to recruit an enemy casualty in a winning battle.',
+    description: '1-in-6 chance to recruit an enemy casualty in a winning battle.',
   },
   'glass-cannon': { name: 'Glass Cannon', symbol: '◇', description: 'Combat rolls range from 0 to 8.' },
   'loaded-dice': { name: 'Loaded Dice', symbol: '⚄', description: 'Combat rolls of 1 or 2 become 3.' },

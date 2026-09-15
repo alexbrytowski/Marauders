@@ -571,6 +571,124 @@ test.afterEach(async () => {
   await stopServer()
 })
 
+test('round-66 construction timing and its eight-round warning synchronize across captains', async ({
+  browser,
+}, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 4 }, () =>
+      browser.newContext({ viewport: { width: 1366, height: 900 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    for (let i = 0; i < pages.length; i++) {
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      expect(
+        (
+          await pages[i].request.post('/api/game/players', {
+            headers,
+            data: { name: `Shipyard ${i + 1}`, color: colors[i], character: characterIds[i] },
+          })
+        ).status(),
+      ).toBe(200)
+    }
+    let game = await state(pages[0])
+    const ids = game.players.map((player) => player.id)
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    let saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      phase: 'playing',
+      activePlayerId: ids[0],
+      turnOrder: ids,
+      turnNumber: 58,
+      remainingActions: 0,
+      remainingMovement: 0,
+      isBuildPhase: true,
+      isEndingRound: false,
+      availableBuilds: 6,
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      ships: [],
+      constructions: [],
+      combat: null,
+      combatChoices: [],
+      revision: saved.game.revision + 1,
+    })
+    saved.game.ports.forEach(
+      (port: { ownerId: string | null }, i: number) =>
+        (port.ownerId = i < 12 ? ids[Math.floor(i / 3)] : null),
+    )
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.getByLabel('Late-game shipyard timing')).toContainText('Shipyards slow in 8 rounds')
+    }
+    await pages[0].screenshot({ path: testInfo.outputPath('shipyard-eight-round-warning.png') })
+
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      turnNumber: 65,
+      isBuildPhase: true,
+      isEndingRound: false,
+      availableBuilds: 5,
+      constructions: [
+        {
+          id: 'existing-build',
+          ownerId: ids[0],
+          portId: 'port-1',
+          remainingOwnerTurns: 2,
+          startedTurnNumber: 61,
+        },
+      ],
+      revision: saved.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.getByLabel('Late-game shipyard timing')).toContainText('Shipyards slow in 1 round')
+    }
+    game = await state(pages[0])
+    let response = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'build', portId: 'port-2', expectedRevision: game.revision },
+    })
+    expect(response.status(), await response.text()).toBe(200)
+    game = await response.json()
+    expect(game.constructions.find((build) => build.portId === 'port-2')?.remainingOwnerTurns).toBe(2)
+
+    response = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'end-turn', expectedRevision: game.revision },
+    })
+    expect(response.status(), await response.text()).toBe(200)
+    game = await response.json()
+    expect(game.turnNumber).toBe(66)
+    expect(game.constructions.find((build) => build.id === 'existing-build')?.remainingOwnerTurns).toBe(1)
+    for (const page of pages)
+      await expect(page.getByLabel('Late-game shipyard timing')).toContainText('Late-game shipyards are active')
+    expect(game.events.some((event) => event.turn === 66 && event.message.includes('now active'))).toBeTruthy()
+
+    response = await pages[1].request.post('/api/game/action', {
+      headers,
+      data: { type: 'build', portId: 'port-4', expectedRevision: game.revision },
+    })
+    expect(response.status(), await response.text()).toBe(200)
+    game = await response.json()
+    expect(game.constructions.find((build) => build.portId === 'port-4')?.remainingOwnerTurns).toBe(3)
+    await pages[1].screenshot({ path: testInfo.outputPath('shipyard-round-66-active.png') })
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
+})
+
 test('early endings confirm unused dice and movement while other browsers and timeouts stay in sync', async ({
   browser,
 }, testInfo) => {

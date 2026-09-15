@@ -79,6 +79,40 @@ public partial class GameRulesTests
         Assert.Equal(4, s.Events.Count(e => e.Kind == "construction" && e.Message.Contains("automatically")));
     }
 
+    [Theory] [InlineData(65, 2)] [InlineData(66, 3)]
+    public void New_construction_slows_at_round_66_without_retiming_existing_builds(int turn, int expectedOwnerTurns)
+    {
+        var s = Playing(); var owner = s.ActivePlayerId!; s.TurnNumber = turn; s.IsBuildPhase = true;
+        var existing = new Construction
+        {
+            OwnerId = owner, PortId = s.Ports[0].Id, StartedTurnNumber = 1, RemainingOwnerTurns = 2
+        };
+        s.Constructions.Add(existing);
+
+        Rules(s).Act(owner, new("build", PortId: s.Ports[1].Id));
+        var manual = s.Constructions.Last();
+        Rules(s).Act(owner, new("end-turn"));
+
+        Assert.Equal(1, existing.RemainingOwnerTurns);
+        Assert.Equal(expectedOwnerTurns, manual.RemainingOwnerTurns);
+        Assert.All(s.Constructions.Where(b => b.StartedTurnNumber == turn),
+            b => Assert.Equal(expectedOwnerTurns, b.RemainingOwnerTurns));
+        Assert.Contains(s.Events, e => e.Kind == "construction" &&
+            e.Message.Contains($"ready in {expectedOwnerTurns} owner rounds"));
+    }
+
+    [Theory] [InlineData(57, 58, "starting in eight rounds")] [InlineData(65, 66, "now active")]
+    public void Shipyard_pacing_change_is_announced_in_the_captains_log(int endingTurn, int announcedTurn, string message)
+    {
+        var s = Playing(); s.TurnNumber = endingTurn; s.IsBuildPhase = true;
+        foreach (var hex in BoardDefinition.Cells.Where(c => c.Terrain == "water").Take(6)) Add(s, 0, hex.Hex);
+
+        Rules(s).Act(s.ActivePlayerId!, new("end-turn"));
+
+        Assert.Equal(announcedTurn, s.TurnNumber);
+        Assert.Contains(s.Events, e => e.Turn == announcedTurn && e.Kind == "construction" && e.Message.Contains(message));
+    }
+
     [Theory] [InlineData(false)] [InlineData(true)]
     public void Either_timeout_automatically_rebuilds_even_before_construction_selection(bool turnExpired)
     {

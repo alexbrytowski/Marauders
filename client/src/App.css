@@ -292,6 +292,38 @@
   color: #ede5d4;
   margin-top: 6px;
 }
+.shipyard-warning {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -10px 0 20px;
+  padding: 10px 14px;
+  border: 1px solid #b9924f80;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #7d5c242e, #1b292933);
+  color: #d8c397;
+}
+.shipyard-warning.active {
+  border-color: #c87b5680;
+  background: linear-gradient(90deg, #7e392b38, #1b292933);
+}
+.shipyard-warning > .icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.shipyard-warning div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.shipyard-warning strong {
+  color: #f1d79d;
+}
+.shipyard-warning span {
+  color: #b9c3b8;
+  font-size: 12px;
+}
 .action-dice {
   display: flex;
   gap: 7px;

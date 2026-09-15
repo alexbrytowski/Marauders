@@ -656,17 +656,17 @@ function Ports({ board }: { board?: Board }) {
 
 function Building({ board }: { board?: Board }) {
   const [stage, setStage] = useState(0)
-  const stages = ['Start building', 'Your next round', 'Your second round', 'Your following round']
+  const stages = ['Start building', 'Next owner round', 'Second owner round', 'Third owner round', 'Following round']
   return (
     <Lesson
-      takeaway="Construction is free at round end, but a new ship needs two future owner rounds to launch."
+      takeaway="New construction needs two owner rounds before round 66 and three from round 66 onward."
       visual={
         <>
           <TeachingChart board={board} captured />
           <div className="build-timeline">
             {stages.map((name, i) => (
               <button key={name} aria-pressed={stage === i} onClick={() => setStage(i)}>
-                <span>{i === 0 ? <Icon name="hammer" /> : i === 3 ? <Icon name="ship" /> : i}</span>
+                <span>{i === 0 ? <Icon name="hammer" /> : i === stages.length - 1 ? <Icon name="ship" /> : i}</span>
                 {name}
               </button>
             ))}
@@ -674,10 +674,11 @@ function Building({ board }: { board?: Board }) {
           <p className="example-feedback" role="status">
             {
               [
-                'Choose an owned port at the end of your round. Two future owner rounds remain.',
-                'At the end of your next round, one owner round remains.',
-                'At the end of your second future round, the ship launches. It cannot move yet.',
-                'The new ship is now ready to move with your fleet.',
+                'Choose an owned port at round end. Its countdown is locked: two owner rounds before round 66, three starting at round 66.',
+                'After your next round, early builds have one owner round left; round-66-and-later builds have two.',
+                'Early builds launch now. Round-66-and-later builds have one owner round left.',
+                'Round-66-and-later builds launch now. A launch cannot move until its owner’s following round.',
+                'The new ship is ready to move with your fleet.',
               ][stage]
             }
           </p>
@@ -696,6 +697,7 @@ function Building({ board }: { board?: Board }) {
         <li>At the end of your round, choose owned ports to build missing ships. It costs no action dice.</li>
         <li>Any unchosen builds start automatically at random owned ports when you finish or time out.</li>
         <li>A port can build several ships, but a build cannot switch ports.</li>
+        <li>At round 58, everyone gets an eight-round warning before new construction slows at round 66.</li>
         <li>
           If newly launched ships trigger battles, finish those battles before the next captain's turn. The
           finishing captain rolls; the next captain keeps their full turn time.
@@ -738,7 +740,7 @@ function Perks() {
     'black-pearl': (
       <>
         <Icon name="ship" />
-        <strong>10% chance</strong>
+        <strong>Roll 1: recruit</strong>
         <Icon name="flag" />
       </>
     ),

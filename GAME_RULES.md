@@ -45,7 +45,7 @@ Once a player is out of actions or ships, their round ends.
 
 Each port supports two ships. A player’s population cap is two ships per owned port, plus one per ship carrying Mouth to Feed. A player may not begin building a ship if doing so would exceed this cap. Existing ships are not removed if the player later loses ports, but they cannot begin further construction until they are below their current cap.
 
-Ports make ships. At the end of their round, a player may choose a port to begin rebuilding each ship they are below their population cap. Starting construction does not cost a die or action. A port can build multiple ships at once, but once a ship has started building at a port, its build cannot be transferred to another port. A ship finishes at the end of the turn two turns later, is placed in an empty hex of its port's dark-blue water, and is ready to move on the following turn. If no dark-blue placement hex is available, the ship spills over to the nearest legal empty blue-water hex, so construction never removes a ship from the player's available actions.
+Ports make ships. At the end of their round, a player may choose a port to begin rebuilding each ship they are below their population cap. Starting construction does not cost a die or action. A port can build multiple ships at once, but once a ship has started building at a port, its build cannot be transferred to another port. A ship started before round 66 finishes at the end of its owner's turn two owner turns later. A ship started during round 66 or later needs three future owner turns instead. The timing is locked when construction begins, so construction already underway is not slowed when round 66 starts. An eight-round public warning begins at round 58. A completed ship is placed in an empty hex of its port's dark-blue water and is ready to move on the following turn. If no dark-blue placement hex is available, the ship spills over to the nearest legal empty blue-water hex, so construction never removes a ship from the player's available actions.
 
 ### Movement
 
@@ -92,7 +92,7 @@ When a port is captured, ownership transfers immediately. Any ships it was build
 
 ### End of a player's round
 
-For each ship they are below their population cap, including ships already under construction, the player may choose an owned port at which to begin construction. When the round ends, including on timeout, the server automatically starts every unchosen build at a randomly selected owned port. Each ship's port is chosen independently with equal chances. Manual choices and existing builds stay in place; automatic builds also need two future owner rounds to finish.
+For each ship they are below their population cap, including ships already under construction, the player may choose an owned port at which to begin construction. When the round ends, including on timeout, the server automatically starts every unchosen build at a randomly selected owned port. Each ship's port is chosen independently with equal chances. Manual choices and existing builds stay in place; automatic builds use the same two-owner-round timing before round 66 and three-owner-round timing from round 66 onward.
 
 If completed ships launch into combat, resolve those battles before the next
 captain's turn begins. The finishing captain chooses battle order and rolls;
@@ -116,7 +116,7 @@ There is a countdown for each turn and action so the game cannot take too long. 
 
 Updated from the owner's September 13 playthrough notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, any unconsumed perk drops at its hex and can be collected again, including on arrival at a whirlpool exit.
 
-- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, there is a 10% chance to recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
+- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, roll one six-sided die. On a 1, recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
 - **Glass Cannon:** This ship's combat roll is uniformly distributed from 0 through 8, including both endpoints. This replaces its normal d6 combat roll.
 - **Loaded Dice:** This ship's combat results of 1 or 2 become 3.
 - **Mouth to Feed:** Adds one population slot to the captain of the ship carrying it, anywhere at sea. Each holder adds one slot. The bonus follows the ship’s owner; losing the perk never removes existing ships or cancels construction.

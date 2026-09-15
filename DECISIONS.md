@@ -1,5 +1,24 @@
 # Implementation decisions
 
+## 2026-09-15: round-66 construction slowdown
+
+- To accelerate the endgame, construction started during displayed round 66 or
+  later needs three future turns by that ship's owner instead of two. A round is
+  one captain's displayed turn, not a complete rotation around the table.
+- Store the duration on each new construction record. Builds already underway
+  retain their remaining countdown and continue progressing normally. Manual,
+  automatic, and timeout-started construction all use the round in which they
+  begin.
+- Warn all viewers beginning at round 58 with a visible countdown, and record
+  the initial warning and round-66 activation in the captain's log.
+
+## 2026-09-15: Black Pearl recruitment chance
+
+- The owner replaced the Black Pearl's 10% recruitment check with one exact
+  six-sided draw per eligible enemy casualty. A 1 recruits; 2 through 6 destroy
+  the casualty normally. Multiple participating Pearl holders still do not
+  multiply the check.
+
 ## 2026-09-14: alternate-map central port balance
 
 - The owner clarified that all three maps keep 13 ports and that the port nearest

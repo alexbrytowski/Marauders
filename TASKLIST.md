@@ -13,15 +13,31 @@ Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
 
+## September 15: endgame construction pacing
+
+- [x] Starting in round 66, make new manual, automatic, and timeout-started
+  construction take three future owner rounds. Preserve the stored countdown of
+  every build already underway.
+- [x] Show an eight-round public warning beginning at round 58, log the warning
+  and activation, and align the rules and handbook wording. Focused four-browser
+  synchronization and visual checks pass; client lint/build, solution build,
+  and all 183 server tests pass.
+
+## September 15: Black Pearl balance
+
+- [x] Replace the Black Pearl's 10% recruitment chance with an exact 1-in-6
+  check, and keep the server rule, automated coverage, perk card, and handbook
+  wording aligned.
+
 ## September 14: alternate-map port balance
 
 - [x] Keep Southgate and Fang Harbor out of the middle, but restore both alternate
   maps to 13 evenly distributed ports. Add Dusk Harbor to The Choke's western
   outer ring and Gull's Rest to Serpent's Coil's northwestern outer ring. Keep
   Northgate and Serpent's Heart neutral because they are nearest each map's center.
-- [ ] Verify v7 map connectivity, automatic fleet and perk setup, client
-  lint/build, server tests, and the focused five-browser map scenario, including
-  v2-v6 save compatibility.
+- [x] Verify v7 map connectivity, automatic fleet and perk setup, client
+  lint/build, all 180 server tests, and v2-v6 save compatibility.
+- [ ] Rerun the focused five-browser map scenario after publishing.
 
 ## September 13: first full playthrough follow-up
 

@@ -91,7 +91,7 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
    again with unused movement. Each pair lasts two full cycles.
 
 Hover ports to inspect shipbuilding and ships to read their perks. Black Pearl
-now recruits at 10%; Mouth to Feed replaces Architect and adds one population
+recruits on a 1-in-6 roll; Mouth to Feed replaces Architect and adds one population
 slot. Cheat Death rerolls the first losing exchange its carrier joins, then respawns
 in open water. Ships grant one action die per three ships, rounding up. Ports assist
 their owner's triggering ship from up to two hexes away, even outside harbor water.

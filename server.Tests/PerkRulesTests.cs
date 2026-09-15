@@ -5,13 +5,13 @@ namespace Marauders.Server.Tests;
 
 public partial class GameRulesTests
 {
-    private sealed class ControlledDice(int[] rolls, int chance = 999) : IDice
+    private sealed class ControlledDice(int[] rolls, int draw = 5) : IDice
     {
         private int index;
         public List<int> Sides { get; } = [];
         public int ChanceChecks { get; private set; }
         public int Roll(int sides = 6) { Sides.Add(sides); return rolls[index++ % rolls.Length]; }
-        public int Next(int exclusiveMax) { ChanceChecks++; Assert.Equal(1000, exclusiveMax); return chance; }
+        public int Next(int exclusiveMax) { ChanceChecks++; Assert.Equal(6, exclusiveMax); return draw; }
     }
     private sealed class SeededDice(int seed) : IDice
     {
@@ -104,13 +104,14 @@ public partial class GameRulesTests
         Assert.Equal(captures ? 0 : 11, port.DefenseWeakness);
     }
 
-    [Theory] [InlineData(0, true)] [InlineData(99, true)] [InlineData(100, false)] [InlineData(999, false)]
-    public void Pearl_conversion_has_exact_threshold_retains_position_and_perk_and_adds_no_actions(int chance, bool converts)
+    [Theory] [InlineData(0, true)] [InlineData(1, false)] [InlineData(5, false)]
+    public void Pearl_conversion_uses_exact_one_in_six_draw_and_retains_ship_details(int draw, bool converts)
     {
         var (s, a, b) = Duel("black-pearl", "mouth-to-feed"); var originalHex = b.Hex; var actions = s.RemainingActions;
-        var dice = new ControlledDice([6, 1], chance); var rules = new GameRules(s, dice, new(), Now);
+        var dice = new ControlledDice([6, 1], draw); var rules = new GameRules(s, dice, new(), Now);
         rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
         Assert.Equal(1, dice.ChanceChecks); Assert.Equal(actions, s.RemainingActions);
+        Assert.Contains(s.Events, e => e.Kind == "perk" && e.Message.Contains($"{draw + 1}/6"));
         Assert.Contains("automatically", s.Combat!.Message);
         var snapshot = Assert.Single(s.Combat.Ships, ship => ship.Id == b.Id);
         Assert.Equal("mouth-to-feed", snapshot.Perk); Assert.Equal(originalHex, new(snapshot.Q, snapshot.R));

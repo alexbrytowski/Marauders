@@ -366,6 +366,27 @@ export default function App() {
                   </>
                 )}
               </section>
+              {game.phase === 'playing' && game.turnNumber >= 58 && (
+                <section
+                  className={`shipyard-warning ${game.turnNumber >= 66 ? 'active' : ''}`}
+                  role="status"
+                  aria-label="Late-game shipyard timing"
+                >
+                  <Icon name="hammer" />
+                  <div>
+                    <strong>
+                      {game.turnNumber >= 66
+                        ? 'Late-game shipyards are active'
+                        : `Shipyards slow in ${66 - game.turnNumber} round${66 - game.turnNumber === 1 ? '' : 's'}`}
+                    </strong>
+                    <span>
+                      {game.turnNumber >= 66
+                        ? 'New construction needs 3 owner rounds. Existing builds keep their timing.'
+                        : 'Starting Round 66, new construction needs 3 owner rounds. Existing builds will be unaffected.'}
+                    </span>
+                  </div>
+                </section>
+              )}
               <div className="game-table">
                 <PlayerCard
                   player={game.players[0]}
