@@ -571,7 +571,7 @@ test.afterEach(async () => {
   await stopServer()
 })
 
-test('late-game whirlpool and construction warnings synchronize across captains', async ({
+test('late-game rule warnings synchronize across captains', async ({
   browser,
 }, testInfo) => {
   const contexts = await Promise.all(
@@ -743,6 +743,62 @@ test('late-game whirlpool and construction warnings synchronize across captains'
     await expect(pages[1].locator('.personal-content progress')).toHaveAttribute('max', '3')
     await expect(pages[1].locator('.personal-content progress')).toHaveAttribute('value', '0')
     await pages[1].screenshot({ path: testInfo.outputPath('shipyard-round-66-active.png') })
+
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      turnNumber: 88,
+      remainingActions: 0,
+      remainingMovement: 0,
+      isBuildPhase: true,
+      isEndingRound: false,
+      availableBuilds: 0,
+      ships: [],
+      constructions: [],
+      combat: null,
+      combatChoices: [],
+      revision: saved.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.getByLabel('Endgame action dice rate')).toContainText('Action surge in 12 rounds')
+    }
+    await pages[0].screenshot({ path: testInfo.outputPath('action-dice-twelve-round-warning.png') })
+
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      turnNumber: 99,
+      isBuildPhase: true,
+      isEndingRound: false,
+      availableBuilds: 0,
+      constructions: [],
+      revision: saved.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.getByLabel('Endgame action dice rate')).toContainText('Action surge in 1 round')
+    }
+    game = await state(pages[0])
+    response = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'end-turn', expectedRevision: game.revision },
+    })
+    expect(response.status(), await response.text()).toBe(200)
+    game = await response.json()
+    expect(game.turnNumber).toBe(100)
+    for (const page of pages)
+      await expect(page.getByLabel('Endgame action dice rate')).toContainText('Endgame action surge is active')
+    expect(game.events.some((event) => event.turn === 100 && event.message.includes('now active'))).toBeTruthy()
+    await pages[0].screenshot({ path: testInfo.outputPath('action-dice-round-100-active.png') })
   } finally {
     await Promise.all(contexts.map((context) => context.close()))
   }

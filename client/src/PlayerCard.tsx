@@ -69,7 +69,9 @@ export function PlayerCard({
         <div>
           <Icon name="dice" />
           <strong>
-            {active && game.phase === 'playing' ? game.remainingActions : actionCount(fleet.length)}
+            {active && game.phase === 'playing'
+              ? game.remainingActions
+              : actionCount(fleet.length, game.turnNumber)}
           </strong>
           <small>{active ? 'dice left' : 'dice / turn'}</small>
         </div>

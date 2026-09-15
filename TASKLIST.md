@@ -1,6 +1,6 @@
 # Marauders launch checklist
 
-Updated 2026-09-14. Target: one game, four captains plus approximately three
+Updated 2026-09-15. Target: one game, four captains plus approximately three
 spectators, desktop-first. Joining is open; the owner explicitly declined an
 invitation gate. Reset stays password-protected. No hard spectator cap is
 implemented or required by this planning assumption.
@@ -12,6 +12,18 @@ See [LAUNCH_REVIEW.md](LAUNCH_REVIEW.md) for findings and hosting options,
 Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
+
+## September 15: round-100 action surge
+
+- [x] Starting in round 100, increase server-authoritative action dice from one
+  per three ships to one per two ships, rounding up. Keep the earlier rate
+  through round 99 and align fleet previews, rules, and handbook wording.
+- [x] Show a twelve-round public warning beginning at round 88, with a shared
+  countdown plus captain-log entries for the warning and round-100 activation.
+  Focused four-browser synchronization and launcher checks pass; client
+  lint/build, Debug tests, Release solution build, and all 193 server tests pass.
+- [x] Add a Development-only local-crew launcher that starts fresh practice
+  matches at round 99 so the old and new action rates can be compared directly.
 
 ## September 15: round-50 whirlpool surge
 

@@ -416,6 +416,27 @@ export default function App() {
                   </div>
                 </section>
               )}
+              {game.phase === 'playing' && game.turnNumber >= 88 && (
+                <section
+                  className={`shipyard-warning ${game.turnNumber >= 100 ? 'active' : ''}`}
+                  role="status"
+                  aria-label="Endgame action dice rate"
+                >
+                  <Icon name="dice" />
+                  <div>
+                    <strong>
+                      {game.turnNumber >= 100
+                        ? 'Endgame action surge is active'
+                        : `Action surge in ${100 - game.turnNumber} round${100 - game.turnNumber === 1 ? '' : 's'}`}
+                    </strong>
+                    <span>
+                      {game.turnNumber >= 100
+                        ? 'Captains now receive 1 action die per 2 ships, rounding up.'
+                        : 'Starting Round 100, captains receive 1 action die per 2 ships instead of per 3.'}
+                    </span>
+                  </div>
+                </section>
+              )}
               <div className="game-table">
                 <PlayerCard
                   player={game.players[0]}

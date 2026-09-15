@@ -343,7 +343,7 @@ function Sailing({ board }: { board?: Board }) {
       <label className="fleet-slider" htmlFor="example-fleet">
         Fleet size:{' '}
         <strong>
-          {fleet} ships → {actionCount(fleet)} action dice
+          {fleet} ships → {actionCount(fleet, 1)} action dice before Round 100
         </strong>
       </label>
       <input
@@ -354,7 +354,10 @@ function Sailing({ board }: { board?: Board }) {
         value={fleet}
         onChange={(e) => setFleet(Number(e.target.value))}
       />
-      <p>1–3 ships: 1 die. 4–6: 2 dice. 7–9: 3 dice. One action die per three ships, rounding up.</p>
+      <p>
+        Before Round 100: 1–3 ships get 1 die, 4–6 get 2, and 7–9 get 3. Starting Round 100,
+        every 2 ships grant 1 action die instead, rounding up. A twelve-round public warning begins at Round 88.
+      </p>
       <p>Movement rolls are equally likely to be 4, 5, or 6, and appear immediately.</p>
       <ol>
         <li>

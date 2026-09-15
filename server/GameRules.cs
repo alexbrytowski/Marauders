@@ -5,7 +5,7 @@ namespace Marauders.Server;
 public sealed class GameRules(GameState state, IDice dice, GameOptions options, DateTimeOffset now)
 {
     private BoardMap Board => MapCatalog.Resolve(state.MapId, state.BoardVersion);
-    public static int ActionCount(int ships) => (ships + 2) / 3;
+    public static int ActionCount(int ships, int turnNumber) => turnNumber >= 100 ? (ships + 1) / 2 : (ships + 2) / 3;
     public static readonly string[] Colors = ["#ed7866", "#69c5bc", "#b19bdf", "#e6be68"];
     public static readonly string[] Characters = CharacterCatalog.Ids;
     private static void Require([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string error) { if (!condition) throw new RuleException(error); }
@@ -742,7 +742,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private void BeginTurn(string owner)
     {
         state.ActivePlayerId = owner;
-        state.RemainingActions = ActionCount(state.Ships.Count(s => s.OwnerId == owner));
+        state.RemainingActions = ActionCount(state.Ships.Count(s => s.OwnerId == owner), state.TurnNumber);
         state.RemainingMovement = 0; state.LastRoll = null;
         state.IsBuildPhase = false; state.IsEndingRound = false; state.AvailableBuilds = 0;
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
@@ -756,6 +756,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("construction", "Shipyard warning: starting in eight rounds, new construction will need 3 owner rounds. Existing construction will keep its timing.");
         else if (state.TurnNumber == 66)
             Log("construction", "Late-game shipyards are now active: new construction needs 3 owner rounds. Existing construction keeps its timing.");
+        if (state.TurnNumber == 88)
+            Log("turn", "Endgame dice warning: starting in twelve rounds, captains will receive 1 action die per 2 ships instead of per 3 ships, rounding up.");
+        else if (state.TurnNumber == 100)
+            Log("turn", "Endgame action surge is now active: captains receive 1 action die per 2 ships, rounding up.");
         RefreshEncounters();
         SettleActions();
     }

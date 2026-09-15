@@ -70,8 +70,11 @@ public partial class GameRulesTests
         }
     }
     [Theory]
-    [InlineData(0, 0)] [InlineData(1, 1)] [InlineData(3, 1)] [InlineData(4, 2)] [InlineData(6, 2)] [InlineData(7, 3)] [InlineData(9, 3)] [InlineData(10, 4)] [InlineData(12, 4)] [InlineData(13, 5)]
-    public void Dice_follow_population_bands(int ships, int expected) => Assert.Equal(expected, GameRules.ActionCount(ships));
+    [InlineData(99, 0, 0)] [InlineData(99, 1, 1)] [InlineData(99, 3, 1)] [InlineData(99, 4, 2)]
+    [InlineData(99, 9, 3)] [InlineData(99, 13, 5)] [InlineData(100, 0, 0)] [InlineData(100, 1, 1)]
+    [InlineData(100, 2, 1)] [InlineData(100, 3, 2)] [InlineData(100, 6, 3)] [InlineData(100, 13, 7)]
+    public void Dice_follow_round_population_bands(int turn, int ships, int expected) =>
+        Assert.Equal(expected, GameRules.ActionCount(ships, turn));
 
     [Fact] public void Host_selects_first_and_ready_deals_ports_reveals_perks_and_launches_fleets_automatically()
     {
@@ -105,6 +108,19 @@ public partial class GameRulesTests
         ReadyCrew(s, rules: rules);
         Assert.Equal("playing", s.Phase); Assert.Equal(50, s.TurnNumber);
         Assert.Contains(s.Events, e => e.Turn == 50 && e.Kind == "turn" && e.Message.Contains("begins round 50"));
+    }
+
+    [Fact] public void Endgame_action_surge_warns_at_88_and_activates_at_100()
+    {
+        var warning = Lobby();
+        ReadyCrew(warning, rules: new GameRules(warning, new FixedDice(), new GameOptions { StartingRound = 88 }, Now));
+        Assert.Equal(2, warning.RemainingActions);
+        Assert.Contains(warning.Events, e => e.Turn == 88 && e.Message.Contains("starting in twelve rounds"));
+
+        var active = Lobby();
+        ReadyCrew(active, rules: new GameRules(active, new FixedDice(), new GameOptions { StartingRound = 100 }, Now));
+        Assert.Equal(3, active.RemainingActions);
+        Assert.Contains(active.Events, e => e.Turn == 100 && e.Message.Contains("now active"));
     }
 
     [Fact] public void Default_action_deadline_ends_the_round_and_custom_timers_are_respected()

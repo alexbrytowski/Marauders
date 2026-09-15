@@ -34,7 +34,7 @@ The server automatically places two ships in empty dark-blue hexes at each owned
 
 ### Dice, actions, and ports
 
-The number of ships on the water determines the number of dice, and therefore actions, a player gets. Divide ships by three and round up: 1-3 ships get 1 die, 4-6 get 2 dice, 7-9 get 3 dice, and so on. Zero ships means zero action dice. Each participating ship still rolls one combat die.
+The number of ships on the water determines the number of dice, and therefore actions, a player gets. Before round 100, divide ships by three and round up: 1-3 ships get 1 die, 4-6 get 2 dice, 7-9 get 3 dice, and so on. Starting in round 100, divide ships by two and round up instead: 1-2 ships get 1 die, 3-4 get 2 dice, 5-6 get 3 dice, and so on. A twelve-round public warning begins at round 88. Zero ships means zero action dice. Each participating ship still rolls one combat die.
 
 Each die is one action. With an action, a player may choose one of the following:
 
