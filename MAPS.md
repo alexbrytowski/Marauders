@@ -18,10 +18,11 @@ The owner's September 10 concept and name replace The Narrows. Two large bodies
 of water fill the western and eastern halves of the board. A continuous land
 divide reaches both boundaries; the **only crossing is three hexes wide** at
 the center. Three ships can seal it, while any one open lane permits passage.
-Northgate (12) and Southgate (13) occupy opposite banks of the passage with two
-harbor hexes each. The other eleven ports form an oval around each bay, with
-five in the west and six in the east. Ports occupy the inner shores and the
-northern and southern ends as well as the outer shores.
+Northgate (12) is the only central port and occupies the northern bank of the
+passage with two harbor hexes. It is the map's neutral starting port. Six ports
+ring each sea; Dusk Harbor (13) fills the western ring's lower outer shore, so
+the two sides have the same port count and spacing. Ports occupy the inner
+shores, northern and southern ends, and outer shores.
 
 A small island in the north of the western bay and one in the south of the
 eastern bay split open-water routes. Sail around either side to approach the
@@ -32,8 +33,8 @@ near a gate gives direct pressure on it, at the cost of a small harbor and
 potential contact with enemy ships coming through. Whirlpools can temporarily
 change access across the land divide.
 
-The playable file is `server/maps/narrows.json`, version `narrows-v5`; its stable
-internal ID remains `narrows` for saved ballots. It has 579 sailable hexes.
+The playable file is `server/maps/narrows.json`, version `narrows-v7`; its stable
+internal ID remains `narrows` for saved ballots. It has 578 sailable hexes.
 
 ## Serpent's Coil
 
@@ -52,28 +53,30 @@ sooner; the inner wall and winding route still matter on the way to the Heart.
 A small northwest island offers routes around either side between Dawn Watch,
 Serpent's Jaw, and the western approach.
 
-Breachwatch (9) and Scalehaven (10) sit inside the outer arm. Coil's Reach (11)
-and Fang Harbor (12) contest the approach to the heart. Distance across land
-can be small even when sailing distance is long, so nearby ports need not be
-easy to reinforce. Blocking the eastern breach lengthens the tested crossing
-by more than twenty movement points. The northern cut independently shortens
-one approach to the heart's harbor from 36 steps to six; closing the eastern
-breach does not close that approach. The longer winding route remains available.
+Breachwatch (9), Scalehaven (10), Coil's Reach (11), and Serpent's Jaw (8) sit
+within the coil. Gull's Rest (12) fills the northwestern outer ring between Dawn Watch and
+Westwind. The eight outer ports and four inner ports surround neutral Serpent's
+Heart (13). Distance across land can be small even when sailing distance is
+long, so nearby ports need not be easy to reinforce. Blocking the eastern breach
+lengthens the tested crossing by more than twenty movement points. The northern
+cut independently shortens one approach to the heart's harbor from 36 steps to
+six; closing the eastern breach does not close that approach. The longer winding
+route remains available.
 
 The playable file is `server/maps/shattered-isles.json`, version
-`shattered-isles-v5`; its internal ID remains `shattered-isles`. It has 593
+`shattered-isles-v7`; its internal ID remains `shattered-isles`. It has 593
 sailable hexes. The islands are terrain, while ports supply capacity, rebuilding
 positions, and elimination objectives. The Heart has the same value as any
 other port. These strategic tradeoffs still need four-player balance play.
 
 ## Existing matches
 
-Versions 2, 3, and 4 are preserved in the corresponding `narrows-v*.json` and
-`shattered-isles-v*.json` files. Saved matches keep
-their exact terrain, with a legacy label. Version 2 retains the names The
-Narrows and Shattered Isles; version 3 retains The Choke and Serpent's Coil.
-They can continue without moving ships or resetting saves. New matches use
-version 5. Unknown versions and versions belonging to another map fail
+Versions 2 through 6 are preserved in the corresponding `narrows-v*.json` and
+`shattered-isles-v*.json` files. Saved matches keep their exact terrain, with a
+legacy label. Version 2 retains the names The Narrows and Shattered Isles;
+version 3 retains The Choke and Serpent's Coil. They can continue without moving
+ships or resetting saves. New matches use version 7. Unknown versions and
+versions belonging to another map fail
 explicitly. The API and client load the version saved in the match;
 perk-placement caches are also version-specific. No live save is reset.
 
@@ -91,4 +94,4 @@ and saved versions. The Choke has an explicit three-cell cut test; the Coil has
 distance tests for all three cuts, including passage past one blocked southern
 entrance hex. Island tests preserve all port positions and harbor cells. The five-browser map scenario
 covers voting, random setup, sailing, shared state, and restart persistence on both
-maps, plus loading all six legacy layouts.
+maps, plus loading all ten legacy layouts.

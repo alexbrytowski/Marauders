@@ -14,14 +14,14 @@ PALETTE = {"water": "#2d6890", "harbor": "#153657", "port": "#111a1b",
            "land": "#526d50", "coast": "#c3b58d"}
 COPY = {
     "narrows": ("THE CHOKE", "Two great seas. One crossing. Three ships wide.", [
-        "Northgate & Southgate: the two banks of the only crossing.",
-        "One island in each bay creates flanking routes between the ring of ports.",
+        "Northgate is the neutral center port; six ports ring each sea.",
+        "One island in each bay creates flanking routes around those port rings.",
         "Whirlpools can temporarily change access across the divide.",
     ]),
     "shattered-isles": ("SERPENT'S COIL", "A southern entrance. A northwest island. More routes to contest.", [
         "The southern cut gives southern fleets direct access to the middle circuit.",
         "The eastern breach, northern inner cut, and winding approach remain open.",
-        "The northwest island splits sailing routes; all thirteen ports keep their normal value.",
+        "Eight outer ports, four inner ports, and the neutral Heart are evenly spread.",
     ]),
 }
 

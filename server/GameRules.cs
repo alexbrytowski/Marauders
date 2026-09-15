@@ -174,7 +174,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Log("map", $"Map draw: {selected.Name}, ticket {state.MapSelection.Ticket}/{state.MapSelection.TotalTickets}. Votes — {counts}.{(state.MapSelection.UsedEqualOdds ? " No votes: all maps had equal odds." : " Each vote was one ticket.")}");
         state.TurnOrder = Enumerable.Range(0, 4).Select(i => state.Players[(start + i) % 4].Id).ToList();
         RevealPerks();
-        var ports = state.Ports.Where(p => selected.NeutralPortId is null || p.Id != selected.NeutralPortId).ToArray();
+        var ports = state.Ports.Where(p => p.Id != selected.NeutralPortId).ToArray();
         Require(ports.Length == 12, "A new game needs exactly twelve starting ports.");
         for (var i = ports.Length - 1; i > 0; i--)
         {
@@ -182,9 +182,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             (ports[i], ports[j]) = (ports[j], ports[i]);
         }
         for (var i = 0; i < ports.Length; i++) ports[i].OwnerId = state.TurnOrder[i % 4];
-        Log("setup", selected.NeutralPortId is { } neutralPortId
-            ? $"Three ports were randomly assigned to each captain. {Port(neutralPortId).Name} remains neutral."
-            : "Three ports were randomly assigned to each captain. No ports begin neutral on this map.");
+        Log("setup", $"Three ports were randomly assigned to each captain. {Port(selected.NeutralPortId).Name} remains neutral.");
         LaunchStartingFleets();
     }
     private string DraftPlayer(int pick) => state.TurnOrder[pick / 4 % 2 == 0 ? pick % 4 : 3 - pick % 4];

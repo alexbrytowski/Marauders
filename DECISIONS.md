@@ -2,14 +2,15 @@
 
 ## 2026-09-14: alternate-map central port balance
 
-- Random port assignment made the forced neutral port on each alternate map an
-  easy capture for the captain randomly assigned its neighboring central port.
-  The owner therefore reduced The Choke and Serpent's Coil to 12 ports, all of
-  which are dealt at setup. Classic retains 13 ports and neutral Blackwater.
-- Remove Southgate from The Choke so Northgate is its only central port. Remove
-  Fang Harbor from Serpent's Coil so Coil's Reach and Serpent's Heart are its two
-  middle ports. Preserve the 13-port v5 layouts for games already in progress;
-  new games use v6.
+- The owner clarified that all three maps keep 13 ports and that the port nearest
+  the center remains the neutral port at setup. The concern was adjacent middle
+  ports, not the total port count.
+- Southgate stays removed from The Choke. Dusk Harbor replaces it on the western
+  outer ring, producing six ports around each sea plus neutral Northgate at the
+  center. Fang Harbor stays removed from Serpent's Coil. Gull's Rest replaces it
+  on the northwestern outer ring, producing eight outer ports, four inner ports,
+  and neutral Serpent's Heart at the center. Preserve v5 and v6 for games already
+  in progress; new games use v7.
 
 ## 2026-09-13: public Cheat Death rerolls
 

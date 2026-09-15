@@ -6,9 +6,9 @@ Marauders is a turn-based board game about pirate ships capturing ports. Each pl
 
 ## The board
 
-The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic** and has 13 ports. Two additional layouts, **The Choke** and **Serpent’s Coil**, use the same terrain meanings and rules and have 12 ports each.
+The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic**. Two additional layouts, **The Choke** and **Serpent’s Coil**, use the same terrain meanings and rules. Each map has 13 ports.
 
-- **Black:** A port, where ships are produced. Classic has 13; The Choke and Serpent’s Coil have 12.
+- **Black:** A port, where ships are produced. There are 13 on every map.
 - **Dark blue:** Waters surrounding a port. A ship on this color can attack an enemy port or defend its own. Ships cannot attack or defend a port from any other hex.
 - **Blue:** Waters that ships traverse.
 - **Green and tan:** Game boundaries signifying land. Ships cannot travel here.
@@ -22,13 +22,13 @@ The game is played with four players. Additional players are spectators only and
 
 The players decide who goes first; the host selects that captain in the lobby (the first seated captain is the default). Each of the four captains must press **Ready**. The fourth ready automatically draws the map, assigns ports, launches ships, and starts play. Captains may undo readiness before then. Changing your map vote clears your readiness; changing the first captain or the seated crew clears everyone's readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
 
-The server randomly deals three ports to each captain. On Classic, Blackwater is the thirteenth port and starts unowned; it can be captured during the game. The Choke and Serpent's Coil have exactly 12 ports, so every port on those maps is dealt. There is no port draft in new games.
+The server randomly deals three ports to each captain. The port nearest the center of the selected map starts unowned: Blackwater on Classic, Northgate on The Choke, and Serpent's Heart on Serpent's Coil. It can be captured during the game. There is no port draft in new games.
 
 Before play, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Serpent’s Coil has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
 Six perk pickups appear in open water on the selected map as part of setup.
 
-The server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. Each captain begins with six ships. There is no separate ship placement or fleet confirmation. On Classic, the unowned port receives no ships.
+The server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. Each captain begins with six ships. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
 
 ## Game rules
 

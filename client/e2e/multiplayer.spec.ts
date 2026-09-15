@@ -2234,17 +2234,20 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       expect(game.mapSelection?.totalTickets).toBe(4)
       const board: Board = await (await pages[0].request.get('/api/board')).json()
       expect(board.id).toBe(mapId)
-      expect(board.version).toBe(`${mapId}-v6`)
+      expect(board.version).toBe(`${mapId}-v7`)
       expect(board.version).toBe(game.boardVersion)
-      expect(game.ports).toHaveLength(12)
-      expect(game.ports.every((port) => port.ownerId !== null)).toBeTruthy()
+      expect(game.ports).toHaveLength(13)
+      const neutralPort = game.ports.filter((port) => port.ownerId === null)
+      expect(neutralPort).toHaveLength(1)
       if (mapId === 'narrows') {
         expect(game.ports.some((port) => port.name === 'Northgate')).toBeTruthy()
+        expect(neutralPort[0].name).toBe('Northgate')
         expect(game.ports.some((port) => port.name === 'Southgate')).toBeFalsy()
+        expect(game.ports.some((port) => port.name === 'Dusk Harbor')).toBeTruthy()
       } else {
+        expect(neutralPort[0].name).toBe('Serpent\'s Heart')
         expect(game.ports.some((port) => port.name === 'Fang Harbor')).toBeFalsy()
-        expect(game.ports.filter((port) => ['Coil\'s Reach', 'Serpent\'s Heart'].includes(port.name)))
-          .toHaveLength(2)
+        expect(game.ports.some((port) => port.name === 'Gull\'s Rest')).toBeTruthy()
       }
       for (const p of pages) {
         await p.getByRole('button', { name: /^All \d+ events$/ }).click()
@@ -2327,7 +2330,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         await expect(p.locator('.map-options')).toBeVisible()
       }
     }
-    // Existing matches retain v2-v5 geometry while new drafts receive v6.
+    // Existing matches retain v2-v6 geometry while new drafts receive v7.
     for (const [mapId, version] of [
       ['narrows', 'v2'],
       ['shattered-isles', 'v2'],
@@ -2337,6 +2340,8 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       ['shattered-isles', 'v4'],
       ['narrows', 'v5'],
       ['shattered-isles', 'v5'],
+      ['narrows', 'v6'],
+      ['shattered-isles', 'v6'],
     ]) {
       await stopServer()
       const savePath = path.join(dataDirectory, 'game-state-v2.json')
@@ -2367,13 +2372,13 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         await page.reload()
         await expect(page.locator('.connection')).toHaveText('Live')
         await expect(page.locator('.chart-header')).toContainText('(LEGACY)')
-        await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
+        await expect(page.locator('.sea-map [data-port]')).toHaveCount(legacy.ports.length)
         await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
       }
       const legacyBoard: Board = await (await pages[0].request.get('/api/board')).json()
       const latestBoard: Board = await (await pages[0].request.get(`/api/board?mapId=${mapId}`)).json()
       expect(legacyBoard.version).toBe(`${mapId}-${version}`)
-      expect(latestBoard.version).toBe(`${mapId}-v6`)
+      expect(latestBoard.version).toBe(`${mapId}-v7`)
       const changed = legacyBoard.cells.find(
         (c) => latestBoard.cells.find((next) => key(next) === key(c))?.terrain !== c.terrain,
       )!

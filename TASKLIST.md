@@ -15,13 +15,13 @@ provider settings and a live deployment have not been verified by the agent.
 
 ## September 14: alternate-map port balance
 
-- [x] Remove Southgate from The Choke, leaving one central port, and remove Fang
-  Harbor from Serpent's Coil, leaving two middle ports. Both maps now deal all
-  12 ports so every captain still starts with three; Classic retains neutral
-  Blackwater as its thirteenth port.
-- [x] Verify v6 map connectivity, automatic fleet and perk setup, client
-  lint/build, all 178 server tests, and the focused five-browser map scenario,
-  including v2-v5 save compatibility.
+- [x] Keep Southgate and Fang Harbor out of the middle, but restore both alternate
+  maps to 13 evenly distributed ports. Add Dusk Harbor to The Choke's western
+  outer ring and Gull's Rest to Serpent's Coil's northwestern outer ring. Keep
+  Northgate and Serpent's Heart neutral because they are nearest each map's center.
+- [ ] Verify v7 map connectivity, automatic fleet and perk setup, client
+  lint/build, server tests, and the focused five-browser map scenario, including
+  v2-v6 save compatibility.
 
 ## September 13: first full playthrough follow-up
 

@@ -57,7 +57,7 @@ def write(name, rows, points, names):
     assert reached == water, f"Isolated water: {water - reached}"
     target = ROOT / "server" / "maps" / f"{name}.json"
     target.parent.mkdir(exist_ok=True)
-    target.write_text(json.dumps(dict(version=f"{name}-v5", rows=["".join(r) for r in rows], ports=ports), indent=2) + "\n", encoding="utf-8")
+    target.write_text(json.dumps(dict(version=f"{name}-v7", rows=["".join(r) for r in rows], ports=ports), indent=2) + "\n", encoding="utf-8")
     print(f"{name}: {len(water)} sailing hexes; harbor sizes {list(map(len, harbors))}")
 
 
@@ -75,13 +75,14 @@ def narrows():
     # bay create flanking routes while leaving the central crossing untouched.
     land(rows, 9, [(8, 9), (7, 9), (7, 10), (8, 9)])
     land(rows, 17, [(24, 25), (23, 26), (23, 25), (24, 24)])
-    # Ring each bay: north/south, outer shore, and both inner-shore shoulders.
+    # Six ports ring each bay. Northgate is the lone central port and remains
+    # the neutral thirteenth port during setup.
     points = [(5, 14), (9, 4), (14, 9), (14, 23), (8, 28),
               (24, 4), (18, 8), (29, 14), (28, 22), (24, 28), (18, 23),
-              (16, 13), (16, 17)]
+              (16, 13), (5, 21)]
     write("narrows", rows, points, ["Westwatch", "Saltmarket", "Low Lantern", "Copper Quay", "Southwatch",
           "Eastwatch", "Highgate", "Moonmarket", "Bright Lantern", "Silver Quay", "Stormwatch",
-          "Northgate", "Southgate"])
+          "Northgate", "Dusk Harbor"])
 
 
 def shattered_isles():
@@ -114,10 +115,12 @@ def shattered_isles():
     # Break up the northwest sea with a small island, leaving broad routes on
     # both sides between Dawn Watch, Serpent's Jaw, and the western approach.
     land(rows, 4, [(8, 9), (6, 9), (6, 10), (7, 9), (8, 8)])
+    # Eight ports form an outer ring, four sit within the coil, and Serpent's
+    # Heart remains the neutral center port.
     points = [(3, 3), (26, 2), (30, 10), (30, 21), (25, 28), (7, 28), (2, 19),
-              (14, 6), (23, 9), (23, 21), (9, 14), (18, 12), (16, 15)]
+              (14, 6), (23, 9), (23, 21), (9, 14), (2, 11), (16, 15)]
     write("shattered-isles", rows, points, ["Dawn Watch", "North Star", "Eastwind", "Last Light", "South Star",
-          "Turtle Quay", "Westwind", "Serpent's Jaw", "Breachwatch", "Scalehaven", "Coil's Reach", "Fang Harbor", "Serpent's Heart"])
+          "Turtle Quay", "Westwind", "Serpent's Jaw", "Breachwatch", "Scalehaven", "Coil's Reach", "Gull's Rest", "Serpent's Heart"])
 
 
 if __name__ == "__main__":
