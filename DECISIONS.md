@@ -1,5 +1,17 @@
 # Implementation decisions
 
+## 2026-09-15: geographically balanced random ports
+
+- Pure shuffling sometimes gave one captain three tightly grouped ports while
+  another captain's ports were scattered. New games measure shortest navigable
+  sailing distance between harbors and compare every possible 3/3/3/3 geographic
+  partition. Port numbers and straight-line distances do not determine balance.
+- Exclude partitions with the greatest number of three-port clusters, then rank
+  the survivors by the worst captain's spread, spread disparity, and disparity
+  in central-versus-remote port reach. Randomly draw from the best 10% rather
+  than always selecting one optimum, and randomly map the four port groups to
+  captains. The central neutral port remains excluded from the deal.
+
 ## 2026-09-15: round-50 whirlpool surge
 
 - The owner increased the whirlpool-pair spawn rate by 2.5 times starting in

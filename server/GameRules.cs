@@ -180,13 +180,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         RevealPerks();
         var ports = state.Ports.Where(p => p.Id != selected.NeutralPortId).ToArray();
         Require(ports.Length == 12, "A new game needs exactly twelve starting ports.");
-        for (var i = ports.Length - 1; i > 0; i--)
-        {
-            var j = dice.Next(i + 1);
-            (ports[i], ports[j]) = (ports[j], ports[i]);
-        }
-        for (var i = 0; i < ports.Length; i++) ports[i].OwnerId = state.TurnOrder[i % 4];
-        Log("setup", $"Three ports were randomly assigned to each captain. {Port(selected.NeutralPortId).Name} remains neutral.");
+        var deal = StartingPortDealer.Create(selected.Board, ports.Select(port => port.Id).ToArray(), state.TurnOrder.Count, dice);
+        for (var owner = 0; owner < state.TurnOrder.Count; owner++)
+            foreach (var portId in deal.PortIdsByOwner[owner]) Port(portId).OwnerId = state.TurnOrder[owner];
+        Log("setup", $"Three geographically balanced random ports were assigned to each captain. {Port(selected.NeutralPortId).Name} remains neutral.");
         LaunchStartingFleets();
     }
     private string DraftPlayer(int pick) => state.TurnOrder[pick / 4 % 2 == 0 ? pick % 4 : 3 - pick % 4];

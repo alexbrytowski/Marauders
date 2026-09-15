@@ -44,8 +44,8 @@ export function LobbyReady({
         <strong>{ready} / 4 captains ready</strong>
       </div>
       <p>
-        When all four are ready, each captain receives three random ports and six ships. The central port
-        stays neutral and play begins.
+        When all four are ready, each captain receives three geographically balanced random ports and six
+        ships. The central port stays neutral and play begins.
       </p>
       {game.players.length < 4 && (
         <p>

@@ -174,6 +174,21 @@ public partial class GameRulesTests
         Assert.False(map.IsSailable(BoardMap.Offset(17, 18)));
     }
 
+    [Fact] public void Coil_v8_adds_two_double_passages_and_one_single_passage_from_the_marked_plan()
+    {
+        var map = MapCatalog.Get("shattered-isles").Board;
+        var legacy = MapCatalog.Resolve("shattered-isles", "shattered-isles-v7");
+        var doublePassages =
+            (from r in new[] { 1, 2 } from c in new[] { 14, 15 } select BoardMap.Offset(c, r))
+            .Concat(from r in new[] { 22, 23 } from c in new[] { 7, 8 } select BoardMap.Offset(c, r));
+        var singlePassage = from r in new[] { 18, 19 } select BoardMap.Offset(16, r);
+        var expected = doublePassages.Concat(singlePassage).ToHashSet();
+        Assert.Equal(10, expected.Count);
+        Assert.All(expected, h => { Assert.True(map.IsSailable(h)); Assert.False(legacy.IsSailable(h)); });
+        var changed = map.Cells.Where(c => c.Terrain != legacy.Cell(c.Hex)!.Terrain).Select(c => c.Hex).ToHashSet();
+        Assert.True(expected.SetEquals(changed));
+    }
+
     [Theory] [InlineData("narrows", 8, 10)] [InlineData("narrows", 24, 19)]
     [InlineData("shattered-isles", 8, 6)]
     public void New_islands_are_small_separate_land_masses(string mapId, int col, int row)

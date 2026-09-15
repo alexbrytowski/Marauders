@@ -89,8 +89,9 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
    or Serpent's Coil; you can change or clear your vote before play starts.
 2. The host chooses who goes first, then all four captains press **Ready to sail**.
    The fourth ready draws the map with one ticket per vote (equal chances if nobody votes)
-   and reveals six perks. Each captain receives three random ports. The most central
-   port stays neutral: Blackwater, Northgate, or Serpent's Heart, depending on the map.
+   and reveals six perks. Each captain receives three geographically balanced random
+   ports drawn from a broad fair band. The most central port stays neutral: Blackwater,
+   Northgate, or Serpent's Heart, depending on the map.
 3. Two ships automatically launch at every owned port and play begins immediately.
 4. Roll 4–6 to sail, select a ship, choose a highlighted destination, and confirm its
    route. A route stops when combat triggers. Unused movement can be split among ships.

@@ -51,6 +51,24 @@ public partial class GameRulesTests
         Assert.True(deals.Count > 1);
     }
 
+    [Theory] [InlineData("classic")] [InlineData("narrows")] [InlineData("shattered-isles")]
+    public void Balanced_dealer_retains_many_cluster_free_random_layouts(string mapId)
+    {
+        var map = MapCatalog.Get(mapId);
+        var ports = map.Board.Ports.Where(port => port.Id != map.NeutralPortId).Select(port => port.Id).ToArray();
+        var layouts = new HashSet<string>();
+        for (var seed = 0; seed < 30; seed++)
+        {
+            var deal = StartingPortDealer.Create(map.Board, ports, 4, new SeededDice(seed));
+            Assert.Equal(0, deal.ClusteredGroupCount);
+            Assert.True(deal.FairLayoutCount >= 100, $"{map.Name} retained only {deal.FairLayoutCount} fair layouts.");
+            Assert.Equal(12, deal.PortIdsByOwner.SelectMany(group => group).Distinct().Count());
+            Assert.All(deal.PortIdsByOwner, group => Assert.Equal(3, group.Count));
+            layouts.Add(string.Join('|', deal.PortIdsByOwner.Select(group => string.Join(',', group.Order()))));
+        }
+        Assert.True(layouts.Count >= 25, $"{map.Name} produced only {layouts.Count} distinct deals.");
+    }
+
     private static void StartEncounter(GameState state, Ship a, Ship b)
     {
         var choice = new CombatChoice("range-check", a.Id, b.Id, null);

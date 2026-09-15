@@ -13,6 +13,23 @@ Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
 
+## September 15: Serpent's Coil passages
+
+- [x] Apply the owner's marked terrain plan to Serpent's Coil: add two-hex-wide
+  northern and lower-western passages plus a one-hex-wide passage through the
+  center barrier. Preserve v7 terrain for games already in progress and cover
+  the exact ten changed hexes and save compatibility with automated tests.
+
+## September 15: geographically balanced random ports
+
+- [x] Replace the unconstrained starting-port shuffle with a server-authoritative
+  fair-band draw based on actual sailing distance. Exclude the strongest
+  three-port clusters while retaining a broad pool of varied layouts; align the
+  rules and lobby wording and cover all three maps with deterministic tests.
+  Thirty seeded draws per map retain at least 25 distinct results. Client lint
+  and build, Debug tests (196), Release build, and the focused five-browser
+  setup/synchronization/persistence regression pass.
+
 ## September 15: round-100 action surge
 
 - [x] Starting in round 100, increase server-authoritative action dice from one

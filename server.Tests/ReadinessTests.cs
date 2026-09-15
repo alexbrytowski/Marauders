@@ -26,11 +26,11 @@ public partial class GameRulesTests
         Assert.Equal("lobby", s.Phase);
         ReadyCaptain(s, 1);
         Assert.Equal("playing", s.Phase); Assert.Equal(s.HostPlayerId, s.ActivePlayerId);
-        Assert.Equal(6, s.PerkPickups.Count); Assert.Single(s.Events, e => e.Message.StartsWith("Three ports were randomly assigned"));
+        Assert.Equal(6, s.PerkPickups.Count); Assert.Single(s.Events, e => e.Message.StartsWith("Three geographically balanced random ports"));
         Assert.Throws<RuleException>(() => ReadyCaptain(s, 1));
         Assert.Throws<RuleException>(() => ReadyCaptain(s, 1, false));
         Assert.Throws<RuleException>(() => Rules(s).Act(s.HostPlayerId!, new("set-first-player", FirstPlayerId: s.Players[1].Id)));
-        Assert.Single(s.Events, e => e.Message.StartsWith("Three ports were randomly assigned"));
+        Assert.Single(s.Events, e => e.Message.StartsWith("Three geographically balanced random ports"));
     }
 
     [Fact] public void Setup_changes_invalidate_old_ready_clicks_and_reset_the_affected_captains()
@@ -89,7 +89,7 @@ public partial class GameStateStoreTests
         Assert.All(results, result => Assert.True(result.Success, result.Error));
         var draft = await Store(directory, password).ReadAsync();
         Assert.Equal("playing", draft.Phase); Assert.Equal(restored.FirstPlayerId, draft.ActivePlayerId);
-        Assert.Single(draft.Events, e => e.Message.StartsWith("Three ports were randomly assigned")); Assert.Equal(6, draft.PerkPickups.Count);
+        Assert.Single(draft.Events, e => e.Message.StartsWith("Three geographically balanced random ports")); Assert.Equal(6, draft.PerkPickups.Count);
         Assert.Equal(24, draft.Ships.Count); Assert.All(draft.Players, p => Assert.Equal(3, draft.Ports.Count(port => port.OwnerId == p.Id)));
         var late = await store.ActAsync("browser-3", new("set-ready", IsReady: true, LobbyVersion: restored.LobbyVersion));
         Assert.False(late.Success); Assert.Equal(draft.Revision, (await store.ReadAsync()).Revision);

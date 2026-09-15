@@ -232,10 +232,10 @@ function Setup({ board }: { board?: Board }) {
   const order = orders[deal % orders.length]
   return (
     <Lesson
-      takeaway="Ready up, receive three random ports, and your six starting ships launch automatically."
+      takeaway="Ready up, receive three balanced random ports, and your six starting ships launch automatically."
       visual={
         <>
-          <span className="example-label">EXAMPLE RANDOM PORT DEAL</span>
+          <span className="example-label">EXAMPLE BALANCED RANDOM PORT DEAL</span>
           <div className="draft-example">
             {order.map((captain, i) => (
               <span
@@ -272,8 +272,10 @@ function Setup({ board }: { board?: Board }) {
         </li>
       </ol>
       <p>
-        Each captain receives three random ports and six ships. The most central port stays neutral: Blackwater
-        on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Six perk pickups await at sea.
+        Each captain receives three geographically balanced random ports and six ships. The server avoids
+        strong three-port clusters while keeping many possible deals. The most central port stays neutral:
+        Blackwater on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Six perk pickups await at
+        sea.
       </p>
       <details>
         <summary>Map votes & changing your mind</summary>

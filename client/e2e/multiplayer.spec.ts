@@ -1585,7 +1585,7 @@ test('captains ready together, restore lobby setup, and automatically start one 
     expect(game.phase).toBe('playing')
     expect(game.activePlayerId).toBe(ids[2])
     expect(
-      game.events.filter((e) => e.message.startsWith('Three ports were randomly assigned')),
+      game.events.filter((e) => e.message.startsWith('Three geographically balanced random ports')),
     ).toHaveLength(1)
     expect(game.mapId).toBe('classic')
     expect(game.perkPickups).toHaveLength(6)
@@ -2467,7 +2467,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       expect(game.mapSelection?.totalTickets).toBe(4)
       const board: Board = await (await pages[0].request.get('/api/board')).json()
       expect(board.id).toBe(mapId)
-      expect(board.version).toBe(`${mapId}-v7`)
+      expect(board.version).toBe(mapId === 'shattered-isles' ? 'shattered-isles-v8' : `${mapId}-v7`)
       expect(board.version).toBe(game.boardVersion)
       expect(game.ports).toHaveLength(13)
       const neutralPort = game.ports.filter((port) => port.ownerId === null)
@@ -2611,7 +2611,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       const legacyBoard: Board = await (await pages[0].request.get('/api/board')).json()
       const latestBoard: Board = await (await pages[0].request.get(`/api/board?mapId=${mapId}`)).json()
       expect(legacyBoard.version).toBe(`${mapId}-${version}`)
-      expect(latestBoard.version).toBe(`${mapId}-v7`)
+      expect(latestBoard.version).toBe(mapId === 'shattered-isles' ? 'shattered-isles-v8' : `${mapId}-v7`)
       const changed = legacyBoard.cells.find(
         (c) => latestBoard.cells.find((next) => key(next) === key(c))?.terrain !== c.terrain,
       )!
