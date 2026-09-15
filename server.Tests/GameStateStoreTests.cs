@@ -48,6 +48,7 @@ public partial class GameStateStoreTests
     [InlineData("shattered-isles", "shattered-isles-v2")] [InlineData("narrows", "narrows-v3")]
     [InlineData("shattered-isles", "shattered-isles-v3")]
     [InlineData("narrows", "narrows-v4")] [InlineData("shattered-isles", "shattered-isles-v4")]
+    [InlineData("narrows", "narrows-v5")] [InlineData("shattered-isles", "shattered-isles-v5")]
     public async Task Legacy_geometry_and_architect_migration_preserve_saved_ships_and_whirlpool_timer(string mapId, string version)
     {
         var directory = Directory.CreateTempSubdirectory("marauders-legacy-").FullName;
@@ -226,7 +227,7 @@ public partial class GameStateStoreTests
         Assert.Equal("narrows", (await store.ReadAsync()).MapVotes[lobby.Players[1].Id]);
         await ReadyCrewAsync(store, prefix: "private-browser-");
         var selected = await Store(directory, password).ReadAsync();
-        Assert.Equal("narrows", selected.MapId); Assert.Equal("narrows-v5", selected.BoardVersion);
+        Assert.Equal("narrows", selected.MapId); Assert.Equal("narrows-v6", selected.BoardVersion);
         Assert.Equal("Westwatch", selected.Ports[0].Name); Assert.Equal("narrows", selected.MapSelection!.MapId);
         Assert.DoesNotContain("private-browser", System.Text.Json.JsonSerializer.Serialize(selected, GameStateStore.JsonOptions));
         Assert.True((await store.ResetAsync(new(password, selected.Id, selected.Revision))).Success);

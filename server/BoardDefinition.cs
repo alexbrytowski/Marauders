@@ -29,8 +29,8 @@ public sealed class BoardMap
         PortHexes = source.Ports.ToDictionary(p => p.Id, p => Offset(p.Col, p.Row));
         Cells = CreateCells();
         ByHex = Cells.ToDictionary(c => c.Hex);
-        if (Ports.Count != 13 || PortHexes.Values.Distinct().Count() != 13 || Ports.Any(p => Harbor(p.Id).Count < 2))
-            throw new InvalidDataException("A Marauders map needs thirteen distinct ports with at least two harbor cells each.");
+        if (Ports.Count is < 12 or > 13 || PortHexes.Values.Distinct().Count() != Ports.Count || Ports.Any(p => Harbor(p.Id).Count < 2))
+            throw new InvalidDataException("A Marauders map needs twelve or thirteen distinct ports with at least two harbor cells each.");
     }
     public static BoardMap Load(string file) => new(JsonSerializer.Deserialize<MapSource>(
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, file)), new JsonSerializerOptions(JsonSerializerDefaults.Web))!);

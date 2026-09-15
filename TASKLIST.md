@@ -1,6 +1,6 @@
 # Marauders launch checklist
 
-Updated 2026-09-13. Target: one game, four captains plus approximately three
+Updated 2026-09-14. Target: one game, four captains plus approximately three
 spectators, desktop-first. Joining is open; the owner explicitly declined an
 invitation gate. Reset stays password-protected. No hard spectator cap is
 implemented or required by this planning assumption.
@@ -12,6 +12,16 @@ See [LAUNCH_REVIEW.md](LAUNCH_REVIEW.md) for findings and hosting options,
 Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
+
+## September 14: alternate-map port balance
+
+- [x] Remove Southgate from The Choke, leaving one central port, and remove Fang
+  Harbor from Serpent's Coil, leaving two middle ports. Both maps now deal all
+  12 ports so every captain still starts with three; Classic retains neutral
+  Blackwater as its thirteenth port.
+- [x] Verify v6 map connectivity, automatic fleet and perk setup, client
+  lint/build, all 178 server tests, and the focused five-browser map scenario,
+  including v2-v5 save compatibility.
 
 ## September 13: first full playthrough follow-up
 

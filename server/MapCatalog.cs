@@ -5,11 +5,10 @@ namespace Marauders.Server;
 public sealed record MapOption(string Id, string Name, string Description, [property: JsonIgnore] BoardMap Board)
 {
     public string Version => Board.Version;
-    public string NeutralPortId => Id switch
+    public string? NeutralPortId => Id switch
     {
         "classic" => "port-7",
-        "narrows" => "port-12",
-        "shattered-isles" => "port-13",
+        "narrows" or "shattered-isles" => null,
         _ => throw new RuleException("This map needs a designated neutral starting port.")
     };
 }
@@ -18,7 +17,7 @@ public static class MapCatalog
 {
     public static IReadOnlyList<MapOption> All { get; } = [
         new("classic", "Classic", "The original Marauder Sea: familiar coastlines, sheltered harbors, and open crossings.", BoardDefinition.Classic),
-        new("narrows", "The Choke", "An island in each bay divides the sailing routes. One passage, three ships wide, links the seas between two gate ports.", BoardMap.Load("maps/narrows.json")),
+        new("narrows", "The Choke", "An island in each bay divides the sailing routes. One passage, three ships wide, links the seas at a single central gate port.", BoardMap.Load("maps/narrows.json")),
         new("shattered-isles", "Serpent's Coil", "A northwest island and a winding inner sea, with eastern and southern entrances and a northern cut near the heart.", BoardMap.Load("maps/shattered-isles.json"))
     ];
     private static readonly IReadOnlyDictionary<string, BoardMap> Legacy = new Dictionary<string, BoardMap>
@@ -28,7 +27,9 @@ public static class MapCatalog
         ["narrows-v3"] = BoardMap.Load("maps/narrows-v3.json"),
         ["shattered-isles-v3"] = BoardMap.Load("maps/shattered-isles-v3.json"),
         ["narrows-v4"] = BoardMap.Load("maps/narrows-v4.json"),
-        ["shattered-isles-v4"] = BoardMap.Load("maps/shattered-isles-v4.json")
+        ["shattered-isles-v4"] = BoardMap.Load("maps/shattered-isles-v4.json"),
+        ["narrows-v5"] = BoardMap.Load("maps/narrows-v5.json"),
+        ["shattered-isles-v5"] = BoardMap.Load("maps/shattered-isles-v5.json")
     };
     public static BoardMap Resolve(string id, string version)
     {

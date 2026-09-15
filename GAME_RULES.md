@@ -6,9 +6,9 @@ Marauders is a turn-based board game about pirate ships capturing ports. Each pl
 
 ## The board
 
-The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic**. Two additional layouts, **The Choke** and **Serpent’s Coil**, use the same terrain meanings and rules, each with 13 ports.
+The game board features multiple hexagons, each with its own meaning. A JPEG of the original in-person board is saved to this folder: `Original Marauders Board.jpeg`. That layout is named **Classic** and has 13 ports. Two additional layouts, **The Choke** and **Serpent’s Coil**, use the same terrain meanings and rules and have 12 ports each.
 
-- **Black:** A port, where ships are produced. There are 13 on the board.
+- **Black:** A port, where ships are produced. Classic has 13; The Choke and Serpent’s Coil have 12.
 - **Dark blue:** Waters surrounding a port. A ship on this color can attack an enemy port or defend its own. Ships cannot attack or defend a port from any other hex.
 - **Blue:** Waters that ships traverse.
 - **Green and tan:** Game boundaries signifying land. Ships cannot travel here.
@@ -22,13 +22,13 @@ The game is played with four players. Additional players are spectators only and
 
 The players decide who goes first; the host selects that captain in the lobby (the first seated captain is the default). Each of the four captains must press **Ready**. The fourth ready automatically draws the map, assigns ports, launches ships, and starts play. Captains may undo readiness before then. Changing your map vote clears your readiness; changing the first captain or the seated crew clears everyone's readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
 
-The server randomly deals three ports to each captain. The fixed central port always starts unowned: Blackwater on Classic, Northgate on The Choke, and Serpent's Heart on Serpent's Coil. It can be captured during the game. There is no port draft in new games.
+The server randomly deals three ports to each captain. On Classic, Blackwater is the thirteenth port and starts unowned; it can be captured during the game. The Choke and Serpent's Coil have exactly 12 ports, so every port on those maps is dealt. There is no port draft in new games.
 
 Before play, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Serpent’s Coil has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
 Six perk pickups appear in open water on the selected map as part of setup.
 
-The server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. Each captain begins with six ships. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
+The server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. Each captain begins with six ships. There is no separate ship placement or fleet confirmation. On Classic, the unowned port receives no ships.
 
 ## Game rules
 
@@ -108,7 +108,7 @@ If a player is over their population cap, they do not lose active ships, but can
 
 If someone captures a player's final remaining port, all of that player's remaining ships immediately become the capturer's ships, retaining their positions.
 
-The unowned port can be captured by anyone, but it fights back like a player-owned port. Its defense weakness is not reset when ships enter its dark-blue water, because it has no allied ships.
+An unowned port can be captured by anyone, but it fights back like a player-owned port. Its defense weakness is not reset when ships enter its dark-blue water, because it has no allied ships.
 
 There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 45 seconds per action and a minimum of 135 seconds per turn. At turn start, the turn budget is the greater of that minimum or (starting action dice + 1) times the action interval: two dice get 2:15, five dice get 4:30. The extra interval allows planning and construction. Gaining ships during a turn does not extend its budget. Port drafting is untimed.
 

@@ -1,5 +1,5 @@
 {
-  "version": "narrows-v6",
+  "version": "narrows-v5",
   "rows": [
     "#################################",
     "#########......###.......########",
@@ -18,7 +18,7 @@
     "#####P.......................P###",
     "######......................#####",
     "#####........................####",
-    "####...........###......##....###",
+    "####...........#P#......##....###",
     "###............###.....####...###",
     "##.............###.....###...####",
     "###...........#####.....#...#####",
@@ -34,77 +34,18 @@
     "#################################"
   ],
   "ports": [
-    {
-      "id": "port-1",
-      "name": "Westwatch",
-      "col": 5,
-      "row": 14
-    },
-    {
-      "id": "port-2",
-      "name": "Saltmarket",
-      "col": 9,
-      "row": 4
-    },
-    {
-      "id": "port-3",
-      "name": "Low Lantern",
-      "col": 14,
-      "row": 9
-    },
-    {
-      "id": "port-4",
-      "name": "Copper Quay",
-      "col": 14,
-      "row": 23
-    },
-    {
-      "id": "port-5",
-      "name": "Southwatch",
-      "col": 8,
-      "row": 28
-    },
-    {
-      "id": "port-6",
-      "name": "Eastwatch",
-      "col": 24,
-      "row": 4
-    },
-    {
-      "id": "port-7",
-      "name": "Highgate",
-      "col": 18,
-      "row": 8
-    },
-    {
-      "id": "port-8",
-      "name": "Moonmarket",
-      "col": 29,
-      "row": 14
-    },
-    {
-      "id": "port-9",
-      "name": "Bright Lantern",
-      "col": 28,
-      "row": 22
-    },
-    {
-      "id": "port-10",
-      "name": "Silver Quay",
-      "col": 24,
-      "row": 28
-    },
-    {
-      "id": "port-11",
-      "name": "Stormwatch",
-      "col": 18,
-      "row": 23
-    },
-    {
-      "id": "port-12",
-      "name": "Northgate",
-      "col": 16,
-      "row": 13
-    }
+    { "id": "port-1", "name": "Westwatch", "col": 5, "row": 14 },
+    { "id": "port-2", "name": "Saltmarket", "col": 9, "row": 4 },
+    { "id": "port-3", "name": "Low Lantern", "col": 14, "row": 9 },
+    { "id": "port-4", "name": "Copper Quay", "col": 14, "row": 23 },
+    { "id": "port-5", "name": "Southwatch", "col": 8, "row": 28 },
+    { "id": "port-6", "name": "Eastwatch", "col": 24, "row": 4 },
+    { "id": "port-7", "name": "Highgate", "col": 18, "row": 8 },
+    { "id": "port-8", "name": "Moonmarket", "col": 29, "row": 14 },
+    { "id": "port-9", "name": "Bright Lantern", "col": 28, "row": 22 },
+    { "id": "port-10", "name": "Silver Quay", "col": 24, "row": 28 },
+    { "id": "port-11", "name": "Stormwatch", "col": 18, "row": 23 },
+    { "id": "port-12", "name": "Northgate", "col": 16, "row": 13 },
+    { "id": "port-13", "name": "Southgate", "col": 16, "row": 17 }
   ]
 }

@@ -223,7 +223,7 @@ export default function App() {
                     <Icon name="compass" />
                     <span>
                       Your chart of the Marauder Sea
-                      <small>13 ports · hex-based sailing · four captains</small>
+                      <small>12–13 ports · hex-based sailing · four captains</small>
                     </span>
                   </div>
                 </div>

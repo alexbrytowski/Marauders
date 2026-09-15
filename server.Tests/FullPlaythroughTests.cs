@@ -31,8 +31,8 @@ public partial class GameRulesTests
         Assert.Equal(expected, s.Events.Last().Rolls![s.ActivePlayerId!][0]);
     }
 
-    [Theory] [InlineData("classic", "port-7")] [InlineData("narrows", "port-12")] [InlineData("shattered-isles", "port-13")]
-    public void Random_deals_preserve_central_neutral_port_equal_fleets_and_vary_ownership(string mapId, string neutral)
+    [Theory] [InlineData("classic", "port-7")] [InlineData("narrows", null)] [InlineData("shattered-isles", null)]
+    public void Random_deals_preserve_map_neutrality_equal_fleets_and_vary_ownership(string mapId, string? neutral)
     {
         var deals = new HashSet<string>();
         for (var seed = 0; seed < 12; seed++)
@@ -40,10 +40,11 @@ public partial class GameRulesTests
             var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("vote-map", MapId: mapId));
             ReadyCrew(s, s.Players[2].Id, new(s, new SeededDice(seed), new(), Now));
             Assert.Equal("playing", s.Phase); Assert.Equal(s.Players[2].Id, s.ActivePlayerId);
-            Assert.Equal(neutral, Assert.Single(s.Ports, p => p.OwnerId is null).Id);
+            if (neutral is not null) Assert.Equal(neutral, Assert.Single(s.Ports, p => p.OwnerId is null).Id);
+            else Assert.DoesNotContain(s.Ports, p => p.OwnerId is null);
             Assert.All(s.Players, p => { Assert.Equal(3, s.Ports.Count(port => port.OwnerId == p.Id)); Assert.Equal(6, s.Ships.Count(ship => ship.OwnerId == p.Id)); });
             Assert.All(s.Ports.Where(p => p.OwnerId is not null), p => Assert.Equal(2, s.Ships.Count(ship => ship.PortId == p.Id && ship.OwnerId == p.OwnerId)));
-            Assert.DoesNotContain(s.Ships, ship => ship.PortId == neutral);
+            if (neutral is not null) Assert.DoesNotContain(s.Ships, ship => ship.PortId == neutral);
             Assert.Equal(6, s.PerkPickups.Select(p => p.Kind).Distinct().Count());
             Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
             deals.Add(string.Join(',', s.Ports.Select(p => s.Players.FindIndex(player => player.Id == p.OwnerId))));

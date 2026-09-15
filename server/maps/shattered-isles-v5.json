@@ -1,5 +1,5 @@
 {
-  "version": "shattered-isles-v6",
+  "version": "shattered-isles-v5",
   "rows": [
     "#################################",
     "######........##...........######",
@@ -13,7 +13,7 @@
     "##.....................P##.....##",
     "###....#######..#####...##....P##",
     "##.....#######..#####...##.....##",
-    "##.....##.........###...##.....##",
+    "##.....##.........P##...##.....##",
     "###....##..........##...##....###",
     "##.....##P.........##..........##",
     "##.....##...####P..##..........##",
@@ -34,77 +34,18 @@
     "#################################"
   ],
   "ports": [
-    {
-      "id": "port-1",
-      "name": "Dawn Watch",
-      "col": 3,
-      "row": 3
-    },
-    {
-      "id": "port-2",
-      "name": "North Star",
-      "col": 26,
-      "row": 2
-    },
-    {
-      "id": "port-3",
-      "name": "Eastwind",
-      "col": 30,
-      "row": 10
-    },
-    {
-      "id": "port-4",
-      "name": "Last Light",
-      "col": 30,
-      "row": 21
-    },
-    {
-      "id": "port-5",
-      "name": "South Star",
-      "col": 25,
-      "row": 28
-    },
-    {
-      "id": "port-6",
-      "name": "Turtle Quay",
-      "col": 7,
-      "row": 28
-    },
-    {
-      "id": "port-7",
-      "name": "Westwind",
-      "col": 2,
-      "row": 19
-    },
-    {
-      "id": "port-8",
-      "name": "Serpent's Jaw",
-      "col": 14,
-      "row": 6
-    },
-    {
-      "id": "port-9",
-      "name": "Breachwatch",
-      "col": 23,
-      "row": 9
-    },
-    {
-      "id": "port-10",
-      "name": "Scalehaven",
-      "col": 23,
-      "row": 21
-    },
-    {
-      "id": "port-11",
-      "name": "Coil's Reach",
-      "col": 9,
-      "row": 14
-    },
-    {
-      "id": "port-13",
-      "name": "Serpent's Heart",
-      "col": 16,
-      "row": 15
-    }
+    { "id": "port-1", "name": "Dawn Watch", "col": 3, "row": 3 },
+    { "id": "port-2", "name": "North Star", "col": 26, "row": 2 },
+    { "id": "port-3", "name": "Eastwind", "col": 30, "row": 10 },
+    { "id": "port-4", "name": "Last Light", "col": 30, "row": 21 },
+    { "id": "port-5", "name": "South Star", "col": 25, "row": 28 },
+    { "id": "port-6", "name": "Turtle Quay", "col": 7, "row": 28 },
+    { "id": "port-7", "name": "Westwind", "col": 2, "row": 19 },
+    { "id": "port-8", "name": "Serpent's Jaw", "col": 14, "row": 6 },
+    { "id": "port-9", "name": "Breachwatch", "col": 23, "row": 9 },
+    { "id": "port-10", "name": "Scalehaven", "col": 23, "row": 21 },
+    { "id": "port-11", "name": "Coil's Reach", "col": 9, "row": 14 },
+    { "id": "port-12", "name": "Fang Harbor", "col": 18, "row": 12 },
+    { "id": "port-13", "name": "Serpent's Heart", "col": 16, "row": 15 }
   ]
 }

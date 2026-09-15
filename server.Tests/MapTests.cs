@@ -53,7 +53,8 @@ public partial class GameRulesTests
     public void Each_map_supports_automatic_fleets_spillover_and_predraft_perk_layouts(string mapId)
     {
         var map = MapCatalog.Get(mapId).Board;
-        Assert.Equal(13, map.Ports.Count); Assert.Equal(13, map.Cells.Count(c => c.Terrain == "port"));
+        var expectedPortCount = mapId == "classic" ? 13 : 12;
+        Assert.Equal(expectedPortCount, map.Ports.Count); Assert.Equal(expectedPortCount, map.Cells.Count(c => c.Terrain == "port"));
         var first = map.Harbor(map.Ports[0].Id)[0];
         foreach (var port in map.Ports)
         {
@@ -67,7 +68,10 @@ public partial class GameRulesTests
         var revealed = s.PerkPickups.ToArray(); Assert.Equal(6, revealed.Length);
         Assert.Equal(revealed, s.PerkPickups);
         Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(6, s.PerkPickups.Count);
-        Assert.Equal(MapCatalog.Get(mapId).NeutralPortId, Assert.Single(s.Ports, p => p.OwnerId is null).Id);
+        if (MapCatalog.Get(mapId).NeutralPortId is { } neutralPortId)
+            Assert.Equal(neutralPortId, Assert.Single(s.Ports, p => p.OwnerId is null).Id);
+        else
+            Assert.DoesNotContain(s.Ports, p => p.OwnerId is null);
         Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
         Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());
         Assert.All(s.Ships, ship => Assert.True(map.InHarbor(ship.Hex, ship.PortId)));
@@ -109,7 +113,7 @@ public partial class GameRulesTests
         }
     }
 
-    [Fact] public void Choke_has_exactly_three_crossing_hexes_and_both_seas_need_them()
+    [Fact] public void Choke_has_exactly_three_crossing_hexes_one_center_port_and_both_seas_need_them()
     {
         var map = MapCatalog.Get("narrows").Board;
         var west = BoardMap.Offset(10, 15); var east = BoardMap.Offset(22, 15);
@@ -117,7 +121,17 @@ public partial class GameRulesTests
         Assert.Equal(3, crossing.Count);
         Assert.Null(map.FindPath(west, east, crossing));
         foreach (var gap in crossing) Assert.NotNull(map.FindPath(west, east, crossing.Where(h => h != gap).ToHashSet()));
+        var center = Assert.Single(map.Ports, p => p.Col is >= 15 and <= 17 && p.Row is >= 12 and <= 18);
+        Assert.Equal("Northgate", center.Name);
         Assert.Equal("The Choke", MapCatalog.Get("narrows").Name);
+    }
+
+    [Fact] public void Coil_has_two_middle_ports_without_the_adjacent_fang_harbor()
+    {
+        var map = MapCatalog.Get("shattered-isles").Board;
+        Assert.DoesNotContain(map.Ports, p => p.Name == "Fang Harbor");
+        Assert.Equal(new[] { "Coil's Reach", "Serpent's Heart" },
+            map.Ports.Where(p => p.Id is "port-11" or "port-13").Select(p => p.Name));
     }
 
     [Fact] public void Coil_outer_breach_shortens_the_crossing_and_inner_cut_opens_another_approach()
@@ -161,11 +175,9 @@ public partial class GameRulesTests
 
     [Theory] [InlineData("narrows", 8, 10)] [InlineData("narrows", 24, 19)]
     [InlineData("shattered-isles", 8, 6)]
-    public void New_islands_are_small_separate_land_masses_with_unchanged_ports_and_harbors(string mapId, int col, int row)
+    public void New_islands_are_small_separate_land_masses(string mapId, int col, int row)
     {
         var map = MapCatalog.Get(mapId).Board; var old = MapCatalog.Resolve(mapId, mapId + "-v4");
-        Assert.Equal(map.Ports, old.Ports);
-        foreach (var port in map.Ports) Assert.Equal(old.Harbor(port.Id), map.Harbor(port.Id));
         var start = BoardMap.Offset(col, row);
         var island = new HashSet<Hex> { start }; var queue = new Queue<Hex>(island);
         while (queue.TryDequeue(out var current))

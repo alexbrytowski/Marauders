@@ -253,7 +253,7 @@ function Setup({ board }: { board?: Board }) {
             <button onClick={() => setDeal(0)}>Reset example</button>
           </div>
           <p className="example-feedback" role="status">
-            Three ports each. The central port stays neutral. Two ships launch at every owned port.
+            Three ports each. Classic leaves Blackwater neutral. Two ships launch at every owned port.
           </p>
           <TeachingChart board={board} captured />
         </>
@@ -272,8 +272,8 @@ function Setup({ board }: { board?: Board }) {
         </li>
       </ol>
       <p>
-        Each captain receives three random ports and six ships. Blackwater on Classic, Northgate on The Choke,
-        and Serpent’s Heart on Serpent’s Coil always start neutral. Six perk pickups await at sea.
+        Each captain receives three random ports and six ships. Classic leaves Blackwater neutral; all 12 ports
+        are dealt on The Choke and Serpent’s Coil. Six perk pickups await at sea.
       </p>
       <details>
         <summary>Map votes & changing your mind</summary>
