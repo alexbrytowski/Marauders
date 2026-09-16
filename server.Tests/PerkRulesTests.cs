@@ -74,6 +74,39 @@ public partial class GameRulesTests
         Assert.Equal(holder.OwnerId, publicDraw.BlackWhiteOwnerId); Assert.Contains(result, publicDraw.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory] [InlineData(true)] [InlineData(false)]
+    public void Mark_of_the_Kraken_suppresses_opposing_Black_and_White(bool markAttacks)
+    {
+        var (s, attacker, defender) = Duel(
+            markAttacks ? "mark-of-the-kraken" : "black-and-white",
+            markAttacks ? "black-and-white" : "mark-of-the-kraken");
+        var dice = new ControlledDice([6, 1, 2, 3]);
+
+        new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
+
+        Assert.Null(s.Combat.BlackWhiteResult); Assert.Null(s.Combat.BlackWhiteOwnerId);
+        Assert.All(dice.Sides, sides => Assert.Equal(6, sides)); Assert.Equal(4, dice.Sides.Count);
+        Assert.Equal(markAttacks ? 3 : 1, s.Combat.Rolls[attacker.OwnerId].Count);
+        Assert.Equal(markAttacks ? 1 : 3, s.Combat.Rolls[defender.OwnerId].Count);
+    }
+
+    [Fact]
+    public void Mark_helper_suppresses_Black_and_White_on_its_own_fleet()
+    {
+        var s = Playing(); var trigger = Add(s, 0, Open); Add(s, 1, Offset(Open, 2));
+        trigger.Perk = "black-and-white";
+        var markedHelper = Add(s, 0, Offset(Open, -1)); markedHelper.Perk = "mark-of-the-kraken";
+        s.RemainingMovement = 1;
+        Rules(s).Act(s.ActivePlayerId!, new("move", ShipId: trigger.Id, Q: Open.Q + 1, R: Open.R));
+        var dice = new ControlledDice([1, 2, 3, 4, 5]);
+
+        new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
+
+        Assert.Null(s.Combat.BlackWhiteResult); Assert.Null(s.Combat.BlackWhiteOwnerId);
+        Assert.All(dice.Sides, sides => Assert.Equal(6, sides)); Assert.Equal(5, dice.Sides.Count);
+        Assert.Equal(4, s.Combat.Rolls[trigger.OwnerId].Count);
+    }
+
     [Fact] public void Removing_the_black_and_white_helper_restores_normal_dice_for_the_next_exchange()
     {
         var s = Playing(); var trigger = Add(s, 0, Open); var opponent = Add(s, 1, Offset(Open, 2));

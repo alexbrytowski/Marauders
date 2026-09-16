@@ -115,7 +115,7 @@ The whole map fits the monitor by default, with the original corner captain card
 controls underneath, and personal Ports/Fleet/Shipyards tabs. Zoom is optional;
 **Fit** restores the whole map. Map arrow keys move focus; Enter/Space selects.
 
-Use **How to play** for eight short chapters, from board basics to advanced rules,
+Use **How to play** for nine short chapters, from board basics through the round-progression timeline and advanced rules,
 with interactive examples using the actual map and pieces. Each chapter has a
 direct link, previous/next navigation, and expandable details. Use **About** for game context,
 and **Game controller** for password-authorized resets. Ship perks appear as sea

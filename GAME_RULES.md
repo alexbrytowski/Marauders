@@ -112,6 +112,38 @@ An unowned port can be captured by anyone, but it fights back like a player-owne
 
 There is a countdown for each turn and action so the game cannot take too long. If either runs out, that player's round ends. The current playtest defaults are 45 seconds per action and a minimum of 135 seconds per turn. At turn start, the turn budget is the greater of that minimum or (starting action dice + 1) times the action interval: two dice get 2:15, five dice get 4:30. The extra interval allows planning and construction. Gaining ships during a turn does not extend its budget. Port drafting is untimed.
 
+### How the voyage changes over time
+
+A round is one captain's displayed turn. Several lasting rule changes arrive as
+that counter advances:
+
+- **Round 32:** A one-round public warning announces that the Kraken is about to
+  rise. The warning goes away after this round.
+- **Round 33:** The Kraken appears at a server-randomized ordinary-water hex, so
+  its location can differ in every game. Its pink hex has a tentacle marker and
+  its two-hex reach is colored red until it is slain. Its spawn is far enough
+  from every port that no ship inside its reach can receive port support.
+- **Round 46:** A four-round public warning announces the whirlpool surge.
+- **Round 50:** The whirlpool spawn chance after a completed turn rises from 10%
+  to 25% whenever no pair exists.
+- **Round 58:** An eight-round public warning announces slower shipbuilding.
+- **Round 66:** Newly started construction needs three future owner rounds
+  instead of two. Existing builds keep the timing stored when they began.
+- **Round 88:** A twelve-round public warning announces the action surge.
+- **Round 100:** Captains receive one action die per two ships instead of per
+  three ships, rounding up.
+
+The Kraken never moves. Any fleet whose triggering ship enters its two-hex reach
+fights it through the normal public ship-combat flow. Friendly ships within two
+hexes of that triggering ship help without chaining. The Kraken rolls three dice
+per exchange and has three persistent lives. A fleet win removes one Kraken life;
+a Kraken win removes one participating ship; ties reroll. The encounter continues
+while the triggering ship remains in reach, and lost Kraken lives never return.
+When its final life is lost, the red reach disappears and a unique seventh perk
+is revealed at its hex. Any eligible ship can collect and later drop that perk
+under the normal pickup rules. Its identity and effect are intentionally omitted
+from this guide so the reward remains a surprise.
+
 ### Perks
 
 Updated from the owner's September 13 playthrough notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, any unconsumed perk drops at its hex and can be collected again, including on arrival at a whirlpool exit.

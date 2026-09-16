@@ -13,6 +13,23 @@ Legend: `[x]` verified locally; `[ ]` still required. A passing local check does
 not certify the hosted environment. The owner has started Railway setup;
 provider settings and a live deployment have not been verified by the agent.
 
+## September 15: round-33 Kraken
+
+- [x] Spawn a stationary, server-randomized Kraken from round 33 in port-safe
+  ordinary water, with a one-round warning at round 32, a pink tentacle marker,
+  and a red two-hex reach that disappears on death.
+- [x] Add server-authoritative three-die, three-life Kraken combat with persistent
+  damage, normal fleet helpers/casualties/perk interactions, timeout recovery,
+  and no possible port support.
+- [x] Drop the reusable seventh perk on death and make its carrier contribute
+  three dice to every battle and suppress Black and White for the entire exchange
+  when it participates on either side. Reveal its name/effect in live game details
+  while keeping the reward secret in How to Play.
+- [x] Add the consolidated round-progression handbook chapter, server unit
+  coverage, multiplayer synchronization coverage, and full verification. Client
+  lint/build, Debug tests (205), Release build, and the focused five-browser
+  warning/spawn/combat/death/reward synchronization and visual regression pass.
+
 ## September 15: Serpent's Coil passages
 
 - [x] Apply the owner's marked terrain plan to Serpent's Coil: add two-hex-wide

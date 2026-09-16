@@ -10,6 +10,7 @@ public static class PerkPlacement
         var candidates = board.Cells.Where(c => c.Terrain == "water" &&
             !state.Ships.Any(s => s.Hex == c.Hex) &&
             !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R) &&
+            !(state.Kraken is { Lives: > 0 } kraken && kraken.Hex == c.Hex) &&
             state.Whirlpool?.Exit(c.Hex) is null).ToArray();
         if (candidates.Length == 0) throw new RuleException("No empty open water is available for the perk.");
         var cell = candidates[random.Next(candidates.Length)];

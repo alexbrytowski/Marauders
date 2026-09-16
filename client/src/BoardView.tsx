@@ -76,6 +76,7 @@ export function BoardView({
   const players = new Map(game.players.map((p) => [p.id, p]))
   const ships = new Map(game.ships.map((s) => [key(s), s]))
   const pickups = new Map(game.perkPickups.map((p) => [key(p), p]))
+  const kraken = game.kraken && game.kraken.lives > 0 ? game.kraken : null
   const inspect = (cell: Cell | null) => {
     setInspected(cell)
     onHover(cell)
@@ -86,6 +87,8 @@ export function BoardView({
   const inspectedPickup = inspected && !inspectedShip ? pickups.get(key(inspected)) : undefined
   const inspectedPickupPerk = inspectedPickup ? perks[inspectedPickup.kind] : undefined
   const inspectedExit = inspected ? whirlpoolExit(game, inspected) : null
+  const inspectedKrakenReach = !!(inspected && kraken && distance(inspected, kraken) <= 2)
+  const inspectedKraken = !!(inspected && kraken && key(inspected) === key(kraken))
   const buildsAt = (portId: string) => game.constructions.filter((build) => build.portId === portId)
   const buildDescription = (portId: string) =>
     buildsAt(portId)
@@ -205,21 +208,28 @@ export function BoardView({
             const highlighted = highlights.has(key(cell))
             const harborFocus = cell.harborId && cell.harborId === focusedHarbor
             const coast = coasts.has(key(cell))
-            const description = ship
+            const krakenDistance = kraken ? distance(cell, kraken) : Number.POSITIVE_INFINITY
+            const isKraken = krakenDistance === 0
+            const inKrakenReach = krakenDistance <= 2 && ['water', 'harbor'].includes(cell.terrain)
+            const baseDescription = ship
               ? `${owner?.name}'s ship ${ship.number}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
               : port
                 ? `${port.name}, port ${portNumber(port.id)}, ${owner?.name ?? 'unclaimed'}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
                 : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup. ${perks[pickup.kind]?.description} ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
+            const description = isKraken
+              ? `The Kraken, ${kraken!.lives} of 3 lives remaining, hex ${key(cell)}`
+              : `${baseDescription}${inKrakenReach ? ". Within the Kraken's two-hex combat reach" : ''}`
             return (
               <g
                 key={key(cell)}
                 transform={`translate(${p.x} ${p.y})`}
-                className={`hex ${cell.terrain} ${coast ? 'coast' : ''} ${highlighted ? 'reachable' : ''} ${isSelected ? 'selected-hex' : ''} ${harborFocus ? 'harbor-focus' : ''}`}
+                className={`hex ${cell.terrain} ${coast ? 'coast' : ''} ${inKrakenReach && !isKraken ? 'kraken-reach' : ''} ${isKraken ? 'kraken-center' : ''} ${highlighted ? 'reachable' : ''} ${isSelected ? 'selected-hex' : ''} ${harborFocus ? 'harbor-focus' : ''}`}
                 data-hex={key(cell)}
                 data-port={port?.id}
                 data-ship={ship?.id}
                 data-perk={pickup?.kind}
                 data-whirlpool={exit ? key(exit) : undefined}
+                data-kraken={isKraken ? 'kraken' : inKrakenReach ? 'reach' : undefined}
                 data-building={builds.length || undefined}
                 role={cell.terrain !== 'land' ? 'button' : undefined}
                 aria-label={description}
@@ -245,6 +255,14 @@ export function BoardView({
                   <g className="perk-token">
                     <circle r="10" />
                     <text y="5">{perks[pickup.kind]?.symbol}</text>
+                  </g>
+                )}
+                {isKraken && (
+                  <g className="kraken-token" aria-hidden="true">
+                    <circle r="11" />
+                    <path d="M-6 0c0-8 12-8 12 0v3M-6 2c-4 3-3 7 0 7 2 0 2-3 0-4m4-3c-3 4-1 8 2 7 2-1 0-4 0-5m3-2c4 3 3 7 0 7" />
+                    <circle className="kraken-eye" cx="-2.5" cy="-1.5" r="1" />
+                    <circle className="kraken-eye" cx="2.5" cy="-1.5" r="1" />
                   </g>
                 )}
                 {port && (
@@ -327,43 +345,53 @@ export function BoardView({
           </g>
         </svg>
       </div>
-      {!preview && (inspectedShip || inspectedPort || inspectedPickupPerk || inspectedExit) && (
-        <aside className="board-inspection" role="tooltip">
-          <strong>
-            {inspectedShip
-              ? `Ship ${inspectedShip.number} · ${players.get(inspectedShip.ownerId)?.name}`
-              : (inspectedPort?.name ?? inspectedPickupPerk?.name ?? 'Whirlpool passage')}
-          </strong>
-          {inspectedShip && (
-            <span>
-              {inspectedPerk ? `${inspectedPerk.name} — ${inspectedPerk.description}` : 'No perk aboard.'}
-            </span>
-          )}
-          {inspectedPickupPerk && <span>{inspectedPickupPerk.description}</span>}
-          {inspectedPort && (
-            <span>
-              {inspectedPort.ownerId
-                ? 'Adds one combat die when its owner’s triggering ship is within two hexes, including open water.'
-                : 'Neutral port: attack from its harbor to capture it. It does not assist ship battles.'}
-            </span>
-          )}
-          {inspectedPort && (
-            <span>
-              {buildsAt(inspectedPort.id).length
-                ? `Building ${buildsAt(inspectedPort.id).length} ship(s). ${buildDescription(inspectedPort.id)}`
-                : 'No ships under construction.'}
-            </span>
-          )}
-          {inspectedExit && (
-            <span>
-              Teleports to hex {key(inspectedExit)}. {game.whirlpool!.remainingTurns} captain turns left.{' '}
-              {game.ships.some((s) => key(s) === key(inspectedExit))
-                ? 'Exit occupied: entry blocked.'
-                : 'Chart a new route after arriving; unused movement remains.'}
-            </span>
-          )}
-        </aside>
-      )}
+      {!preview &&
+        (inspectedShip || inspectedPort || inspectedPickupPerk || inspectedExit || inspectedKrakenReach) && (
+          <aside className="board-inspection" role="tooltip">
+            <strong>
+              {inspectedKraken
+                ? 'The Kraken'
+                : inspectedShip
+                  ? `Ship ${inspectedShip.number} · ${players.get(inspectedShip.ownerId)?.name}`
+                  : (inspectedPort?.name ?? inspectedPickupPerk?.name ?? 'Whirlpool passage')}
+            </strong>
+            {inspectedShip && (
+              <span>
+                {inspectedPerk ? `${inspectedPerk.name} — ${inspectedPerk.description}` : 'No perk aboard.'}
+              </span>
+            )}
+            {inspectedPickupPerk && <span>{inspectedPickupPerk.description}</span>}
+            {inspectedPort && (
+              <span>
+                {inspectedPort.ownerId
+                  ? 'Adds one combat die when its owner’s triggering ship is within two hexes, including open water.'
+                  : 'Neutral port: attack from its harbor to capture it. It does not assist ship battles.'}
+              </span>
+            )}
+            {inspectedPort && (
+              <span>
+                {buildsAt(inspectedPort.id).length
+                  ? `Building ${buildsAt(inspectedPort.id).length} ship(s). ${buildDescription(inspectedPort.id)}`
+                  : 'No ships under construction.'}
+              </span>
+            )}
+            {inspectedExit && (
+              <span>
+                Teleports to hex {key(inspectedExit)}. {game.whirlpool!.remainingTurns} captain turns left.{' '}
+                {game.ships.some((s) => key(s) === key(inspectedExit))
+                  ? 'Exit occupied: entry blocked.'
+                  : 'Chart a new route after arriving; unused movement remains.'}
+              </span>
+            )}
+            {inspectedKrakenReach && (
+              <span>
+                {inspectedKraken
+                  ? `${kraken!.lives} of 3 lives remain. It rolls 3 dice and drops the Mark of the Kraken when slain.`
+                  : "Inside the Kraken's two-hex reach. Entering this area triggers combat; ports cannot assist."}
+              </span>
+            )}
+          </aside>
+        )}
       <div className="chart-footer">
         <div className="map-legend">
           <span>
@@ -375,6 +403,7 @@ export function BoardView({
               ↻ Whirlpools · {game.whirlpool.remainingTurns} turns left
             </span>
           )}
+          {kraken && <span className="kraken-status">Kraken · {kraken.lives}/3 lives</span>}
           <span>
             <i className="harbor-key" />
             Harbor

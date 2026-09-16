@@ -15,6 +15,7 @@ const chapters = [
   { id: 'ports', title: 'Capture a port', level: 'Build your strategy', icon: 'port' },
   { id: 'building', title: 'Rebuild your fleet', level: 'Build your strategy', icon: 'hammer' },
   { id: 'perks', title: 'Find an advantage', level: 'Advanced', icon: 'dice' },
+  { id: 'progression', title: 'Follow the voyage timeline', level: 'Advanced', icon: 'clock' },
   { id: 'extras', title: 'Know the finer points', level: 'Advanced', icon: 'log' },
 ]
 
@@ -274,8 +275,8 @@ function Setup({ board }: { board?: Board }) {
       <p>
         Each captain receives three geographically balanced random ports and six ships. The server avoids
         strong three-port clusters while keeping many possible deals. The most central port stays neutral:
-        Blackwater on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Six perk pickups await at
-        sea.
+        Blackwater on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Six perk pickups
+        await at sea.
       </p>
       <details>
         <summary>Map votes & changing your mind</summary>
@@ -357,8 +358,8 @@ function Sailing({ board }: { board?: Board }) {
         onChange={(e) => setFleet(Number(e.target.value))}
       />
       <p>
-        Before Round 100: 1–3 ships get 1 die, 4–6 get 2, and 7–9 get 3. Starting Round 100,
-        every 2 ships grant 1 action die instead, rounding up. A twelve-round public warning begins at Round 88.
+        Before Round 100: 1–3 ships get 1 die, 4–6 get 2, and 7–9 get 3. Starting Round 100, every 2 ships
+        grant 1 action die instead, rounding up.
       </p>
       <p>Movement rolls are equally likely to be 4, 5, or 6, and appear immediately.</p>
       <ol>
@@ -661,7 +662,13 @@ function Ports({ board }: { board?: Board }) {
 
 function Building({ board }: { board?: Board }) {
   const [stage, setStage] = useState(0)
-  const stages = ['Start building', 'Next owner round', 'Second owner round', 'Third owner round', 'Following round']
+  const stages = [
+    'Start building',
+    'Next owner round',
+    'Second owner round',
+    'Third owner round',
+    'Following round',
+  ]
   return (
     <Lesson
       takeaway="New construction needs two owner rounds before round 66 and three from round 66 onward."
@@ -671,7 +678,9 @@ function Building({ board }: { board?: Board }) {
           <div className="build-timeline">
             {stages.map((name, i) => (
               <button key={name} aria-pressed={stage === i} onClick={() => setStage(i)}>
-                <span>{i === 0 ? <Icon name="hammer" /> : i === stages.length - 1 ? <Icon name="ship" /> : i}</span>
+                <span>
+                  {i === 0 ? <Icon name="hammer" /> : i === stages.length - 1 ? <Icon name="ship" /> : i}
+                </span>
                 {name}
               </button>
             ))}
@@ -702,7 +711,6 @@ function Building({ board }: { board?: Board }) {
         <li>At the end of your round, choose owned ports to build missing ships. It costs no action dice.</li>
         <li>Any unchosen builds start automatically at random owned ports when you finish or time out.</li>
         <li>A port can build several ships, but a build cannot switch ports.</li>
-        <li>At round 58, everyone gets an eight-round warning before new construction slows at round 66.</li>
         <li>
           If newly launched ships trigger battles, finish those battles before the next captain's turn. The
           finishing captain rolls; the next captain keeps their full turn time.
@@ -782,12 +790,14 @@ function Perks() {
             </svg>
           </div>
           <div className="perk-example-options">
-            {Object.entries(perks).map(([id, p]) => (
-              <button key={id} aria-pressed={selected === id} onClick={() => setSelected(id)}>
-                <span>{p.symbol}</span>
-                {p.name}
-              </button>
-            ))}
+            {Object.entries(perks)
+              .filter(([id]) => id !== 'mark-of-the-kraken')
+              .map(([id, p]) => (
+                <button key={id} aria-pressed={selected === id} onClick={() => setSelected(id)}>
+                  <span>{p.symbol}</span>
+                  {p.name}
+                </button>
+              ))}
           </div>
           <div className="perk-demonstration" aria-live="polite">
             <h3>{perk.name}</h3>
@@ -809,9 +819,9 @@ function Perks() {
         <li>Movement rolls are always 4, 5, or 6, unaffected by perks.</li>
         <li>Black and White replaces all dice and modifiers in an exchange with one 50/50 result.</li>
         <li>
-          Cheat Death forces a public reroll after any losing exchange its carrier joins, including as a helper
-          or port attacker. Everyone sees the rejected result before the next exchange is rolled. It is consumed
-          before losses or port effects, then respawns in empty open water. Ties do not consume it.
+          Cheat Death forces a public reroll after any losing exchange its carrier joins, including as a
+          helper or port attacker. Everyone sees the rejected result before the next exchange is rolled. It is
+          consumed before losses or port effects, then respawns in empty open water. Ties do not consume it.
         </li>
       </ul>
       <details>
@@ -824,6 +834,92 @@ function Perks() {
         <p>
           Each Mouth to Feed holder adds one population slot anywhere at sea. The bonus follows the ship’s
           captain; losing it never deletes ships or cancels construction.
+        </p>
+      </details>
+    </Lesson>
+  )
+}
+
+function Progression() {
+  const milestones = [
+    ['33', 'The Kraken rises', 'It appears at a random, remote open-water hex with a red two-hex reach.'],
+    [
+      '50',
+      'Whirlpools intensify',
+      'Completed turns have a 25% spawn chance instead of 10% when no pair exists.',
+    ],
+    ['66', 'Shipyards slow', 'New builds need three future owner rounds; existing builds keep their timing.'],
+    [
+      '100',
+      'Actions surge',
+      'Captains receive one action die per two ships instead of per three, rounding up.',
+    ],
+  ]
+  return (
+    <Lesson
+      takeaway="Rounds 33, 50, 66, and 100 each introduce a lasting change to the voyage."
+      visual={
+        <div className="progression-timeline" aria-label="Round progression timeline">
+          {milestones.map(([round, title, text]) => (
+            <div key={round}>
+              <strong>R{round}</strong>
+              <span>
+                <b>{title}</b>
+                <small>{text}</small>
+              </span>
+            </div>
+          ))}
+        </div>
+      }
+    >
+      <h3>The seas change as rounds pass</h3>
+      <p>
+        A round is one captain's displayed turn. These milestones happen once at the listed round, even though
+        several captains may act during a full trip around the table.
+      </p>
+      <section className="progression-section">
+        <h3>The Kraken · Round 33</h3>
+        <ul>
+          <li>It spawns at a server-randomized open-water hex that changes from game to game.</li>
+          <li>
+            Its pink hex carries a tentacle symbol; every water hex within two is marked red until it is slain.
+          </li>
+          <li>
+            Entering that reach triggers combat. Nearby ships help normally, but its location guarantees that
+            ports cannot.
+          </li>
+          <li>It never moves, rolls three dice each exchange, and has three persistent lives.</li>
+          <li>A fleet win removes one life. A Kraken win removes one participating ship. Ties reroll.</li>
+          <li>Defeating it reveals a unique seventh perk that any eligible ship can collect.</li>
+        </ul>
+      </section>
+      <section className="progression-section">
+        <h3>Whirlpool surge · Round 50</h3>
+        <p>
+          When no pair exists, each completed turn has a 10% chance to create whirlpools through Round 49. At
+          Round 50 that chance rises to 25%.
+        </p>
+      </section>
+      <section className="progression-section">
+        <h3>Slower shipbuilding · Round 66</h3>
+        <p>
+          Ships started from Round 66 onward need three future turns by their owner to finish instead of two.
+          Builds already underway keep the faster timing they started with.
+        </p>
+      </section>
+      <section className="progression-section">
+        <h3>More action dice · Round 100</h3>
+        <p>
+          Before Round 100, captains get one action die per three ships, rounded up. From Round 100 onward they
+          get one per two ships, rounded up.
+        </p>
+      </section>
+      <details>
+        <summary>What persists?</summary>
+        <p>
+          Damage to the Kraken never heals. Whirlpool and shipyard frequency/timing changes remain active
+          after their milestone. The red reach disappears when the Kraken dies. The board, Kraken life counter,
+          construction timers, and action dice show the current rules.
         </p>
       </details>
     </Lesson>
@@ -881,9 +977,8 @@ function Extras() {
         <summary>When whirlpools appear & fade</summary>
         <p>
           After each completed captain turn, including a timeout, there is a 10% chance to spawn a pair if
-          none exists through round 49. A four-round public warning begins at round 46. Starting when round
-          50 completes, the chance is 25%. Endpoints are empty ordinary water, at least ten hexes apart, away
-          from ships, harbors, and pickups.
+          none exists through round 49. Starting when round 50 completes, the chance is 25%. Endpoints are
+          empty ordinary water, at least ten hexes apart, away from ships, harbors, and pickups.
         </p>
         <p>
           A pair lasts twice the living captain count at spawn: eight subsequent turns with four captains. The
@@ -935,7 +1030,7 @@ export function HowToPlayPage({ page, board }: { page: string; board?: Board }) 
     heading.current?.focus({ preventScroll: true })
     heading.current?.scrollIntoView({ block: 'nearest' })
   }, [index])
-  const Chapter = [Basics, Setup, Sailing, Battles, Ports, Building, Perks, Extras][index]
+  const Chapter = [Basics, Setup, Sailing, Battles, Ports, Building, Perks, Progression, Extras][index]
   return (
     <article className="handbook">
       <header className="handbook-header">

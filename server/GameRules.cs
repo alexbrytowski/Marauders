@@ -4,12 +4,13 @@ namespace Marauders.Server;
 /// operates on a private candidate state; a rejected command is never published.</summary>
 public sealed class GameRules(GameState state, IDice dice, GameOptions options, DateTimeOffset now)
 {
+    public const string KrakenId = "the-kraken";
     private BoardMap Board => MapCatalog.Resolve(state.MapId, state.BoardVersion);
     public static int ActionCount(int ships, int turnNumber) => turnNumber >= 100 ? (ships + 1) / 2 : (ships + 2) / 3;
     public static readonly string[] Colors = ["#ed7866", "#69c5bc", "#b19bdf", "#e6be68"];
     public static readonly string[] Characters = CharacterCatalog.Ids;
     private static void Require([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string error) { if (!condition) throw new RuleException(error); }
-    private string Name(string id) => state.Players.FirstOrDefault(p => p.Id == id)?.Name ?? "Unclaimed port";
+    private string Name(string id) => id == KrakenId ? "The Kraken" : state.Players.FirstOrDefault(p => p.Id == id)?.Name ?? "Unclaimed port";
     private Ship Ship(string? id) => state.Ships.SingleOrDefault(s => s.Id == id) ?? throw new RuleException("That ship is no longer on the board.");
     private Port Port(string? id) => state.Ports.SingleOrDefault(p => p.Id == id) ?? throw new RuleException("Choose a port on the map.");
     private int Capacity(string id) => state.Ports.Count(p => p.OwnerId == id) * 2 + state.Ships.Count(s => s.OwnerId == id && s.Perk == "mouth-to-feed");
@@ -243,6 +244,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(ship.OwnerId == actor, "That ship belongs to another captain.");
         Require(command.Q.HasValue && command.R.HasValue, "Choose a destination hex.");
         var blocked = state.Ships.Where(s => s.Id != ship.Id).Select(s => s.Hex).ToHashSet();
+        if (state.Kraken is { Lives: > 0 } kraken) blocked.Add(kraken.Hex);
         if (state.Whirlpool is { } pair)
         {
             if (blocked.Contains(pair.First)) blocked.Add(pair.Second);
@@ -315,14 +317,20 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
                 if (harbor is not null && !Board.InHarbor(b.Hex, harbor)) harbor = null;
                 choices.Add(new($"{a.Id}:{b.Id}", a.Id, b.Id, harbor));
             }
+        if (state.Kraken is { Lives: > 0 } kraken)
+            foreach (var ship in state.Ships.Where(ship => ship.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach))
+                choices.Add(new($"kraken:{ship.Id}", ship.Id, null, null, "kraken"));
         // Different triggering pairs can describe exactly the same fight. Only
         // ask for a choice if the forces or supporting port actually differ.
         return choices.DistinctBy(c =>
         {
-            var a = Ship(c.TriggerShipId); var b = Ship(c.OpponentShipId);
+            var a = Ship(c.TriggerShipId);
+            if (c.Kind == "kraken")
+                return "kraken|" + string.Join(",", Helpers(a).Select(s => s.Id).Order(StringComparer.Ordinal));
+            var b = Ship(c.OpponentShipId);
             var participants = Helpers(a).Concat(Helpers(b)).Select(s => s.Id).Order(StringComparer.Ordinal);
             var support = SupportingPorts(a).Concat(SupportingPorts(b)).Select(p => p.Id).Distinct().Order(StringComparer.Ordinal);
-            return string.Join(",", participants) + "|" + string.Join(",", support);
+            return "ships|" + string.Join(",", participants) + "|" + string.Join(",", support);
         }).ToList();
     }
     private void RefreshEncounters(string? preferred = null)
@@ -336,7 +344,24 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         p.OwnerId == trigger.OwnerId && Board.PortHex(p.Id).DistanceTo(trigger.Hex) <= 2);
     private void StartBattle(CombatChoice choice)
     {
-        var a = Ship(choice.TriggerShipId); var b = Ship(choice.OpponentShipId);
+        var a = Ship(choice.TriggerShipId);
+        if (choice.Kind == "kraken")
+        {
+            var kraken = state.Kraken;
+            Require(kraken is { Lives: > 0 } && a.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach,
+                "That Kraken encounter is no longer pending.");
+            var krakenBattle = new CombatState
+            {
+                Kind = "kraken", TriggerShipId = a.Id, AttackerId = a.OwnerId, DefenderId = KrakenId,
+                ParticipantShipIds = Helpers(a).Select(ship => ship.Id).ToList()
+            };
+            SnapshotBattleShips(krakenBattle);
+            state.Combat = krakenBattle; state.CombatChoices = [];
+            ActionClock();
+            Log("kraken", $"Battle: {Name(a.OwnerId)}'s fleet entered the Kraken's two-hex reach. The Kraken has {kraken.Lives} lives.");
+            return;
+        }
+        var b = Ship(choice.OpponentShipId);
         Require(Triggers(a, b, Board, state.Ports), "That encounter is no longer pending.");
         var battle = new CombatState
         {
@@ -385,20 +410,29 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         battle.Rolls = new() { [battle.AttackerId] = [], [battle.DefenderId] = [] };
         battle.BlackWhiteResult = null;
         battle.BlackWhiteOwnerId = null;
-        var blackWhite = battle.ParticipantShipIds.Select(Ship).FirstOrDefault(ship => ship.Perk == "black-and-white");
+        var participants = battle.ParticipantShipIds.Select(Ship).ToList();
+        var markSuppressesBlackWhite = participants.Any(ship => ship.Perk == "mark-of-the-kraken");
+        var blackWhite = markSuppressesBlackWhite
+            ? null
+            : participants.FirstOrDefault(ship => ship.Perk == "black-and-white");
         if (blackWhite is not null)
         {
             RollBlackAndWhite(battle, blackWhite);
             return;
         }
-        foreach (var id in battle.ParticipantShipIds)
+        foreach (var ship in participants)
         {
-            var ship = Ship(id);
-            var roll = ship.Perk == "glass-cannon" ? dice.Roll(9) - 1 : dice.Roll();
-            if (ship.Perk == "loaded-dice" && roll is 1 or 2) roll = 3;
-            battle.Rolls[ship.OwnerId].Add(roll);
+            var count = ship.Perk == "mark-of-the-kraken" ? 3 : 1;
+            for (var i = 0; i < count; i++)
+            {
+                var roll = ship.Perk == "glass-cannon" ? dice.Roll(9) - 1 : dice.Roll();
+                if (ship.Perk == "loaded-dice" && roll is 1 or 2) roll = 3;
+                battle.Rolls[ship.OwnerId].Add(roll);
+            }
         }
         if (battle.Kind == "port") battle.Rolls[battle.DefenderId].Add(dice.Roll());
+        else if (battle.Kind == "kraken")
+            for (var i = 0; i < KrakenPlacement.Dice; i++) battle.Rolls[battle.DefenderId].Add(dice.Roll());
         else foreach (var id in battle.SupportingPortIds) battle.Rolls[Port(id).OwnerId!].Add(dice.Roll());
         var a = battle.Rolls[battle.AttackerId].Max();
         var b = battle.Rolls[battle.DefenderId].Max() + battle.DefenseModifier;
@@ -425,6 +459,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             }
             battle.Status = "resolved";
         }
+        else if (battle.Kind == "kraken")
+            ResolveKrakenExchange(battle, a > b,
+                $"{Name(battle.WinnerId)} wins {Math.Max(a, b)} to {Math.Min(a, b)}.");
         else
         {
             battle.LosingPlayerId = a > b ? battle.DefenderId : battle.AttackerId;
@@ -436,6 +473,34 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Log("roll", battle.Message, battle.Rolls);
         ActionClock();
         ResolveOnlyLoss($"{Name(battle.WinnerId!)} wins {Math.Max(a, b)} to {Math.Min(a, b)}.");
+    }
+    private void ResolveKrakenExchange(CombatState battle, bool fleetWins, string result)
+    {
+        var kraken = state.Kraken;
+        Require(kraken is { Lives: > 0 }, "The Kraken has already been slain.");
+        if (fleetWins)
+        {
+            kraken.Lives--;
+            if (kraken.Lives == 0)
+            {
+                state.PerkPickups.Add(new("mark-of-the-kraken", kraken.Q, kraken.R));
+                battle.Status = "resolved";
+                battle.Message = $"{result} The Kraken loses its final life and is slain. The Mark of the Kraken dropped at its hex.";
+                Log("perk", $"The slain Kraken dropped the Mark of the Kraken at {kraken.Q}, {kraken.R}.");
+            }
+            else
+            {
+                battle.Status = "awaiting-roll";
+                battle.Message = $"{result} The Kraken loses a life; {kraken.Lives} remain. Roll the next exchange.";
+            }
+            return;
+        }
+        battle.LosingPlayerId = battle.AttackerId;
+        battle.Status = "choose-loss";
+        var onlyCasualty = state.Ships.Count(ship => ship.OwnerId == battle.AttackerId && battle.ParticipantShipIds.Contains(ship.Id)) == 1;
+        battle.Message = result + " " + (onlyCasualty
+            ? "The only eligible casualty will be resolved automatically."
+            : $"{Name(battle.AttackerId)} must choose a participating ship to lose.");
     }
     private void RollBlackAndWhite(CombatState battle, Ship holder)
     {
@@ -461,6 +526,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             }
             battle.Status = "resolved";
         }
+        else if (battle.Kind == "kraken")
+            ResolveKrakenExchange(battle, battle.WinnerId == battle.AttackerId, result);
         else
         {
             battle.LosingPlayerId = battle.WinnerId == battle.AttackerId ? battle.DefenderId : battle.AttackerId;
@@ -542,7 +609,10 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         battle!.ParticipantShipIds.Remove(ship.Id);
         var a = state.Ships.SingleOrDefault(s => s.Id == battle.TriggerShipId);
         var b = state.Ships.SingleOrDefault(s => s.Id == battle.OpponentShipId);
-        if (a is not null && b is not null && Triggers(a, b, Board, state.Ports))
+        var encounterContinues = battle.Kind == "kraken"
+            ? a is not null && state.Kraken is { Lives: > 0 } kraken && a.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach
+            : a is not null && b is not null && Triggers(a, b, Board, state.Ports);
+        if (encounterContinues)
         {
             // Helpers are fixed for this triggering pair; their assistance never chains.
             battle.Status = "awaiting-roll"; battle.LosingPlayerId = null;
@@ -610,6 +680,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             if (build.RemainingOwnerTurns > 0) continue;
             var occupied = state.Ships.Select(s => s.Hex).ToHashSet();
             if (state.Whirlpool is { } pair) { occupied.Add(pair.First); occupied.Add(pair.Second); }
+            if (state.Kraken is { Lives: > 0 } kraken) occupied.Add(kraken.Hex);
             var hex = Board.SpawnHex(build.PortId, occupied);
             // Retain completed construction if no legal launch space is available.
             if (hex is null) continue;
@@ -621,7 +692,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private static string PerkName(string kind) => kind switch
     {
         "black-pearl" => "The Black Pearl", "glass-cannon" => "Glass Cannon", "loaded-dice" => "Loaded Dice",
-        "mouth-to-feed" => "Mouth to Feed", "black-and-white" => "Black and White", "cheat-death" => "Cheat Death", _ => kind
+        "mouth-to-feed" => "Mouth to Feed", "black-and-white" => "Black and White", "cheat-death" => "Cheat Death",
+        "mark-of-the-kraken" => "The Mark of the Kraken", _ => kind
     };
     private void FinishRound()
     {
@@ -677,7 +749,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
         if (dice.Next(1000) >= WhirlpoolSpawnThreshold) return;
         var candidates = Board.Cells.Where(c => c.Terrain == "water" &&
-            !state.Ships.Any(s => s.Hex == c.Hex) && !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R)).Select(c => c.Hex).ToArray();
+            !state.Ships.Any(s => s.Hex == c.Hex) && !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R) &&
+            !(state.Kraken is { Lives: > 0 } kraken && kraken.Hex == c.Hex)).Select(c => c.Hex).ToArray();
         var starts = candidates.Where(a => candidates.Any(b => a.DistanceTo(b) >= 10)).ToArray();
         if (starts.Length == 0) return;
         var first = starts[dice.Next(starts.Length)];
@@ -745,6 +818,13 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
+        if (state.TurnNumber == KrakenPlacement.SpawnRound - 1)
+            Log("kraken", "Kraken warning: the sea is churning. The Kraken will rise in open water next round.");
+        if (state.TurnNumber >= KrakenPlacement.SpawnRound && state.Kraken is null)
+        {
+            state.Kraken = KrakenPlacement.Spawn(state, dice);
+            Log("kraken", $"The Kraken rose at {state.Kraken.Q}, {state.Kraken.R} with three dice, three lives, and a two-hex reach.");
+        }
         if (state.TurnNumber == 46)
             Log("whirlpool", "Whirlpool warning: starting in four rounds, completed turns will have a 25% chance to spawn whirlpools instead of 10%.");
         else if (state.TurnNumber == 50)

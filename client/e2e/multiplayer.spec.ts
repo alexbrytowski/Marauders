@@ -571,9 +571,187 @@ test.afterEach(async () => {
   await stopServer()
 })
 
-test('late-game rule warnings synchronize across captains', async ({
+test('Kraken warning, random spawn, combat, death, and secret reward synchronize', async ({
   browser,
 }, testInfo) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    for (let i = 0; i < pages.length; i++) {
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4) {
+        const joined = await pages[i].request.post('/api/game/players', {
+          headers,
+          data: { name: `Kraken ${i + 1}`, color: colors[i], character: characterIds[i] },
+        })
+        expect(joined.status()).toBe(200)
+      }
+    }
+
+    let game = await state(pages[0])
+    const ids = game.players.map((player) => player.id)
+    const board: Board = await (await pages[0].request.get('/api/board')).json()
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    const warningSave = JSON.parse(await readFile(savePath, 'utf8'))
+    const ships = ids.map((ownerId, i) => {
+      const portId = `port-${i * 3 + 1}`
+      const harbor = board.cells.find((cell) => cell.harborId === portId)!
+      return { id: `kraken-idle-${i}`, ownerId, portId, number: i + 1, q: harbor.q, r: harbor.r }
+    })
+    Object.assign(warningSave.game, {
+      phase: 'playing',
+      activePlayerId: ids[0],
+      turnOrder: ids,
+      turnNumber: 32,
+      remainingActions: 1,
+      remainingMovement: 0,
+      isBuildPhase: false,
+      isEndingRound: false,
+      availableBuilds: 0,
+      combat: null,
+      combatChoices: [],
+      constructions: [],
+      ships,
+      perkPickups: [],
+      whirlpool: null,
+      kraken: null,
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      revision: warningSave.game.revision + 1,
+    })
+    warningSave.game.ports.forEach(
+      (port: { ownerId: string | null }, i: number) =>
+        (port.ownerId = i < 12 ? ids[Math.floor(i / 3)] : null),
+    )
+    await writeFile(savePath, JSON.stringify(warningSave))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.getByLabel('Kraken warning')).toContainText('Round 33')
+    }
+
+    game = await state(pages[0])
+    while (game.turnNumber === 32) {
+      const ended = await pages[0].request.post('/api/game/action', {
+        headers,
+        data: { type: 'end-turn', expectedRevision: game.revision },
+      })
+      expect(ended.status()).toBe(200)
+      game = await ended.json()
+    }
+    expect(game.turnNumber).toBe(33)
+    expect(game.kraken?.lives).toBe(3)
+    const kraken = game.kraken!
+    expect(
+      game.ports.every((port) => {
+        const portCell = board.cells.find((cell) => cell.portId === port.id)!
+        return distance(kraken, portCell) > 4
+      }),
+    ).toBe(true)
+    for (const page of pages) {
+      await expect(page.getByLabel('Kraken warning')).toHaveCount(0)
+      await expect(page.locator('[data-kraken="kraken"]')).toHaveCount(1)
+      await expect(page.locator('[data-kraken="reach"]').first()).toBeVisible()
+      await expect(page.locator('.kraken-status')).toContainText('3/3 lives')
+    }
+    await pages[0].screenshot({ path: testInfo.outputPath('kraken-spawn-and-reach.png') })
+
+    const destination = board.cells.find(
+      (cell) =>
+        cell.terrain === 'water' &&
+        distance(cell, kraken) === 2 &&
+        directions.some((direction) => {
+          const source = { q: cell.q + direction.q, r: cell.r + direction.r }
+          return board.cells.some(
+            (candidate) =>
+              candidate.q === source.q &&
+              candidate.r === source.r &&
+              candidate.terrain === 'water' &&
+              distance(candidate, kraken) === 3,
+          )
+        }),
+    )!
+    const source = directions
+      .map((direction) => ({ q: destination.q + direction.q, r: destination.r + direction.r }))
+      .find(
+        (hex) =>
+          distance(hex, kraken) === 3 &&
+          board.cells.some((cell) => cell.q === hex.q && cell.r === hex.r && cell.terrain === 'water'),
+      )!
+    await stopServer()
+    const battleSave = JSON.parse(await readFile(savePath, 'utf8'))
+    battleSave.game.ships = [
+      { id: 'kraken-attacker', ownerId: ids[0], portId: 'port-1', number: 20, ...source },
+      ...ships.slice(1),
+    ]
+    Object.assign(battleSave.game, {
+      activePlayerId: ids[0],
+      remainingActions: 1,
+      remainingMovement: 1,
+      lastRoll: 4,
+      isBuildPhase: false,
+      isEndingRound: false,
+      combat: null,
+      combatChoices: [],
+      constructions: [],
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      revision: battleSave.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(battleSave))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    await pages[0].locator('[data-ship="kraken-attacker"]').click()
+    await pages[0].locator(`[data-hex="${key(destination)}"]`).click()
+    game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Sail 1 hex/ }).click())
+    expect(game.combat?.kind).toBe('kraken')
+    expect(game.combat?.supportingPortIds).toEqual([])
+    for (const page of pages)
+      await expect(page.getByRole('heading', { name: 'Clash with the Kraken' })).toBeVisible()
+    await pages[0].screenshot({ path: testInfo.outputPath('kraken-battle.png') })
+
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: 'Roll battle dice' }).click(),
+    )
+    expect(game.combat?.rolls['the-kraken']).toHaveLength(3)
+    for (const page of pages)
+      await expect(page.getByText('The Kraken', { exact: true }).first()).toBeVisible()
+
+    await stopServer()
+    const rewardSave = JSON.parse(await readFile(savePath, 'utf8'))
+    rewardSave.game.combat = null
+    rewardSave.game.combatChoices = []
+    rewardSave.game.kraken.lives = 0
+    rewardSave.game.perkPickups = [{ kind: 'mark-of-the-kraken', q: kraken.q, r: kraken.r }]
+    rewardSave.game.revision += 1
+    await writeFile(savePath, JSON.stringify(rewardSave))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('[data-kraken]')).toHaveCount(0)
+      await expect(page.locator('[data-perk="mark-of-the-kraken"]')).toHaveCount(1)
+    }
+    await pages[0].locator('[data-perk="mark-of-the-kraken"]').hover()
+    await expect(pages[0].getByRole('tooltip')).toContainText('This ship contributes three dice')
+    await pages[0].goto('/#how-to-play/perks')
+    await expect(pages[0].locator('.handbook')).not.toContainText('Mark of the Kraken')
+    await pages[0].goto('/#how-to-play/progression')
+    await expect(pages[0].locator('.handbook')).not.toContainText('Mark of the Kraken')
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
+})
+
+test('late-game rule warnings synchronize across captains', async ({ browser }, testInfo) => {
   const contexts = await Promise.all(
     Array.from({ length: 4 }, () =>
       browser.newContext({ viewport: { width: 1366, height: 900 }, reducedMotion: 'reduce' }),
@@ -625,7 +803,9 @@ test('late-game rule warnings synchronize across captains', async ({
     for (const page of pages) {
       await page.reload()
       await expect(page.locator('.connection')).toHaveText('Live')
-      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText('Whirlpool surge in 4 rounds')
+      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText(
+        'Whirlpool surge in 4 rounds',
+      )
     }
     await pages[0].screenshot({ path: testInfo.outputPath('whirlpool-four-round-warning.png') })
 
@@ -645,7 +825,9 @@ test('late-game rule warnings synchronize across captains', async ({
     for (const page of pages) {
       await page.reload()
       await expect(page.locator('.connection')).toHaveText('Live')
-      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText('Whirlpool surge in 1 round')
+      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText(
+        'Whirlpool surge in 1 round',
+      )
     }
     game = await state(pages[0])
     let response = await pages[0].request.post('/api/game/action', {
@@ -656,8 +838,12 @@ test('late-game rule warnings synchronize across captains', async ({
     game = await response.json()
     expect(game.turnNumber).toBe(50)
     for (const page of pages)
-      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText('Whirlpool surge is active')
-    expect(game.events.some((event) => event.turn === 50 && event.message.includes('now active'))).toBeTruthy()
+      await expect(page.getByLabel('Late-game whirlpool frequency')).toContainText(
+        'Whirlpool surge is active',
+      )
+    expect(
+      game.events.some((event) => event.turn === 50 && event.message.includes('now active')),
+    ).toBeTruthy()
 
     await stopServer()
     saved = JSON.parse(await readFile(savePath, 'utf8'))
@@ -723,8 +909,12 @@ test('late-game rule warnings synchronize across captains', async ({
     expect(game.turnNumber).toBe(66)
     expect(game.constructions.find((build) => build.id === 'existing-build')?.remainingOwnerTurns).toBe(1)
     for (const page of pages)
-      await expect(page.getByLabel('Late-game shipyard timing')).toContainText('Late-game shipyards are active')
-    expect(game.events.some((event) => event.turn === 66 && event.message.includes('now active'))).toBeTruthy()
+      await expect(page.getByLabel('Late-game shipyard timing')).toContainText(
+        'Late-game shipyards are active',
+      )
+    expect(
+      game.events.some((event) => event.turn === 66 && event.message.includes('now active')),
+    ).toBeTruthy()
 
     response = await pages[1].request.post('/api/game/action', {
       headers,
@@ -796,8 +986,12 @@ test('late-game rule warnings synchronize across captains', async ({
     game = await response.json()
     expect(game.turnNumber).toBe(100)
     for (const page of pages)
-      await expect(page.getByLabel('Endgame action dice rate')).toContainText('Endgame action surge is active')
-    expect(game.events.some((event) => event.turn === 100 && event.message.includes('now active'))).toBeTruthy()
+      await expect(page.getByLabel('Endgame action dice rate')).toContainText(
+        'Endgame action surge is active',
+      )
+    expect(
+      game.events.some((event) => event.turn === 100 && event.message.includes('now active')),
+    ).toBeTruthy()
     await pages[0].screenshot({ path: testInfo.outputPath('action-dice-round-100-active.png') })
   } finally {
     await Promise.all(contexts.map((context) => context.close()))
@@ -2319,6 +2513,65 @@ test('perks, Black and White override, zero rolls, and victory history synchroni
     game = await clickAction(pages[0], () =>
       pages[0].getByRole('button', { name: /Continue the voyage/ }).click(),
     )
+    // The Mark suppresses Black and White for everyone, even when the two perks
+    // are carried by opposing fleets, so the shared dialog and server use dice.
+    await stopServer()
+    saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      isBuildPhase: false,
+      remainingActions: 2,
+      remainingMovement: 1,
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      combat: null,
+      combatChoices: [],
+      ships: [
+        {
+          id: 'suppressed-black-white',
+          ownerId: ids[0],
+          portId: 'port-1',
+          number: 11,
+          q: open.q,
+          r: open.r,
+          perk: 'black-and-white',
+        },
+        {
+          id: 'kraken-mark',
+          ownerId: ids[1],
+          portId: 'port-4',
+          number: 21,
+          q: open.q + 2,
+          r: open.r,
+          perk: 'mark-of-the-kraken',
+        },
+      ],
+    })
+    saved.game.revision++
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const p of pages) {
+      await p.reload()
+      await expect(p.locator('.connection')).toHaveText('Live')
+    }
+    await pages[0].locator('[data-ship="suppressed-black-white"]').click()
+    await pages[0].locator(`[data-hex="${open.q + 1},${open.r}"]`).click()
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: /Sail 1 hex · battle ahead/ }).click(),
+    )
+    for (const p of pages) {
+      await expect(p.getByLabel('Black and White battle override')).toHaveCount(0)
+      await expect(p.getByRole('button', { name: 'Roll battle dice', exact: true })).toHaveCount(
+        p === pages[0] ? 1 : 0,
+      )
+    }
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: 'Roll battle dice', exact: true }).click(),
+    )
+    expect(game.combat?.blackWhiteResult).toBeNull()
+    expect(game.combat?.blackWhiteOwnerId).toBeNull()
+    expect(game.combat?.rolls[ids[0]]).toHaveLength(1)
+    expect(game.combat?.rolls[ids[1]]).toHaveLength(3)
     // A final port battle exercises real server capture and final-round recording.
     await stopServer()
     saved = JSON.parse(await readFile(savePath, 'utf8'))
@@ -2478,9 +2731,9 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         expect(game.ports.some((port) => port.name === 'Southgate')).toBeFalsy()
         expect(game.ports.some((port) => port.name === 'Dusk Harbor')).toBeTruthy()
       } else {
-        expect(neutralPort[0].name).toBe('Serpent\'s Heart')
+        expect(neutralPort[0].name).toBe("Serpent's Heart")
         expect(game.ports.some((port) => port.name === 'Fang Harbor')).toBeFalsy()
-        expect(game.ports.some((port) => port.name === 'Gull\'s Rest')).toBeTruthy()
+        expect(game.ports.some((port) => port.name === "Gull's Rest")).toBeTruthy()
       }
       for (const p of pages) {
         await p.getByRole('button', { name: /^All \d+ events$/ }).click()

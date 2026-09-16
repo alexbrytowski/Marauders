@@ -48,6 +48,7 @@ export function BattleModal({
   const selectLoss = (id: string) => setSelection({ exchange, id })
   const shipsFor = (id: string) =>
     game.ships.filter((ship) => ship.ownerId === id && battle?.participantShipIds.includes(ship.id))
+  const diceFor = (ship: (typeof game.ships)[number]) => (ship.perk === 'mark-of-the-kraken' ? 3 : 1)
   const fleet = (id: string) => (
     <div className="battle-fleet">
       {shipsFor(id).map((s) => (
@@ -68,32 +69,38 @@ export function BattleModal({
     const player = game.players.find((p) => p.id === id)
     const ships = shipsFor(id)
     const port = battle?.kind === 'port' && defending ? game.ports.find((p) => p.id === battle.portId) : null
+    const kraken = battle?.kind === 'kraken' && defending
     const support =
       battle?.supportingPortIds.filter((portId) => game.ports.find((p) => p.id === portId)?.ownerId === id)
         .length ?? 0
+    const diceCount = kraken ? 3 : ships.reduce((total, ship) => total + diceFor(ship), 0) + support
     return (
       <section
         className="battle-side"
-        style={{ '--crew': player?.color ?? '#d3c8ad' } as React.CSSProperties}
+        style={{ '--crew': kraken ? '#ee83ad' : (player?.color ?? '#d3c8ad') } as React.CSSProperties}
       >
         <span className="battle-side-role">{defending ? 'DEFENDING' : 'ATTACKING'}</span>
         <div className="battle-crest">
-          <Icon name={port ? 'port' : 'ship'} />
+          <Icon name={kraken ? 'kraken' : port ? 'port' : 'ship'} />
         </div>
-        <h3>{port?.name ?? player?.name ?? 'Unclaimed port'}</h3>
+        <h3>{kraken ? 'The Kraken' : (port?.name ?? player?.name ?? 'Unclaimed port')}</h3>
         <p>
           {port
             ? '1 port die'
-            : `${ships.length} ship${ships.length === 1 ? '' : 's'} · ${ships.length + support} ${ships.length + support === 1 ? 'die' : 'dice'}`}
+            : kraken
+              ? `${game.kraken?.lives ?? 0} lives remaining · 3 dice`
+              : `${ships.length} ship${ships.length === 1 ? '' : 's'} · ${diceCount} ${diceCount === 1 ? 'die' : 'dice'}`}
           {support > 0 && ' (includes port support within two hexes)'}
         </p>
         <div className="battle-dice" key={`${battle?.id}-${battle?.round}`}>
           {rolling ? (
             <>
-              {ships.map((ship) => (
-                <RollingDie key={ship.id} glass={ship.perk === 'glass-cannon'} />
-              ))}
-              {Array.from({ length: port ? 1 : support }, (_, i) => (
+              {ships.flatMap((ship) =>
+                Array.from({ length: diceFor(ship) }, (_, i) => (
+                  <RollingDie key={`${ship.id}-${i}`} glass={ship.perk === 'glass-cannon'} />
+                )),
+              )}
+              {Array.from({ length: port ? 1 : kraken ? 3 : support }, (_, i) => (
                 <RollingDie key={`port-${i}`} />
               ))}
             </>
@@ -106,9 +113,7 @@ export function BattleModal({
         {port && battle!.defenseModifier !== 0 && (
           <span className="defense-modifier">Port defense modifier: {battle!.defenseModifier}</span>
         )}
-        {!port && (
-          fleet(id)
-        )}
+        {!port && !kraken && fleet(id)}
       </section>
     )
   }
@@ -117,10 +122,17 @@ export function BattleModal({
         (ship) => battle.participantShipIds.includes(ship.id) && ship.perk === 'black-and-white',
       )
     : undefined
+  const markSuppressesBlackWhite = battle
+    ? game.ships.some(
+        (ship) => battle.participantShipIds.includes(ship.id) && ship.perk === 'mark-of-the-kraken',
+      )
+    : false
   const blackWhiteOwnerId =
-    battle?.status === 'awaiting-roll'
-      ? (currentBlackWhiteHolder?.ownerId ?? null)
-      : (battle?.blackWhiteOwnerId ?? currentBlackWhiteHolder?.ownerId ?? null)
+    markSuppressesBlackWhite
+      ? null
+      : battle?.status === 'awaiting-roll'
+        ? (currentBlackWhiteHolder?.ownerId ?? null)
+        : (battle?.blackWhiteOwnerId ?? currentBlackWhiteHolder?.ownerId ?? null)
   const blackWhiteActive = !!blackWhiteOwnerId
   const opposingBlackWhiteId =
     battle && blackWhiteOwnerId
@@ -131,6 +143,7 @@ export function BattleModal({
   const combatantName = (id: string | null) =>
     game.players.find((player) => player.id === id)?.name ??
     game.ports.find((port) => port.id === battle?.portId && (port.ownerId ?? port.id) === id)?.name ??
+    (id === 'the-kraken' ? 'The Kraken' : null) ??
     'Unclaimed port'
   return (
     <dialog
@@ -152,16 +165,20 @@ export function BattleModal({
         <h2 id="battle-title">
           {battle?.kind === 'port'
             ? 'Siege of the harbor'
-            : battle
-              ? 'Battle on the high seas'
-              : 'Choose your battle'}
+            : battle?.kind === 'kraken'
+              ? 'Clash with the Kraken'
+              : battle
+                ? 'Battle on the high seas'
+                : 'Choose your battle'}
         </h2>
         <p>
           {blackWhiteActive
             ? 'One black-or-white draw decides this exchange.'
-            : battle?.portId
-            ? game.ports.find((p) => p.id === battle.portId)?.name
-            : 'Every roll is public. Highest die wins.'}
+            : battle?.kind === 'kraken'
+              ? `${game.kraken?.lives ?? 0} of 3 lives remain. The Kraken rolls three dice.`
+              : battle?.portId
+                ? game.ports.find((p) => p.id === battle.portId)?.name
+                : 'Every roll is public. Highest die wins.'}
         </p>
       </div>
       {error && (
@@ -181,7 +198,9 @@ export function BattleModal({
                 onClick={() => void act({ type: 'choose-combat', choiceId: choice.id })}
               >
                 {game.players.find((p) => p.id === a?.ownerId)?.name} #{a?.number} <span>vs.</span>{' '}
-                {game.players.find((p) => p.id === b?.ownerId)?.name} #{b?.number}
+                {choice.kind === 'kraken'
+                  ? 'The Kraken'
+                  : `${game.players.find((p) => p.id === b?.ownerId)?.name} #${b?.number}`}
               </button>
             )
           })}
@@ -300,8 +319,8 @@ export function BattleModal({
       )}
       <p className="battle-note">
         {game.isEndingRound && 'Resolve launch battles before the next captain’s turn begins. '}
-        Ties reroll. Cheat Death forces a public reroll. Helpers never chain. Battle results remain in the
-        captain’s log.
+        Ties reroll. Cheat Death forces a public reroll. Helpers never chain. Kraken lives stay lost. Battle
+        results remain in the captain’s log.
       </p>
     </dialog>
   )

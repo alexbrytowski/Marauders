@@ -171,6 +171,51 @@
 .lesson-copy strong {
   color: #e3ece1;
 }
+.progression-timeline {
+  display: grid;
+  gap: 8px;
+}
+.progression-timeline > div {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #34505a;
+  border-radius: 6px;
+  background: #102a33;
+}
+.progression-timeline > div > strong {
+  color: #ff9cbc;
+  font:
+    700 16px Georgia,
+    serif;
+}
+.progression-timeline span,
+.progression-timeline small {
+  display: block;
+}
+.progression-timeline b {
+  color: #ead7b0;
+  font-size: 12px;
+}
+.progression-timeline small {
+  margin-top: 2px;
+  color: #aabfbd;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.progression-section {
+  padding-top: 4px;
+}
+.progression-section + .progression-section {
+  border-top: 1px solid #35505a;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+.progression-section > :last-child {
+  margin-bottom: 0;
+}
 .handbook details {
   border-top: 1px solid #35505a;
   margin-top: 14px;

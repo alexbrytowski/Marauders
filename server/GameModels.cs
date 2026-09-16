@@ -48,6 +48,7 @@ public sealed class GameState
     public List<RoundSnapshot> RoundHistory { get; set; } = [];
     public List<PerkPickup> PerkPickups { get; set; } = [];
     public WhirlpoolPair? Whirlpool { get; set; }
+    public KrakenState? Kraken { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
@@ -87,7 +88,7 @@ public sealed class Construction
     public int RemainingOwnerTurns { get; set; } = 2;
     public int StartedTurnNumber { get; set; }
 }
-public sealed record CombatChoice(string Id, string TriggerShipId, string OpponentShipId, string? HarborId);
+public sealed record CombatChoice(string Id, string TriggerShipId, string? OpponentShipId, string? HarborId, string Kind = "ships");
 public sealed record BattleShip(string Id, string OwnerId, int Number, int Q, int R, string? Perk);
 public sealed class CombatState
 {
@@ -128,6 +129,13 @@ public sealed class WhirlpoolPair
     public Hex Second { get; set; }
     public int RemainingTurns { get; set; }
     public Hex? Exit(Hex entry) => entry == First ? Second : entry == Second ? First : null;
+}
+public sealed class KrakenState
+{
+    public int Q { get; set; }
+    public int R { get; set; }
+    public int Lives { get; set; } = 3;
+    public Hex Hex => new(Q, R);
 }
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);
 public sealed class GameOptions

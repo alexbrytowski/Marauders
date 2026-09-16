@@ -1,5 +1,41 @@
 # Implementation decisions
 
+## 2026-09-15: Mark of the Kraken suppresses Black and White
+
+- The owner clarified that The Mark of the Kraken makes the entire participating
+  fleet immune to Black and White. If a Mark carrier participates on either side
+  of a ship battle, port attack, or Kraken encounter, Black and White does not
+  trigger for that exchange and all participants use their normal combat dice
+  and modifiers. This supersedes the earlier decision that Black and White could
+  replace a marked carrier's exchange.
+
+## 2026-09-15: round-33 Kraken and secret reward
+
+- Show one public warning during displayed round 32, then remove the banner.
+  Spawn the Kraken at the beginning of round 33. For a later-round development
+  start or an older compatible save that has not spawned it, create it on the
+  next turn-start boundary at or after round 33. Retain a zero-life Kraken record
+  after its death so it never respawns.
+- Randomly choose the spawn server-side for every game from empty ordinary-water
+  cells. The Kraken cell must be more than four direct hexes from every port:
+  consequently, every possible triggering cell in its two-hex reach is more than
+  two hexes from every port and cannot receive port support. Avoid ships, pickups,
+  and whirlpool endpoints. The living Kraken also blocks movement through its hex.
+- Treat each fleet as the player side of a normal public combat. Its triggering
+  ship enters combat within two Kraken hexes and friendly ships within two of that
+  ship help without chaining. The Kraken is a stationary neutral side with three
+  d6 dice and three persistent lives. A fleet win removes one life and continues;
+  a Kraken win causes one participating ship casualty and continues only while
+  the triggering ship remains in reach. Normal tie, casualty, timeout, Cheat
+  Death, and Black and White handling applies. Black Pearl cannot recruit the NPC.
+- On the final life, remove the red reach and drop **The Mark of the Kraken** at
+  the Kraken hex. It follows normal pickup/drop ownership rules. A carrier
+  contributes three normal d6 dice instead of one in every battle, including as
+  a helper or port attacker. If it participates, it suppresses Black and White
+  for the entire exchange, regardless of which side carries Black and White.
+  Keep the reward's name and effect out of the player-facing How to Play so it is
+  revealed only by in-game pickup/ship details and combat UI.
+
 ## 2026-09-15: geographically balanced random ports
 
 - Pure shuffling sometimes gave one captain three tightly grouped ports while

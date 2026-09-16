@@ -48,6 +48,13 @@ export function Icon({ name, className = '' }: { name: string; className?: strin
         <path d="m4 20 9-9M9 5l5-3 7 7-3 5zM2 18l4 4" />
       </>
     ),
+    kraken: (
+      <>
+        <path d="M6 11c0-8 12-8 12 0v3M6 13c-4 3-3 8 1 8 3 0 3-4 1-6m4-2c-3 5-1 9 2 8 3-1 1-5 1-7m3-1c4 3 3 8-1 8" />
+        <circle cx="10" cy="9" r=".8" fill="currentColor" />
+        <circle cx="14" cy="9" r=".8" fill="currentColor" />
+      </>
+    ),
     flag: (
       <>
         <path d="M5 22V3m0 0c5-4 9 4 15 0v10c-6 4-10-4-15 0" />

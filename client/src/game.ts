@@ -45,7 +45,13 @@ export type Construction = {
   remainingOwnerTurns: number
   startedTurnNumber: number
 }
-export type Encounter = { id: string; triggerShipId: string; opponentShipId: string; harborId: string | null }
+export type Encounter = {
+  id: string
+  triggerShipId: string
+  opponentShipId: string | null
+  harborId: string | null
+  kind: string
+}
 export type Battle = {
   id: string
   kind: string
@@ -113,6 +119,7 @@ export type Game = {
   roundHistory: RoundSnapshot[]
   perkPickups: (Hex & { kind: string })[]
   whirlpool?: { first: Hex; second: Hex; remainingTurns: number } | null
+  kraken?: (Hex & { lives: number }) | null
   updatedAt: string
 }
 export type Session = { playerId: string | null; canReset: boolean }
@@ -156,6 +163,12 @@ export const perks: Record<string, { name: string; symbol: string; description: 
     symbol: '↻',
     description:
       'Forces a public reroll after the first losing exchange this ship participates in, then respawns in open water.',
+  },
+  'mark-of-the-kraken': {
+    name: 'The Mark of the Kraken',
+    symbol: 'K',
+    description:
+      'This ship contributes three dice instead of one. The Black and White perk has no effect when this ship participates.',
   },
 }
 export const key = (h: Hex) => `${h.q},${h.r}`
@@ -227,6 +240,7 @@ export async function getJson<T>(url: string, body?: object): Promise<T> {
 export function movementPaths(board: Board, game: Game, ship: Ship): Map<string, Hex[]> {
   const cells = new Map(board.cells.map((c) => [key(c), c]))
   const blocked = new Set(game.ships.filter((s) => s.id !== ship.id).map(key))
+  if (game.kraken && game.kraken.lives > 0) blocked.add(key(game.kraken))
   if (game.whirlpool) {
     if (blocked.has(key(game.whirlpool.first))) blocked.add(key(game.whirlpool.second))
     if (blocked.has(key(game.whirlpool.second))) blocked.add(key(game.whirlpool.first))
@@ -255,11 +269,14 @@ export function firstEncounter(board: Board, game: Game, ship: Ship, path: Hex[]
   const cells = new Map(board.cells.map((c) => [key(c), c]))
   return path.slice(1).findIndex((step) => {
     const h = whirlpoolExit(game, step) ?? step
-    return game.ships.some(
-      (other) =>
-        other.ownerId !== ship.ownerId &&
-        (distance(h, other) === 1 ||
-          (cells.get(key(h))?.harborId && cells.get(key(h))?.harborId === cells.get(key(other))?.harborId)),
+    return (
+      (!!game.kraken && game.kraken.lives > 0 && distance(h, game.kraken) <= 2) ||
+      game.ships.some(
+        (other) =>
+          other.ownerId !== ship.ownerId &&
+          (distance(h, other) === 1 ||
+            (cells.get(key(h))?.harborId && cells.get(key(h))?.harborId === cells.get(key(other))?.harborId)),
+      )
     )
   })
 }

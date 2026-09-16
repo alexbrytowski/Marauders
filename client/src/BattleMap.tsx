@@ -23,7 +23,8 @@ export function BattleMap({
     (cell) =>
       cell.portId && (cell.portId === battle.portId || battle.supportingPortIds.includes(cell.portId)),
   )
-  const points = [...ships, ...portCells].map(point)
+  const kraken = battle.kind === 'kraken' ? game.kraken : null
+  const points = [...ships, ...portCells, ...(kraken ? [kraken] : [])].map(point)
   if (!points.length) return null
   const left = Math.min(...points.map((p) => p.x)) - 44,
     top = Math.min(...points.map((p) => p.y)) - 44
@@ -72,6 +73,22 @@ export function BattleMap({
               </g>
             )
           })}
+        {kraken &&
+          (() => {
+            const p = point(kraken)
+            return (
+              <g
+                className={`battle-map-kraken ${kraken.lives === 0 ? 'slain' : ''}`}
+                transform={`translate(${p.x} ${p.y})`}
+                role="img"
+                aria-label={kraken.lives ? `The Kraken, ${kraken.lives} lives remaining` : 'The slain Kraken'}
+              >
+                <circle r="15" />
+                <path d="M-7 0c0-10 14-10 14 0v4M-7 3c-5 3-4 9 0 9 3 0 3-4 1-7m4-2c-3 5-1 10 3 9 3-1 1-6 1-8m3-1c5 3 4 9 0 9" />
+                <text y="-17">{kraken.lives}/3</text>
+              </g>
+            )
+          })()}
         {ships.map((ship) => {
           const p = point(ship),
             player = game.players.find((player) => player.id === ship.ownerId)

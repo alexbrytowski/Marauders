@@ -374,6 +374,19 @@ export default function App() {
                   </>
                 )}
               </section>
+              {game.phase === 'playing' && game.turnNumber === 32 && !game.kraken && (
+                <section
+                  className="shipyard-warning kraken-warning"
+                  role="status"
+                  aria-label="Kraken warning"
+                >
+                  <Icon name="kraken" />
+                  <div>
+                    <strong>The sea is churning</strong>
+                    <span>The Kraken will rise in remote open water at the start of Round 33.</span>
+                  </div>
+                </section>
+              )}
               {game.phase === 'playing' && game.turnNumber >= 46 && (
                 <section
                   className={`shipyard-warning whirlpool-warning ${game.turnNumber >= 50 ? 'active' : ''}`}
@@ -719,7 +732,8 @@ export default function App() {
                           {Object.entries(event.rolls).map(([id, rolls]) => (
                             <span key={id}>
                               {game.players.find((p) => p.id === id)?.name ??
-                                game.ports.find((p) => p.id === id)?.name}
+                                game.ports.find((p) => p.id === id)?.name ??
+                                (id === 'the-kraken' ? 'The Kraken' : id)}
                               : {rolls.join(' · ')}
                             </span>
                           ))}
