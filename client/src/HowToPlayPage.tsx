@@ -842,6 +842,7 @@ function Perks() {
 
 function Progression() {
   const milestones = [
+    ['29', 'Kraken warning', 'Its future two-hex reach is marked red, giving fleets four rounds to move clear.'],
     ['33', 'The Kraken rises', 'It appears at a random, remote open-water hex with a red two-hex reach.'],
     [
       '50',
@@ -857,7 +858,7 @@ function Progression() {
   ]
   return (
     <Lesson
-      takeaway="Rounds 33, 50, 66, and 85 each introduce a lasting change to the voyage."
+      takeaway="The Kraken warning starts at round 29; rounds 33, 50, 66, and 85 introduce lasting changes."
       visual={
         <div className="progression-timeline" aria-label="Round progression timeline">
           {milestones.map(([round, title, text]) => (
@@ -880,7 +881,14 @@ function Progression() {
       <section className="progression-section">
         <h3>The Kraken · Round 33</h3>
         <ul>
-          <li>It spawns at a server-randomized open-water hex that changes from game to game.</li>
+          <li>
+            At round 29, the server chooses its open-water emergence hex and marks the future two-hex reach red.
+            Fleets have four rounds to move clear, and the center hex is reserved.
+          </li>
+          <li>
+            It rises at that marked location in round 33. Every ship left in the red reach is removed immediately
+            without a battle; carried perks drop normally.
+          </li>
           <li>
             Its pink hex carries a tentacle symbol; every water hex within two is marked red until it is slain.
           </li>

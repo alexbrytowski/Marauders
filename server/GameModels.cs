@@ -135,6 +135,7 @@ public sealed class KrakenState
     public int Q { get; set; }
     public int R { get; set; }
     public int Lives { get; set; } = 3;
+    public int? AwakensOnRound { get; set; }
     public Hex Hex => new(Q, R);
 }
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);

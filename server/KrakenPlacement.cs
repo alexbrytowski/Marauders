@@ -4,6 +4,7 @@ namespace Marauders.Server;
 public static class KrakenPlacement
 {
     public const int SpawnRound = 33;
+    public const int WarningRound = SpawnRound - 4;
     public const int Reach = 2;
     public const int StartingLives = 3;
     public const int Dice = 3;
@@ -24,6 +25,10 @@ public static class KrakenPlacement
         if (candidates.Length == 0)
             throw new RuleException("No port-safe open water is available for the Kraken.");
         var hex = candidates[random.Next(candidates.Length)];
-        return new() { Q = hex.Q, R = hex.R, Lives = StartingLives };
+        return new() { Q = hex.Q, R = hex.R, Lives = StartingLives, AwakensOnRound = SpawnRound };
     }
+
+    // Kraken records from older saves have no awakening round and are already active.
+    public static bool IsActive(KrakenState? kraken, int round) =>
+        kraken is { Lives: > 0 } && (kraken.AwakensOnRound is null || round >= kraken.AwakensOnRound);
 }

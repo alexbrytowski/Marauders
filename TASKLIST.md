@@ -15,9 +15,11 @@ provider settings and a live deployment have not been verified by the agent.
 
 ## September 15: round-33 Kraken
 
-- [x] Spawn a stationary, server-randomized Kraken from round 33 in port-safe
-  ordinary water, with a one-round warning at round 32, a pink tentacle marker,
-  and a red two-hex reach that disappears on death.
+- [x] Choose and telegraph a stationary, server-randomized Kraken in port-safe
+  ordinary water from round 29, reserving its center and showing its future red
+  two-hex reach for four rounds before it rises at round 33. Its pink tentacle
+  marker appears on activation; ships left in the marked reach are removed
+  immediately without battle, and the reach disappears on death.
 - [x] Add server-authoritative three-die, three-life Kraken combat with persistent
   damage, normal fleet helpers/casualties/perk interactions, timeout recovery,
   and no possible port support.

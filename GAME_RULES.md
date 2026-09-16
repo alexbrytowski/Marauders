@@ -117,12 +117,17 @@ There is a countdown for each turn and action so the game cannot take too long. 
 A round is one captain's displayed turn. Several lasting rule changes arrive as
 that counter advances:
 
-- **Round 32:** A one-round public warning announces that the Kraken is about to
-  rise. The warning goes away after this round.
+- **Round 29:** A four-round public warning begins. The server chooses the
+  Kraken's future ordinary-water hex, reserves that center against movement and
+  other spawns, and marks its future two-hex reach red so fleets can move clear.
 - **Round 33:** The Kraken appears at a server-randomized ordinary-water hex, so
-  its location can differ in every game. Its pink hex has a tentacle marker and
+  its location can differ in every game. It rises at the location marked since
+  round 29. Its pink hex has a tentacle marker and
   its two-hex reach is colored red until it is slain. Its spawn is far enough
-  from every port that no ship inside its reach can receive port support.
+  from every port that no ship inside its reach can receive port support. Every
+  ship still in the marked reach when it rises is removed immediately without a
+  battle, roll, casualty choice, or perk intervention. Carried perks drop at the
+  removed ships' hexes normally.
 - **Round 46:** A four-round public warning announces the whirlpool surge.
 - **Round 50:** The whirlpool spawn chance after a completed turn rises from 10%
   to 25% whenever no pair exists.

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { directions, distance, key, perks, portNumber, whirlpoolExit } from './game'
+import { directions, distance, isKrakenActive, key, perks, portNumber, whirlpoolExit } from './game'
 import type { Board, Cell, Game, Hex } from './game'
 import { outline, point } from './boardGeometry'
 import { ShipPiece, PortPiece } from './BoardPieces'
@@ -77,6 +77,7 @@ export function BoardView({
   const ships = new Map(game.ships.map((s) => [key(s), s]))
   const pickups = new Map(game.perkPickups.map((p) => [key(p), p]))
   const kraken = game.kraken && game.kraken.lives > 0 ? game.kraken : null
+  const activeKraken = isKrakenActive(game)
   const inspect = (cell: Cell | null) => {
     setInspected(cell)
     onHover(cell)
@@ -209,7 +210,8 @@ export function BoardView({
             const harborFocus = cell.harborId && cell.harborId === focusedHarbor
             const coast = coasts.has(key(cell))
             const krakenDistance = kraken ? distance(cell, kraken) : Number.POSITIVE_INFINITY
-            const isKraken = krakenDistance === 0
+            const isKrakenCenter = krakenDistance === 0
+            const isKraken = activeKraken && isKrakenCenter
             const inKrakenReach = krakenDistance <= 2 && ['water', 'harbor'].includes(cell.terrain)
             const baseDescription = ship
               ? `${owner?.name}'s ship ${ship.number}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
@@ -218,6 +220,8 @@ export function BoardView({
                 : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup. ${perks[pickup.kind]?.description} ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
             const description = isKraken
               ? `The Kraken, ${kraken!.lives} of 3 lives remaining, hex ${key(cell)}`
+              : isKrakenCenter
+                ? `The Kraken will rise here in round ${kraken!.awakensOnRound ?? 33}, hex ${key(cell)}`
               : `${baseDescription}${inKrakenReach ? ". Within the Kraken's two-hex combat reach" : ''}`
             return (
               <g
@@ -350,7 +354,7 @@ export function BoardView({
           <aside className="board-inspection" role="tooltip">
             <strong>
               {inspectedKraken
-                ? 'The Kraken'
+                ? activeKraken ? 'The Kraken' : 'Kraken warning'
                 : inspectedShip
                   ? `Ship ${inspectedShip.number} · ${players.get(inspectedShip.ownerId)?.name}`
                   : (inspectedPort?.name ?? inspectedPickupPerk?.name ?? 'Whirlpool passage')}
@@ -385,9 +389,11 @@ export function BoardView({
             )}
             {inspectedKrakenReach && (
               <span>
-                {inspectedKraken
-                  ? `${kraken!.lives} of 3 lives remain. It rolls 3 dice and drops the Mark of the Kraken when slain.`
-                  : "Inside the Kraken's two-hex reach. Entering this area triggers combat; ports cannot assist."}
+                {activeKraken
+                  ? inspectedKraken
+                    ? `${kraken!.lives} of 3 lives remain. It rolls 3 dice and drops the Mark of the Kraken when slain.`
+                    : "Inside the Kraken's two-hex reach. Entering this area triggers combat; ports cannot assist."
+                  : `The Kraken will rise here in round ${kraken!.awakensOnRound ?? 33}. Ships left in the marked reach are removed immediately without battle.`}
               </span>
             )}
           </aside>
@@ -403,7 +409,13 @@ export function BoardView({
               ↻ Whirlpools · {game.whirlpool.remainingTurns} turns left
             </span>
           )}
-          {kraken && <span className="kraken-status">Kraken · {kraken.lives}/3 lives</span>}
+          {kraken && (
+            <span className="kraken-status">
+              {activeKraken
+                ? `Kraken · ${kraken.lives}/3 lives`
+                : `Kraken warning · rises in ${(kraken.awakensOnRound ?? 33) - game.turnNumber} rounds`}
+            </span>
+          )}
           <span>
             <i className="harbor-key" />
             Harbor

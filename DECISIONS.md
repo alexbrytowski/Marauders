@@ -11,11 +11,16 @@
 
 ## 2026-09-15: round-33 Kraken and secret reward
 
-- Show one public warning during displayed round 32, then remove the banner.
-  Spawn the Kraken at the beginning of round 33. For a later-round development
-  start or an older compatible save that has not spawned it, create it on the
-  next turn-start boundary at or after round 33. Retain a zero-life Kraken record
-  after its death so it never respawns.
+- Begin the public warning during displayed round 29. At that boundary, choose
+  and persist the Kraken's server-randomized location, reserve its center hex
+  against ship movement and other spawns, and show its future two-hex reach in
+  red through round 32. This gives fleets four rounds to move clear before the
+  Kraken becomes active at the beginning of round 33. At emergence, remove every
+  ship still within the marked two-hex reach immediately, without combat, dice,
+  casualty choice, or perk intervention; carried perks drop normally. For a
+  later-round development start or an older compatible save that has not spawned
+  it, create it on the next turn-start boundary at or after round 33. Retain a
+  zero-life Kraken record after its death so it never respawns.
 - Randomly choose the spawn server-side for every game from empty ordinary-water
   cells. The Kraken cell must be more than four direct hexes from every port:
   consequently, every possible triggering cell in its two-hex reach is more than

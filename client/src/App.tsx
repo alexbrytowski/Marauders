@@ -374,7 +374,7 @@ export default function App() {
                   </>
                 )}
               </section>
-              {game.phase === 'playing' && game.turnNumber === 32 && !game.kraken && (
+              {game.phase === 'playing' && game.turnNumber >= 29 && game.turnNumber < 33 && (
                 <section
                   className="shipyard-warning kraken-warning"
                   role="status"
@@ -382,8 +382,10 @@ export default function App() {
                 >
                   <Icon name="kraken" />
                   <div>
-                    <strong>The sea is churning</strong>
-                    <span>The Kraken will rise in remote open water at the start of Round 33.</span>
+                    <strong>
+                      The Kraken rises in {33 - game.turnNumber} round{33 - game.turnNumber === 1 ? '' : 's'}
+                    </strong>
+                    <span>Its future two-hex reach is marked red. Ships left there when Round 33 begins are removed.</span>
                   </div>
                 </section>
               )}

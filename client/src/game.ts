@@ -119,7 +119,7 @@ export type Game = {
   roundHistory: RoundSnapshot[]
   perkPickups: (Hex & { kind: string })[]
   whirlpool?: { first: Hex; second: Hex; remainingTurns: number } | null
-  kraken?: (Hex & { lives: number }) | null
+  kraken?: (Hex & { lives: number; awakensOnRound?: number | null }) | null
   updatedAt: string
 }
 export type Session = { playerId: string | null; canReset: boolean }
@@ -174,6 +174,10 @@ export const perks: Record<string, { name: string; symbol: string; description: 
 export const key = (h: Hex) => `${h.q},${h.r}`
 export const distance = (a: Hex, b: Hex) =>
   (Math.abs(a.q - b.q) + Math.abs(a.r - b.r) + Math.abs(a.q - b.q + a.r - b.r)) / 2
+export const isKrakenActive = (game: Game) =>
+  !!game.kraken &&
+  game.kraken.lives > 0 &&
+  (game.kraken.awakensOnRound == null || game.turnNumber >= game.kraken.awakensOnRound)
 export const directions = [
   { q: 1, r: 0 },
   { q: 1, r: -1 },
@@ -270,7 +274,7 @@ export function firstEncounter(board: Board, game: Game, ship: Ship, path: Hex[]
   return path.slice(1).findIndex((step) => {
     const h = whirlpoolExit(game, step) ?? step
     return (
-      (!!game.kraken && game.kraken.lives > 0 && distance(h, game.kraken) <= 2) ||
+      (isKrakenActive(game) && distance(h, game.kraken!) <= 2) ||
       game.ships.some(
         (other) =>
           other.ownerId !== ship.ownerId &&

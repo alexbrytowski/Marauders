@@ -317,7 +317,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
                 if (harbor is not null && !Board.InHarbor(b.Hex, harbor)) harbor = null;
                 choices.Add(new($"{a.Id}:{b.Id}", a.Id, b.Id, harbor));
             }
-        if (state.Kraken is { Lives: > 0 } kraken)
+        if (KrakenPlacement.IsActive(state.Kraken, state.TurnNumber) && state.Kraken is { } kraken)
             foreach (var ship in state.Ships.Where(ship => ship.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach))
                 choices.Add(new($"kraken:{ship.Id}", ship.Id, null, null, "kraken"));
         // Different triggering pairs can describe exactly the same fight. Only
@@ -348,7 +348,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (choice.Kind == "kraken")
         {
             var kraken = state.Kraken;
-            Require(kraken is { Lives: > 0 } && a.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach,
+            Require(KrakenPlacement.IsActive(kraken, state.TurnNumber) && a.Hex.DistanceTo(kraken!.Hex) <= KrakenPlacement.Reach,
                 "That Kraken encounter is no longer pending.");
             var krakenBattle = new CombatState
             {
@@ -610,7 +610,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var a = state.Ships.SingleOrDefault(s => s.Id == battle.TriggerShipId);
         var b = state.Ships.SingleOrDefault(s => s.Id == battle.OpponentShipId);
         var encounterContinues = battle.Kind == "kraken"
-            ? a is not null && state.Kraken is { Lives: > 0 } kraken && a.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach
+            ? a is not null && KrakenPlacement.IsActive(state.Kraken, state.TurnNumber) && a.Hex.DistanceTo(state.Kraken!.Hex) <= KrakenPlacement.Reach
             : a is not null && b is not null && Triggers(a, b, Board, state.Ports);
         if (encounterContinues)
         {
@@ -818,12 +818,20 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
-        if (state.TurnNumber == KrakenPlacement.SpawnRound - 1)
-            Log("kraken", "Kraken warning: the sea is churning. The Kraken will rise in open water next round.");
-        if (state.TurnNumber >= KrakenPlacement.SpawnRound && state.Kraken is null)
+        var placedKraken = false;
+        if (state.TurnNumber >= KrakenPlacement.WarningRound && state.Kraken is null)
         {
             state.Kraken = KrakenPlacement.Spawn(state, dice);
-            Log("kraken", $"The Kraken rose at {state.Kraken.Q}, {state.Kraken.R} with three dice, three lives, and a two-hex reach.");
+            placedKraken = true;
+        }
+        if (state.TurnNumber < KrakenPlacement.SpawnRound && placedKraken)
+            Log("kraken", $"Kraken warning: the sea is churning around {state.Kraken!.Q}, {state.Kraken.R}. It will rise in round {KrakenPlacement.SpawnRound}; its two-hex reach is now marked on every chart.");
+        if (state.TurnNumber >= KrakenPlacement.SpawnRound &&
+            (placedKraken || state.TurnNumber == KrakenPlacement.SpawnRound))
+        {
+            var kraken = state.Kraken!;
+            Log("kraken", $"The Kraken rose at {kraken.Q}, {kraken.R} with three dice, three lives, and a two-hex reach.");
+            ResolveKrakenEmergence(kraken);
         }
         if (state.TurnNumber == 46)
             Log("whirlpool", "Whirlpool warning: starting in four rounds, completed turns will have a 25% chance to spawn whirlpools instead of 10%.");
@@ -839,6 +847,25 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("turn", "Endgame action surge is now active: captains receive 1 action die per 2 ships, rounding up.");
         RefreshEncounters();
         SettleActions();
+    }
+
+    private void ResolveKrakenEmergence(KrakenState kraken)
+    {
+        var casualties = state.Ships
+            .Where(ship => ship.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach)
+            .ToArray();
+        foreach (var ship in casualties)
+        {
+            state.Ships.Remove(ship);
+            if (ship.Perk is not null)
+            {
+                state.PerkPickups.Add(new(ship.Perk, ship.Q, ship.R));
+                Log("perk", $"{PerkName(ship.Perk)} dropped at {ship.Q}, {ship.R}.");
+            }
+            Log("casualty", $"{Name(ship.OwnerId)}'s ship {ship.Number} was swallowed when the Kraken rose.");
+        }
+        if (casualties.Length > 0)
+            Log("kraken", $"The Kraken's emergence removed {casualties.Length} ship{(casualties.Length == 1 ? "" : "s")} from its marked reach without a battle.");
     }
 
     public bool Expire()

@@ -30,21 +30,78 @@ public partial class GameRulesTests
     }
 
     [Fact]
-    public void Kraken_warns_once_at_32_and_spawns_randomly_at_33()
+    public void Kraken_reach_is_revealed_at_29_and_activates_at_33()
+    {
+        var state = Lobby();
+        var rules = new GameRules(state, new FixedDice(), new GameOptions { StartingRound = 29 }, Now);
+        ReadyCrew(state, rules: rules);
+        var kraken = Assert.IsType<KrakenState>(state.Kraken);
+        Assert.Equal(33, kraken.AwakensOnRound);
+        Assert.False(KrakenPlacement.IsActive(kraken, state.TurnNumber));
+        Assert.Single(state.Events, e => e.Kind == "kraken" && e.Message.Contains("round 33"));
+        Assert.DoesNotContain(state.Events, e => e.Kind == "kraken" && e.Message.Contains("rose at"));
+
+        while (state.TurnNumber < 33)
+            rules.Act(state.ActivePlayerId!, new("end-turn"));
+        Assert.Equal(33, state.TurnNumber);
+        Assert.True(KrakenPlacement.IsActive(kraken, state.TurnNumber));
+        Assert.Equal(3, kraken.Lives);
+        Assert.Equal("water", MapCatalog.Resolve(state.MapId, state.BoardVersion).Cell(kraken.Hex)!.Terrain);
+        Assert.Single(state.Events, e => e.Kind == "kraken" && e.Message.Contains("rose at"));
+        Assert.Single(state.Events, e => e.Kind == "kraken" && e.Message.Contains("round 33"));
+    }
+
+    [Fact]
+    public void Warned_reach_is_safe_until_round_33_and_the_center_is_reserved()
+    {
+        var state = Playing();
+        state.TurnNumber = 29;
+        state.Kraken = new() { Q = Open.Q + 3, R = Open.R, AwakensOnRound = 33 };
+        var ship = Add(state, 0, Open);
+        state.RemainingMovement = 3;
+
+        Rules(state).Act(ship.OwnerId, new("move", ShipId: ship.Id, Q: Open.Q + 1, R: Open.R));
+        Assert.Null(state.Combat);
+        Assert.Empty(state.CombatChoices);
+        Assert.Throws<RuleException>(() =>
+            Rules(state).Act(ship.OwnerId, new("move", ShipId: ship.Id, Q: Open.Q + 3, R: Open.R)));
+
+        state.TurnNumber = 33;
+        Rules(state).Act(ship.OwnerId, new("move", ShipId: ship.Id, Q: Open.Q + 2, R: Open.R));
+        Assert.Equal("kraken", state.Combat!.Kind);
+    }
+
+    [Fact]
+    public void Kraken_emergence_removes_every_ship_in_the_warned_reach_without_battle()
     {
         var state = Lobby();
         var rules = new GameRules(state, new FixedDice(), new GameOptions { StartingRound = 32 }, Now);
         ReadyCrew(state, rules: rules);
-        Assert.Null(state.Kraken);
-        Assert.Single(state.Events, e => e.Kind == "kraken" && e.Message.Contains("next round"));
+        var kraken = Assert.IsType<KrakenState>(state.Kraken);
+        var danger = BoardDefinition.Cells
+            .Where(cell => cell.Terrain == "water" && cell.Hex.DistanceTo(kraken.Hex) is 1 or 2)
+            .Take(2)
+            .Select(cell => cell.Hex)
+            .ToArray();
+        Assert.Equal(2, danger.Length);
+        var doomed = state.Ships.Where(ship => ship.OwnerId == state.ActivePlayerId).Take(2).ToArray();
+        var survivor = state.Ships.First(ship => ship.OwnerId == state.ActivePlayerId && !doomed.Contains(ship));
+        doomed[0].Q = danger[0].Q; doomed[0].R = danger[0].R;
+        doomed[1].Q = danger[1].Q; doomed[1].R = danger[1].R;
+        state.PerkPickups.Clear();
+        doomed[0].Perk = "loaded-dice";
 
         rules.Act(state.ActivePlayerId!, new("end-turn"));
+
         Assert.Equal(33, state.TurnNumber);
-        var kraken = Assert.IsType<KrakenState>(state.Kraken);
-        Assert.Equal(3, kraken.Lives);
-        Assert.Equal("water", MapCatalog.Resolve(state.MapId, state.BoardVersion).Cell(kraken.Hex)!.Terrain);
-        Assert.Single(state.Events, e => e.Kind == "kraken" && e.Message.Contains("rose at"));
-        Assert.Single(state.Events, e => e.Kind == "kraken" && e.Message.Contains("next round"));
+        Assert.DoesNotContain(doomed[0], state.Ships);
+        Assert.DoesNotContain(doomed[1], state.Ships);
+        Assert.Contains(survivor, state.Ships);
+        Assert.Contains(state.PerkPickups, perk =>
+            perk.Kind == "loaded-dice" && perk.Q == danger[0].Q && perk.R == danger[0].R);
+        Assert.Null(state.Combat);
+        Assert.Empty(state.CombatChoices);
+        Assert.Contains(state.Events, e => e.Kind == "kraken" && e.Message.Contains("removed 2 ships") && e.Message.Contains("without a battle"));
     }
 
     [Fact]

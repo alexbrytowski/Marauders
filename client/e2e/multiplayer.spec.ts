@@ -608,7 +608,7 @@ test('Kraken warning, random spawn, combat, death, and secret reward synchronize
       phase: 'playing',
       activePlayerId: ids[0],
       turnOrder: ids,
-      turnNumber: 32,
+      turnNumber: 28,
       remainingActions: 1,
       remainingMovement: 0,
       isBuildPhase: false,
@@ -633,12 +633,37 @@ test('Kraken warning, random spawn, combat, death, and secret reward synchronize
     await startServer()
     for (const page of pages) {
       await page.reload()
-      await expect(page.getByLabel('Kraken warning')).toContainText('Round 33')
+      await expect(page.getByLabel('Kraken warning')).toHaveCount(0)
     }
 
     game = await state(pages[0])
-    while (game.turnNumber === 32) {
-      const ended = await pages[0].request.post('/api/game/action', {
+    while (game.turnNumber < 29) {
+      const warned = await pages[0].request.post('/api/game/action', {
+        headers,
+        data: { type: 'end-turn', expectedRevision: game.revision },
+      })
+      expect(warned.status()).toBe(200)
+      game = await warned.json()
+    }
+    expect(game.turnNumber).toBe(29)
+    expect(game.kraken?.awakensOnRound).toBe(33)
+    const warnedKraken = game.kraken!
+    expect(
+      game.ports.every((port) => {
+        const portCell = board.cells.find((cell) => cell.portId === port.id)!
+        return distance(warnedKraken, portCell) > 4
+      }),
+    ).toBe(true)
+    for (const page of pages) {
+      await expect(page.getByLabel('Kraken warning')).toContainText('Round 33')
+      await expect(page.locator('[data-kraken="kraken"]')).toHaveCount(0)
+      await expect(page.locator('[data-kraken="reach"]').first()).toBeVisible()
+      await expect(page.locator('.kraken-status')).toContainText('rises in 4 rounds')
+    }
+
+    while (game.turnNumber < 33) {
+      const activePage = pages[ids.indexOf(game.activePlayerId!)]
+      const ended = await activePage.request.post('/api/game/action', {
         headers,
         data: { type: 'end-turn', expectedRevision: game.revision },
       })
@@ -648,6 +673,8 @@ test('Kraken warning, random spawn, combat, death, and secret reward synchronize
     expect(game.turnNumber).toBe(33)
     expect(game.kraken?.lives).toBe(3)
     const kraken = game.kraken!
+    expect(kraken.q).toBe(warnedKraken.q)
+    expect(kraken.r).toBe(warnedKraken.r)
     expect(
       game.ports.every((port) => {
         const portCell = board.cells.find((cell) => cell.portId === port.id)!
