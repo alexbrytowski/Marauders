@@ -47,17 +47,17 @@ provider settings and a live deployment have not been verified by the agent.
   and build, Debug tests (196), Release build, and the focused five-browser
   setup/synchronization/persistence regression pass.
 
-## September 15: round-100 action surge
+## September 15: round-85 action surge
 
-- [x] Starting in round 100, increase server-authoritative action dice from one
+- [x] Starting in round 85, increase server-authoritative action dice from one
   per three ships to one per two ships, rounding up. Keep the earlier rate
-  through round 99 and align fleet previews, rules, and handbook wording.
-- [x] Show a twelve-round public warning beginning at round 88, with a shared
-  countdown plus captain-log entries for the warning and round-100 activation.
-  Focused four-browser synchronization and launcher checks pass; client
-  lint/build, Debug tests, Release solution build, and all 193 server tests pass.
+  through round 84 and align fleet previews, rules, and handbook wording.
+- [x] Show a twelve-round public warning beginning at round 73, with a shared
+  countdown plus captain-log entries for the warning and round-85 activation.
+  Focused four-browser synchronization, client lint/build, Debug and Release
+  solution builds, and all 208 server tests pass.
 - [x] Add a Development-only local-crew launcher that starts fresh practice
-  matches at round 99 so the old and new action rates can be compared directly.
+  matches at round 84 so the old and new action rates can be compared directly.
 
 ## September 15: round-50 whirlpool surge
 

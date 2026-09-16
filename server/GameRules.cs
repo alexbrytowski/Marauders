@@ -6,7 +6,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
 {
     public const string KrakenId = "the-kraken";
     private BoardMap Board => MapCatalog.Resolve(state.MapId, state.BoardVersion);
-    public static int ActionCount(int ships, int turnNumber) => turnNumber >= 100 ? (ships + 1) / 2 : (ships + 2) / 3;
+    public static int ActionCount(int ships, int turnNumber) => turnNumber >= 85 ? (ships + 1) / 2 : (ships + 2) / 3;
     public static readonly string[] Colors = ["#ed7866", "#69c5bc", "#b19bdf", "#e6be68"];
     public static readonly string[] Characters = CharacterCatalog.Ids;
     private static void Require([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string error) { if (!condition) throw new RuleException(error); }
@@ -833,9 +833,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("construction", "Shipyard warning: starting in eight rounds, new construction will need 3 owner rounds. Existing construction will keep its timing.");
         else if (state.TurnNumber == 66)
             Log("construction", "Late-game shipyards are now active: new construction needs 3 owner rounds. Existing construction keeps its timing.");
-        if (state.TurnNumber == 88)
+        if (state.TurnNumber == 73)
             Log("turn", "Endgame dice warning: starting in twelve rounds, captains will receive 1 action die per 2 ships instead of per 3 ships, rounding up.");
-        else if (state.TurnNumber == 100)
+        else if (state.TurnNumber == 85)
             Log("turn", "Endgame action surge is now active: captains receive 1 action die per 2 ships, rounding up.");
         RefreshEncounters();
         SettleActions();

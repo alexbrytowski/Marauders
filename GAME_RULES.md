@@ -34,7 +34,7 @@ The server automatically places two ships in empty dark-blue hexes at each owned
 
 ### Dice, actions, and ports
 
-The number of ships on the water determines the number of dice, and therefore actions, a player gets. Before round 100, divide ships by three and round up: 1-3 ships get 1 die, 4-6 get 2 dice, 7-9 get 3 dice, and so on. Starting in round 100, divide ships by two and round up instead: 1-2 ships get 1 die, 3-4 get 2 dice, 5-6 get 3 dice, and so on. A twelve-round public warning begins at round 88. Zero ships means zero action dice. Each participating ship still rolls one combat die.
+The number of ships on the water determines the number of dice, and therefore actions, a player gets. Before round 85, divide ships by three and round up: 1-3 ships get 1 die, 4-6 get 2 dice, 7-9 get 3 dice, and so on. Starting in round 85, divide ships by two and round up instead: 1-2 ships get 1 die, 3-4 get 2 dice, 5-6 get 3 dice, and so on. A twelve-round public warning begins at round 73. Zero ships means zero action dice. Each participating ship still rolls one combat die.
 
 Each die is one action. With an action, a player may choose one of the following:
 
@@ -129,8 +129,8 @@ that counter advances:
 - **Round 58:** An eight-round public warning announces slower shipbuilding.
 - **Round 66:** Newly started construction needs three future owner rounds
   instead of two. Existing builds keep the timing stored when they began.
-- **Round 88:** A twelve-round public warning announces the action surge.
-- **Round 100:** Captains receive one action die per two ships instead of per
+- **Round 73:** A twelve-round public warning announces the action surge.
+- **Round 85:** Captains receive one action die per two ships instead of per
   three ships, rounding up.
 
 The Kraken never moves. Any fleet whose triggering ship enters its two-hex reach

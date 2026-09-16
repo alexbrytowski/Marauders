@@ -183,7 +183,7 @@ export const directions = [
   { q: 0, r: 1 },
 ]
 export const actionCount = (ships: number, turnNumber: number) =>
-  Math.ceil(ships / (turnNumber >= 100 ? 2 : 3))
+  Math.ceil(ships / (turnNumber >= 85 ? 2 : 3))
 export const portNumber = (id: string) => id.replace('port-', '')
 export const capacity = (game: Game, ownerId: string) =>
   game.ports.filter((p) => p.ownerId === ownerId).length * 2 +

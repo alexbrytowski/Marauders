@@ -346,7 +346,7 @@ function Sailing({ board }: { board?: Board }) {
       <label className="fleet-slider" htmlFor="example-fleet">
         Fleet size:{' '}
         <strong>
-          {fleet} ships → {actionCount(fleet, 1)} action dice before Round 100
+          {fleet} ships → {actionCount(fleet, 1)} action dice before Round 85
         </strong>
       </label>
       <input
@@ -358,7 +358,7 @@ function Sailing({ board }: { board?: Board }) {
         onChange={(e) => setFleet(Number(e.target.value))}
       />
       <p>
-        Before Round 100: 1–3 ships get 1 die, 4–6 get 2, and 7–9 get 3. Starting Round 100, every 2 ships
+        Before Round 85: 1–3 ships get 1 die, 4–6 get 2, and 7–9 get 3. Starting Round 85, every 2 ships
         grant 1 action die instead, rounding up.
       </p>
       <p>Movement rolls are equally likely to be 4, 5, or 6, and appear immediately.</p>
@@ -850,14 +850,14 @@ function Progression() {
     ],
     ['66', 'Shipyards slow', 'New builds need three future owner rounds; existing builds keep their timing.'],
     [
-      '100',
+      '85',
       'Actions surge',
       'Captains receive one action die per two ships instead of per three, rounding up.',
     ],
   ]
   return (
     <Lesson
-      takeaway="Rounds 33, 50, 66, and 100 each introduce a lasting change to the voyage."
+      takeaway="Rounds 33, 50, 66, and 85 each introduce a lasting change to the voyage."
       visual={
         <div className="progression-timeline" aria-label="Round progression timeline">
           {milestones.map(([round, title, text]) => (
@@ -908,9 +908,9 @@ function Progression() {
         </p>
       </section>
       <section className="progression-section">
-        <h3>More action dice · Round 100</h3>
+        <h3>More action dice · Round 85</h3>
         <p>
-          Before Round 100, captains get one action die per three ships, rounded up. From Round 100 onward they
+          Before Round 85, captains get one action die per three ships, rounded up. From Round 85 onward they
           get one per two ships, rounded up.
         </p>
       </section>

@@ -938,7 +938,7 @@ test('late-game rule warnings synchronize across captains', async ({ browser }, 
     saved = JSON.parse(await readFile(savePath, 'utf8'))
     Object.assign(saved.game, {
       activePlayerId: ids[0],
-      turnNumber: 88,
+      turnNumber: 73,
       remainingActions: 0,
       remainingMovement: 0,
       isBuildPhase: true,
@@ -963,7 +963,7 @@ test('late-game rule warnings synchronize across captains', async ({ browser }, 
     saved = JSON.parse(await readFile(savePath, 'utf8'))
     Object.assign(saved.game, {
       activePlayerId: ids[0],
-      turnNumber: 99,
+      turnNumber: 84,
       isBuildPhase: true,
       isEndingRound: false,
       availableBuilds: 0,
@@ -984,15 +984,15 @@ test('late-game rule warnings synchronize across captains', async ({ browser }, 
     })
     expect(response.status(), await response.text()).toBe(200)
     game = await response.json()
-    expect(game.turnNumber).toBe(100)
+    expect(game.turnNumber).toBe(85)
     for (const page of pages)
       await expect(page.getByLabel('Endgame action dice rate')).toContainText(
         'Endgame action surge is active',
       )
     expect(
-      game.events.some((event) => event.turn === 100 && event.message.includes('now active')),
+      game.events.some((event) => event.turn === 85 && event.message.includes('now active')),
     ).toBeTruthy()
-    await pages[0].screenshot({ path: testInfo.outputPath('action-dice-round-100-active.png') })
+    await pages[0].screenshot({ path: testInfo.outputPath('action-dice-round-85-active.png') })
   } finally {
     await Promise.all(contexts.map((context) => context.close()))
   }

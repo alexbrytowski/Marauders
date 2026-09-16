@@ -75,9 +75,9 @@ at round 58 and the longer construction timing activate at round 66. It uses the
 same disposable local-crew save area and never changes the main local game.
 
 To test the action-dice change directly, double-click
-**Play-Local-Crew-Round-99.cmd**. The fresh match begins at round 99, using one
+**Play-Local-Crew-Round-84.cmd**. The fresh match begins at round 84, using one
 action die per three ships for that round, then activates one die per two ships
-at round 100. It uses the same isolated, disposable practice save.
+at round 85. It uses the same isolated, disposable practice save.
 
 The launcher shows a newly generated local reset password in its terminal unless
 you already supplied `Game__ResetPassword`. Passwords are never stored in Git or
@@ -105,8 +105,8 @@ the save. See [operations](OPERATIONS.md) for configuration, backup, and recover
 Hover ports to inspect shipbuilding and ships to read their perks. Black Pearl
 recruits on a 1-in-6 roll; Mouth to Feed replaces Architect and adds one population
 slot. Cheat Death rerolls the first losing exchange its carrier joins, then respawns
-in open water. Ships grant one action die per three ships before round 100 and per
-two ships starting at round 100, always rounding up. Ports assist
+in open water. Ships grant one action die per three ships before round 85 and per
+two ships starting at round 85, always rounding up. Ports assist
 their owner's triggering ship from up to two hexes away, even outside harbor water.
 **Forfeit and leave** asks for confirmation, removes your fleet, leaves your ports
 neutral with full defense, and releases your browser seat. The last remaining port owner wins.
