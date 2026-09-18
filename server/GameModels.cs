@@ -37,10 +37,15 @@ public sealed class GameState
         get
         {
             if (Combat is { } battle)
-                return ActivePlayerId == battle.AttackerId || ActivePlayerId == battle.DefenderId
-                    ? ActivePlayerId : battle.AttackerId;
+            {
+                var liveCombatants = new[] { battle.AttackerId, battle.DefenderId }
+                    .Where(id => id != GameRules.KrakenId && Players.Any(player => player.Id == id && !player.HasForfeited))
+                    .ToArray();
+                return liveCombatants.Contains(ActivePlayerId) ? ActivePlayerId : liveCombatants.FirstOrDefault();
+            }
             var captains = CombatChoices.SelectMany(c => new[] { c.TriggerShipId, c.OpponentShipId })
-                .Select(id => Ships.FirstOrDefault(s => s.Id == id)?.OwnerId).OfType<string>().ToArray();
+                .Select(id => Ships.FirstOrDefault(s => s.Id == id)?.OwnerId).OfType<string>()
+                .Where(id => Players.Any(player => player.Id == id && !player.HasForfeited)).ToArray();
             return captains.Contains(ActivePlayerId) ? ActivePlayerId : captains.FirstOrDefault();
         }
     }

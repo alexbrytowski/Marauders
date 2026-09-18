@@ -37,17 +37,17 @@ public partial class GameRulesTests
         Assert.Equal("mouth-to-feed", b.Perk); Assert.Single(s.PerkPickups);
     }
 
-    [Theory] [InlineData(1, 0)] [InlineData(8, 7)] [InlineData(9, 8)]
-    public void Glass_cannon_rolls_zero_through_eight_publicly(int raw, int expected)
+    [Theory] [InlineData(1, -1)] [InlineData(9, 7)] [InlineData(10, 8)]
+    public void Glass_cannon_rolls_negative_one_through_eight_publicly(int raw, int expected)
     {
         var (s, a, _) = Duel("glass-cannon"); var dice = new ControlledDice([raw, 6]);
         new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
-        Assert.Equal(expected, Assert.Single(s.Combat.Rolls[a.OwnerId])); Assert.Equal(new[] { 9, 6 }, dice.Sides);
+        Assert.Equal(expected, Assert.Single(s.Combat.Rolls[a.OwnerId])); Assert.Equal(new[] { 10, 6 }, dice.Sides);
         Assert.Equal(expected, s.Events.Last(e => e.Kind == "roll").Rolls![a.OwnerId][0]);
     }
 
-    [Theory] [InlineData(1, 3)] [InlineData(2, 3)] [InlineData(3, 3)] [InlineData(6, 6)]
-    public void Loaded_dice_changes_exactly_one_and_two(int raw, int expected)
+    [Theory] [InlineData(1, 4)] [InlineData(2, 4)] [InlineData(3, 4)] [InlineData(4, 4)] [InlineData(6, 6)]
+    public void Loaded_dice_changes_one_two_and_three_to_four(int raw, int expected)
     {
         var (s, a, _) = Duel("loaded-dice"); var dice = new ControlledDice([raw, 5]);
         new GameRules(s, dice, new(), Now).Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
@@ -148,7 +148,7 @@ public partial class GameRulesTests
         Assert.Contains("automatically", s.Combat!.Message);
         var snapshot = Assert.Single(s.Combat.Ships, ship => ship.Id == b.Id);
         Assert.Equal("mouth-to-feed", snapshot.Perk); Assert.Equal(originalHex, new(snapshot.Q, snapshot.R));
-        Assert.NotEqual(a.OwnerId, snapshot.OwnerId);
+        Assert.Equal(converts ? a.OwnerId : b.OwnerId, snapshot.OwnerId);
         Assert.DoesNotContain(b.Id, s.Combat.ParticipantShipIds); Assert.Equal("resolved", s.Combat.Status);
         if (converts)
         {
@@ -162,7 +162,7 @@ public partial class GameRulesTests
         }
     }
 
-    [Fact] public void Pearl_helpers_check_once_and_recruited_helper_does_not_join_fixed_battle_participants()
+    [Fact] public void Pearl_helpers_check_once_and_recruited_helper_immediately_joins_the_ongoing_battle()
     {
         var s = Playing(); var a = Add(s, 0, Open); var b = Add(s, 1, Offset(Open, 2));
         Add(s, 0, Offset(Open, -1)).Perk = "black-pearl"; Add(s, 0, Offset(Open, 0, -1)).Perk = "black-pearl";
@@ -173,7 +173,9 @@ public partial class GameRulesTests
         rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat!.Id));
         rules.Act(helper.OwnerId, new("remove-ship", CombatId: s.Combat.Id, ShipId: helper.Id));
         Assert.Equal(1, dice.ChanceChecks); Assert.Equal(a.OwnerId, helper.OwnerId);
-        Assert.Equal("awaiting-roll", s.Combat.Status); Assert.DoesNotContain(helper.Id, s.Combat.ParticipantShipIds);
+        Assert.Equal("awaiting-roll", s.Combat.Status); Assert.Contains(helper.Id, s.Combat.ParticipantShipIds);
+        rules.Act(s.ActivePlayerId!, new("roll-combat", CombatId: s.Combat.Id));
+        Assert.Equal(4, s.Combat.Rolls[a.OwnerId].Count);
     }
 
     [Fact] public void Losing_pearl_drops_without_a_conversion_check_and_can_be_collected_again()
@@ -190,10 +192,10 @@ public partial class GameRulesTests
     {
         var s = Playing(); var port = s.Ports[3]; var cells = BoardDefinition.Harbor(port.Id);
         var a = Add(s, 0, cells[0]); a.Perk = "loaded-dice"; Add(s, 0, cells[1]).Perk = "glass-cannon";
-        var dice = new ControlledDice([1, 9, 6]); var rules = new GameRules(s, dice, new(), Now);
+        var dice = new ControlledDice([1, 10, 6]); var rules = new GameRules(s, dice, new(), Now);
         rules.Act(a.OwnerId, new("attack-port", ShipId: a.Id, PortId: port.Id));
         rules.Act(a.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
-        Assert.Equal(new[] { 3, 8 }, s.Combat.Rolls[a.OwnerId]); Assert.Equal(new[] { 6, 9, 6 }, dice.Sides);
+        Assert.Equal(new[] { 4, 8 }, s.Combat.Rolls[a.OwnerId]); Assert.Equal(new[] { 6, 10, 6 }, dice.Sides);
         Assert.Equal(a.OwnerId, port.OwnerId);
     }
 

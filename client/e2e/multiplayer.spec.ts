@@ -38,7 +38,7 @@ const characterNames = [
   'Steven the Cruel',
 ]
 
-test('overnight changes synchronize whirlpools, hover details, equivalent battles and confirmed forfeits', async ({
+test('overnight changes synchronize whirlpools, equivalent battles and persistent ghost fleets', async ({
   browser,
 }, testInfo) => {
   const contexts = await Promise.all(
@@ -240,7 +240,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     ).toBe(400)
     await pages[1].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
     await expect(pages[1].getByRole('dialog', { name: 'Forfeit this voyage?' })).toContainText(
-      '3 ports will become neutral with full defense. Your 2 ships',
+      '3 ports and 2 ships will remain as a stationary white ghost fleet',
     )
     await pages[1].getByRole('button', { name: 'Keep playing' }).click()
     expect((await state(pages[0])).ports).toHaveLength(13)
@@ -257,12 +257,16 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
       pages[1].getByRole('button', { name: 'Confirm forfeit' }).click(),
     )
     expect(game.ports).toHaveLength(13)
-    expect(game.ships).toHaveLength(2)
+    expect(game.ports.filter((port) => port.ownerId === ids[1])).toHaveLength(3)
+    expect(game.ships).toHaveLength(4)
     expect(game.turnNumber).toBe(turn)
-    expect(game.combat).toBeNull()
+    expect(game.combat).not.toBeNull()
+    expect(game.combatPlayerId).toBe(ids[0])
     for (const page of pages) {
       await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
-      await expect(page.getByLabel('Battle close-up')).toHaveCount(0)
+      await expect(page.getByLabel('Battle close-up')).toBeVisible()
+      await expect(page.locator('[data-ship="overnight-b"] .ship-token > circle')).toHaveAttribute('fill', '#f7f7f2')
+      await expect(page.locator('[data-port="port-4"] .port-token > circle')).toHaveAttribute('fill', '#f7f7f2')
     }
     await expect(pages[1].locator('.identity')).toContainText('Spectating')
     await pages[1].reload()
@@ -275,7 +279,8 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
         })
       ).status(),
     ).toBe(400)
-    // Leaving during the active turn advances play, then a final forfeit wins.
+    // An active forfeit clears the now ghost-vs-ghost battle and advances play;
+    // a final forfeit wins without requiring the survivor to clear ghost assets.
     await pages[0].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
     game = await clickAction(pages[0], () =>
       pages[0].getByRole('button', { name: 'Confirm forfeit' }).click(),
@@ -290,6 +295,7 @@ test('overnight changes synchronize whirlpools, hover details, equivalent battle
     expect(game.phase).toBe('finished')
     expect(game.winnerId).toBe(ids[2])
     expect(game.ports).toHaveLength(13)
+    expect(game.ships).toHaveLength(4)
     await stopServer()
     await startServer()
     await pages[4].reload()
@@ -455,7 +461,9 @@ test('automatic rebuilding, six-die clocks and final-opponent forfeit synchroniz
     expect(game.phase).toBe('finished')
     expect(game.winnerId).toBe(ids[0])
     expect(game.players.filter((p) => !p.hasForfeited)).toHaveLength(3)
-    expect(game.ports.filter((p) => p.ownerId === null)).toHaveLength(10)
+    expect(game.ports.filter((p) => p.ownerId === null)).toHaveLength(1)
+    expect(game.ports.filter((p) => p.ownerId === ids[1])).toHaveLength(9)
+    expect(game.constructions.some((build) => build.ownerId === ids[1])).toBe(false)
     expect(game.turnEndsAt).toBeNull()
     expect(game.actionEndsAt).toBeNull()
     expect(game.roundHistory.filter((h) => h.isFinal)).toHaveLength(1)
@@ -1516,15 +1524,16 @@ test('full playthrough changes synchronize port support, Cheat Death respawns an
       expect((await state(page)).perkPickups).toEqual(game.perkPickups)
       expect((await state(page)).combat).toEqual(game.combat)
     }
-    // A third captain can forfeit while the result is open. Their neutral ports persist.
+    // A third captain can forfeit while the result is open. Their ghost ports persist.
     await pages[2].getByRole('button', { name: 'Forfeit and leave', exact: true }).click()
     game = await clickAction(pages[2], () =>
       pages[2].getByRole('button', { name: 'Confirm forfeit' }).click(),
     )
     expect(game.ports).toHaveLength(13)
-    expect(game.ports.filter((port) => port.ownerId === null)).toHaveLength(4)
+    expect(game.ports.filter((port) => port.ownerId === null)).toHaveLength(1)
+    expect(game.ports.filter((port) => port.ownerId === ids[2])).toHaveLength(3)
     for (const page of pages) await expect(page.locator('.sea-map [data-port]')).toHaveCount(13)
-    // Place a surviving ship in that neutral harbor and finish the previous encounter.
+    // Place a surviving ship in that ghost harbor and finish the previous encounter.
     await stopServer()
     const captureSave = JSON.parse(await readFile(savePath, 'utf8'))
     const harbor = board.cells.find((cell) => cell.harborId === 'port-7')!
@@ -1538,7 +1547,7 @@ test('full playthrough changes synchronize port support, Cheat Death respawns an
       ],
       revision: game.revision + 1,
     })
-    // A previously weakened neutral port guarantees this scenario's capture.
+    // A previously weakened ghost port guarantees this scenario's capture.
     captureSave.game.ports.find((port: { id: string }) => port.id === 'port-7').defenseWeakness = 6
     await writeFile(savePath, JSON.stringify(captureSave))
     await startServer()
@@ -1846,7 +1855,7 @@ test('paged handbook teaches with interactive game pieces without changing the v
   const before = await state(page)
   const chapter = page.locator('.handbook-chapter')
   const feedback = chapter.locator('.example-feedback')
-  await expect(page.getByRole('navigation', { name: 'Rule chapters' }).getByRole('link')).toHaveCount(8)
+  await expect(page.getByRole('navigation', { name: 'Rule chapters' }).getByRole('link')).toHaveCount(9)
   await expect(page.getByRole('heading', { name: 'Meet the board' })).toBeFocused()
   await chapter.getByRole('button', { name: 'Land', exact: true }).click()
   await expect(feedback).toContainText('cannot sail onto or through')
@@ -1906,16 +1915,21 @@ test('paged handbook teaches with interactive game pieces without changing the v
   await expect(chapter.locator('.example-dice .die')).toHaveCount(3)
   await page.screenshot({ path: testInfo.outputPath('handbook-port.png'), fullPage: true })
   await next()
-  await chapter.getByRole('button', { name: 'Your second round' }).click()
-  await expect(feedback).toContainText('cannot move yet')
+  await chapter.getByRole('button', { name: 'Third owner round' }).click()
+  await expect(feedback).toContainText('cannot move until')
   await next()
   await chapter.getByRole('button', { name: 'Glass Cannon' }).click()
   await expect(chapter.getByLabel('Rolled 0')).toBeVisible()
   await expect(chapter.getByLabel('Rolled 8')).toBeVisible()
   await next()
+  await expect(page).toHaveURL(/how-to-play\/progression$/)
+  await expect(chapter.getByLabel('Round progression timeline')).toBeVisible()
+  await next()
   await chapter.getByRole('button', { name: 'Enter the whirlpool' }).click()
   await expect(feedback).toContainText('now has 3')
   await expect(page).toHaveURL(/how-to-play\/extras$/)
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Follow the voyage timeline', exact: true })).toBeFocused()
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Find an advantage', exact: true })).toBeFocused()
   await page.reload()

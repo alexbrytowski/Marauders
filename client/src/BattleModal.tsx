@@ -3,7 +3,7 @@ import { Die, Icon } from './Icons'
 import { BattleMap } from './BattleMap'
 import { RollingDie } from './RollingDie'
 import type { Board, Command, Game } from './game'
-import { perks } from './game'
+import { ghostColor, perks } from './game'
 import { LeaveGame } from './LeaveGame'
 
 export function BattleModal({
@@ -77,13 +77,13 @@ export function BattleModal({
     return (
       <section
         className="battle-side"
-        style={{ '--crew': kraken ? '#ee83ad' : (player?.color ?? '#d3c8ad') } as React.CSSProperties}
+        style={{ '--crew': kraken ? '#ee83ad' : player?.hasForfeited ? ghostColor : (player?.color ?? '#d3c8ad') } as React.CSSProperties}
       >
         <span className="battle-side-role">{defending ? 'DEFENDING' : 'ATTACKING'}</span>
         <div className="battle-crest">
           <Icon name={kraken ? 'kraken' : port ? 'port' : 'ship'} />
         </div>
-        <h3>{kraken ? 'The Kraken' : (port?.name ?? player?.name ?? 'Unclaimed port')}</h3>
+        <h3>{kraken ? 'The Kraken' : (port?.name ?? (player?.hasForfeited ? `${player.name}'s ghost fleet` : player?.name) ?? 'Unclaimed port')}</h3>
         <p>
           {port
             ? '1 port die'
@@ -141,7 +141,10 @@ export function BattleModal({
         : battle.attackerId
       : null
   const combatantName = (id: string | null) =>
-    game.players.find((player) => player.id === id)?.name ??
+    (() => {
+      const player = game.players.find((candidate) => candidate.id === id)
+      return player?.hasForfeited ? `${player.name}'s ghost fleet` : player?.name
+    })() ??
     game.ports.find((port) => port.id === battle?.portId && (port.ownerId ?? port.id) === id)?.name ??
     (id === 'the-kraken' ? 'The Kraken' : null) ??
     'Unclaimed port'

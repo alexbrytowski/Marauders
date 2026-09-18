@@ -29,7 +29,8 @@ public partial class GameRulesTests
         Rules(s).Act(s.Players[1].Id, new("forfeit"));
         Assert.Equal("finished", s.Phase); Assert.Equal(winner, s.WinnerId);
         Assert.Equal(3, s.Players.Count(p => !p.HasForfeited));
-        Assert.Equal(12, s.Ports.Count(p => p.OwnerId is null));
+        Assert.Equal(11, s.Ports.Count(p => p.OwnerId is null));
+        Assert.Single(s.Ports, p => p.OwnerId == s.Players[1].Id);
         Assert.Empty(s.Constructions); Assert.Empty(s.CombatChoices); Assert.Null(s.Combat);
         Assert.Null(s.TurnEndsAt); Assert.Null(s.ActionEndsAt);
         Assert.True(Assert.Single(s.RoundHistory).IsFinal); Assert.False(Rules(s).Expire());

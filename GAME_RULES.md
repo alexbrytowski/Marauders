@@ -2,7 +2,7 @@
 
 ## Summary
 
-Marauders is a turn-based board game about pirate ships capturing ports. Each player takes turns rolling dice to move ships and attack ports. Win as soon as you are the only captain who owns any ports, whether opponents lose their final ports or forfeit. Neutral ports do not delay victory.
+Marauders is a turn-based board game about pirate ships capturing ports. Each player takes turns rolling dice to move ships and attack ports. Win as soon as you are the only active captain who owns any ports, whether opponents lose their final ports or forfeit. Neutral and ghost ports do not delay victory.
 
 ## The board
 
@@ -153,9 +153,9 @@ from this guide so the reward remains a surprise.
 
 Updated from the owner's September 13 playthrough notes and clarifications. Perks appear as pickups in open water, spread apart with fair access from nearby ports. Sailing through a pickup gives it to that ship. Each ship may hold one perk; a fleet may hold multiple perks. A ship already holding one sails past other pickups. When a ship is destroyed, any unconsumed perk drops at its hex and can be collected again, including on arrival at a whirlpool exit.
 
-- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, roll one six-sided die. On a 1, recruit that casualty instead. It stays at its hex and retains its perk. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
-- **Glass Cannon:** This ship's combat roll is uniformly distributed from 0 through 8, including both endpoints. This replaces its normal d6 combat roll.
-- **Loaded Dice:** This ship's combat results of 1 or 2 become 3.
+- **The Black Pearl:** When an enemy casualty would be destroyed in a ship battle involving this ship on the winning side, roll one six-sided die. On a 1, recruit that casualty instead. It stays at its hex and retains its perk. If it is within two hexes of its new side's surviving triggering ship, it immediately contributes to later exchanges in that same battle. Recruitment never increases the current round's action dice. One check per casualty, regardless of how many Pearl holders participated.
+- **Glass Cannon:** This ship's combat roll is uniformly distributed from -1 through 8, including both endpoints. This replaces its normal d6 combat roll.
+- **Loaded Dice:** This ship's combat results of 1, 2, or 3 become 4.
 - **Mouth to Feed:** Adds one population slot to the captain of the ship carrying it, anywhere at sea. Each holder adds one slot. The bonus follows the ship’s owner; losing the perk never removes existing ships or cancels construction.
 - **Black and White:** When this ship participates in a combat exchange, all numbered ship and port dice and defense modifiers are replaced by one server-generated black-or-white result. Black wins for this ship's team; white wins for the opposing side. This applies in ship battles and port attacks, including when the holder helps. If the holder is removed and the ship battle continues, later exchanges return to normal dice.
 - **Cheat Death:** The first time this ship participates on the losing side of a combat exchange, consume the perk before any casualty, recruitment, capture, or defense weakening. This includes helpers, port attackers, and Black and White results. The losing result remains visible to every player, then the battle controller must publicly reroll the entire exchange as they would after a tie. Ties do not consume it. The perk immediately respawns in a random empty ordinary-water hex, avoiding other pickups and whirlpools. The new result applies normally; another losing participant carrying Cheat Death can then use its own perk.
@@ -164,13 +164,19 @@ Combat perks work for participating helpers and port attackers. Shared movement 
 
 ### Forfeit and leave
 
-A captain may forfeit during play (or a legacy draft) after confirming. Their
-ships, carried perks, and construction vanish. Their ports stay on the map as
-unclaimed neutral ports with defense weakness reset to zero. Harbors remain
-usable and others may attack and capture these ports normally. Their turns
-and any remaining legacy draft picks are skipped; they watch as a
-spectator and cannot rejoin that match. During play, the only captain still
-owning ports wins immediately, even if neutral ports and previously eliminated
+A captain may forfeit during play (or a legacy draft) after confirming. Ships
+already on the water and owned ports remain as a white ghost fleet. Ghost ships
+do not move, keep their carried perks, fight normally when an active captain
+encounters them, and receive support from their owner's ghost ports within two
+hexes. Ghost ports retain their current defense and can be attacked and captured
+normally. The server selects casualties for a losing ghost fleet. Ghost fleets
+do not fight other ghost fleets or the Kraken. Capturing a ghost fleet's final
+port does not recruit its remaining ships; those ships must still be sunk or
+recruited through the Black Pearl. All pending construction is canceled, and
+ghost ports never build replacement ships. The forfeited captain's turns and any
+remaining legacy draft picks are skipped; they watch as a spectator and cannot
+rejoin that match. During play, the only active captain still owning ports wins
+immediately, even if ghost ships, ghost ports, neutral ports, and previously eliminated
 captains remain. During drafting, the last nonforfeited captain wins; captains
 who have not picked yet still count. Leaving the lobby releases the seat and vote; leaving a finished game
 preserves its result.

@@ -48,7 +48,7 @@ export function LeaveGame({
             ? game.phase === 'lobby'
               ? 'Release your seat and map vote. You can join again while the lobby has room.'
               : 'Release your seat and return to watching. The final result stays saved.'
-            : `${captain.name}, your ${review?.ports.filter((p) => p.ownerId === playerId).length ?? 0} ports will become neutral with full defense. Your ${review?.ships.filter((s) => s.ownerId === playerId).length ?? 0} ships, carried perks, and all construction will vanish. You cannot rejoin this match as a captain.`}
+            : `${captain.name}, your ${review?.ports.filter((p) => p.ownerId === playerId).length ?? 0} ports and ${review?.ships.filter((s) => s.ownerId === playerId).length ?? 0} ships will remain as a stationary white ghost fleet. Ships keep their perks, ports keep their defense, and nearby ghost ships and ports fight together. All construction will vanish. You cannot rejoin this match as a captain.`}
         </p>
         {stale && <p role="status">The game changed. Review the latest state before confirming.</p>}
         {failed && !stale && <p role="alert">Leaving failed. Check your connection and try again.</p>}

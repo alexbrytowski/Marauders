@@ -1,5 +1,17 @@
 # Marauders launch checklist
 
+## September 17: perk tuning and ghost fleets
+
+- [x] Change Glass Cannon to -1 through 8 and Loaded Dice to replace 1-3 with 4
+  in server rolls, public UI copy, and automated coverage.
+- [x] Keep eligible Black Pearl recruits in later exchanges of the current
+  battle instead of waiting for a future encounter refresh.
+- [x] Preserve forfeited ships and ports as stationary white ghost fleets with
+  perks, defense, port support, automatic server casualties, normal capture,
+  and no ghost-vs-ghost or ghost-vs-Kraken battles.
+- [x] Cancel every pending build on forfeit and prevent ghost ports from ever
+  rebuilding. Preserve immediate victory for the last active captain.
+
 Updated 2026-09-15. Target: one game, four captains plus approximately three
 spectators, desktop-first. Joining is open; the owner explicitly declined an
 invitation gate. Reset stays password-protected. No hard spectator cap is

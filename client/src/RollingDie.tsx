@@ -5,7 +5,7 @@ export function RollingDie({ glass = false }: { glass?: boolean }) {
   const [value, setValue] = useState(1)
   useEffect(() => {
     const timer = setInterval(
-      () => setValue(Math.floor(Math.random() * (glass ? 9 : 6)) + (glass ? 0 : 1)),
+      () => setValue(Math.floor(Math.random() * (glass ? 10 : 6)) + (glass ? -1 : 1)),
       85,
     )
     return () => clearInterval(timer)

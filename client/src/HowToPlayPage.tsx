@@ -1001,12 +1001,14 @@ function Extras() {
           choices and the round ends, including due construction. Unchosen builds start at random owned ports.
         </p>
         <p>
-          Forfeit and leave requires confirmation. Your ships, carried perks, and builds vanish. Your ports
-          remain neutral with full defense and usable harbors, ready for others to capture. You watch as a
-          spectator and cannot rejoin that match. Your remaining turns are skipped.
+          Forfeit and leave requires confirmation. Ships already at sea and your ports remain as a stationary
+          white ghost fleet. Ships keep their perks, ports keep their defense and support nearby ghost ships,
+          and the server chooses ghost casualties. All pending builds are canceled, and ghost ports never
+          rebuild. Others can attack and capture ghost ports normally, but taking the last one does not award
+          the remaining ghost ships. You watch as a spectator and cannot rejoin that match.
         </p>
         <p>
-          The only captain with ports wins even if neutral ports remain. Leaving the lobby releases your seat
+          The only active captain with ports wins even if neutral or ghost assets remain. Leaving the lobby releases your seat
           and vote; leaving a finished game preserves its result.
         </p>
       </details>

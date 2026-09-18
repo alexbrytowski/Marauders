@@ -517,9 +517,9 @@ export default function App() {
                     </h2>
                     <p>
                       {ship
-                        ? `${game.players.find((p) => p.id === ship.ownerId)?.name} · Hex ${ship.q}, ${ship.r}${canMove ? ` · ${game.remainingMovement} movement left` : ''}`
+                        ? `${game.players.find((p) => p.id === ship.ownerId)?.hasForfeited ? 'Ghost ship' : game.players.find((p) => p.id === ship.ownerId)?.name} · Hex ${ship.q}, ${ship.r}${canMove ? ` · ${game.remainingMovement} movement left` : ''}`
                         : port
-                          ? `${game.players.find((p) => p.id === port.ownerId)?.name ?? 'Unclaimed'} · Defense ${port.defenseWeakness ? `−${port.defenseWeakness}` : 'full strength'}`
+                          ? `${game.players.find((p) => p.id === port.ownerId)?.hasForfeited ? 'Ghost port' : (game.players.find((p) => p.id === port.ownerId)?.name ?? 'Unclaimed')} · Defense ${port.defenseWeakness ? `−${port.defenseWeakness}` : 'full strength'}`
                           : game.phase === 'draft'
                             ? 'Perks are marked on the chart. Choose a port with your route in mind. Each port launches two ships automatically.'
                             : game.phase === 'placement'

@@ -1,5 +1,5 @@
 import type { Board, Game } from './game'
-import { perks, portNumber } from './game'
+import { ghostColor, perks, portNumber } from './game'
 import { outline, point } from './boardGeometry'
 
 export function BattleMap({
@@ -62,7 +62,9 @@ export function BattleMap({
                       width="26"
                       height="22"
                       rx="2"
-                      fill={game.players.find((player) => player.id === port.ownerId)?.color ?? '#d3c8ad'}
+                      fill={game.players.find((player) => player.id === port.ownerId)?.hasForfeited
+                        ? ghostColor
+                        : (game.players.find((player) => player.id === port.ownerId)?.color ?? '#d3c8ad')}
                     />
                     <text y="4" style={{ fontSize: 10 }}>
                       P{portNumber(port.id)}
@@ -117,7 +119,7 @@ export function BattleMap({
             >
               <title>{label}</title>
               <circle className="ship-ring" r="15" fill="#10252e" />
-              <circle r={trigger ? 12 : 13.5} fill={player?.color} stroke="#10252e" strokeWidth="1" />
+              <circle r={trigger ? 12 : 13.5} fill={player?.hasForfeited ? ghostColor : player?.color} stroke="#10252e" strokeWidth="1" />
               <text y="4.5">{ship.number}</text>
               {!present && <path d="M-10 -10L10 10M10-10L-10 10" />}
             </g>

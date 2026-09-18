@@ -1,5 +1,22 @@
 # Implementation decisions
 
+## 2026-09-17: perk rebalance and forfeited ghost fleets
+
+- Glass Cannon now rolls uniformly from -1 through 8. Loaded Dice changes raw
+  results of 1, 2, and 3 into 4.
+- A Black Pearl recruit that is eligible to help its new side's surviving
+  trigger immediately remains in the current battle for later exchanges.
+- Forfeiting preserves ships already at sea and owned ports as a white ghost
+  fleet. Ships remain stationary and keep perks; ports retain defense and give
+  normal two-hex support to their ghost ships. Ghosts never take turns, fight
+  other ghosts, engage the Kraken, or build ships. All pending construction is
+  canceled. The server deterministically selects the lowest-numbered eligible
+  ghost casualty.
+- Ghost ports can be attacked and captured normally. Losing a final ghost port
+  does not transfer surviving ghosts to the capturer. Ghost assets do not count
+  as an active captain for victory, so the last active captain still wins
+  immediately without clearing them.
+
 ## 2026-09-15: Mark of the Kraken suppresses Black and White
 
 - The owner clarified that The Mark of the Kraken makes the entire participating

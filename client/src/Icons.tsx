@@ -95,7 +95,7 @@ export function Die({ value, dim = false }: { value?: number; dim?: boolean }) {
       className={`die ${dim ? 'dim' : ''}`}
       aria-label={value !== undefined ? `Rolled ${value}` : 'Available action die'}
     >
-      {value !== undefined && (value === 0 || value > 6) ? (
+      {value !== undefined && (value < 1 || value > 6) ? (
         <b className="die-numeral">{value}</b>
       ) : (
         Array.from({ length: 9 }, (_, i) => (

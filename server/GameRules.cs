@@ -18,6 +18,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private int NewConstructionOwnerTurns => state.TurnNumber >= 66 ? 3 : 2;
     private int WhirlpoolSpawnThreshold => state.TurnNumber >= 50 ? 250 : 100;
     private bool HasTime => state.ActionEndsAt > now && (state.IsEndingRound || state.TurnEndsAt > now);
+    private bool IsGhost(string ownerId) => state.Players.Any(player => player.Id == ownerId && player.HasForfeited);
     public void RefreshBuildCapacity()
     {
         if (state.IsBuildPhase && state.ActivePlayerId is { } owner)
@@ -231,7 +232,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("setup", $"{Name(owner)} launched two ships at each of their ports.");
         }
         state.PlacementDone.Clear();
-        state.Phase = "playing"; state.TurnNumber = options.StartingRound; BeginTurn(state.TurnOrder.First(id => state.Ports.Any(p => p.OwnerId == id)));
+        state.Phase = "playing"; state.TurnNumber = options.StartingRound;
+        BeginTurn(state.TurnOrder.First(id => !IsGhost(id) && state.Ports.Any(p => p.OwnerId == id)));
     }
     private void NoBattle() => Require(state.Combat is null && state.CombatChoices.Count == 0, "Resolve the pending battle first.");
     private void Ready() { NoBattle(); Require(!state.IsBuildPhase, "The round is in construction selection."); }
@@ -311,14 +313,16 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             {
                 var a = state.Ships[i]; var b = state.Ships[j];
                 if (!Triggers(a, b, Board, state.Ports)) continue;
+                if (IsGhost(a.OwnerId) && IsGhost(b.OwnerId)) continue;
                 if (b.Id == preferred || (a.Id != preferred && b.OwnerId == state.ActivePlayerId)) (a, b) = (b, a);
+                if (IsGhost(a.OwnerId) && !IsGhost(b.OwnerId)) (a, b) = (b, a);
                 var harbor = Board.Cell(a.Hex)?.HarborId;
                 if (!state.Ports.Any(p => p.Id == harbor)) harbor = null;
                 if (harbor is not null && !Board.InHarbor(b.Hex, harbor)) harbor = null;
                 choices.Add(new($"{a.Id}:{b.Id}", a.Id, b.Id, harbor));
             }
         if (KrakenPlacement.IsActive(state.Kraken, state.TurnNumber) && state.Kraken is { } kraken)
-            foreach (var ship in state.Ships.Where(ship => ship.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach))
+            foreach (var ship in state.Ships.Where(ship => !IsGhost(ship.OwnerId) && ship.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach))
                 choices.Add(new($"kraken:{ship.Id}", ship.Id, null, null, "kraken"));
         // Different triggering pairs can describe exactly the same fight. Only
         // ask for a choice if the forces or supporting port actually differ.
@@ -425,8 +429,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             var count = ship.Perk == "mark-of-the-kraken" ? 3 : 1;
             for (var i = 0; i < count; i++)
             {
-                var roll = ship.Perk == "glass-cannon" ? dice.Roll(9) - 1 : dice.Roll();
-                if (ship.Perk == "loaded-dice" && roll is 1 or 2) roll = 3;
+                var roll = ship.Perk == "glass-cannon" ? dice.Roll(10) - 2 : dice.Roll();
+                if (ship.Perk == "loaded-dice" && roll is 1 or 2 or 3) roll = 4;
                 battle.Rolls[ship.OwnerId].Add(roll);
             }
         }
@@ -467,12 +471,11 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             battle.LosingPlayerId = a > b ? battle.DefenderId : battle.AttackerId;
             battle.Status = "choose-loss";
             var onlyCasualty = state.Ships.Count(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id)) == 1;
-            battle.Message = $"{Name(battle.WinnerId)} wins {Math.Max(a, b)} to {Math.Min(a, b)}. " +
-                (onlyCasualty ? "The only eligible casualty will be resolved automatically." : $"{Name(battle.LosingPlayerId)} must choose a participating ship to lose.");
+            battle.Message = $"{Name(battle.WinnerId)} wins {Math.Max(a, b)} to {Math.Min(a, b)}. {LossPrompt(battle, onlyCasualty)}";
         }
         Log("roll", battle.Message, battle.Rolls);
         ActionClock();
-        ResolveOnlyLoss($"{Name(battle.WinnerId!)} wins {Math.Max(a, b)} to {Math.Min(a, b)}.");
+        ResolveAutomaticLoss($"{Name(battle.WinnerId!)} wins {Math.Max(a, b)} to {Math.Min(a, b)}.");
     }
     private void ResolveKrakenExchange(CombatState battle, bool fleetWins, string result)
     {
@@ -533,13 +536,12 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             battle.LosingPlayerId = battle.WinnerId == battle.AttackerId ? battle.DefenderId : battle.AttackerId;
             battle.Status = "choose-loss";
             var onlyCasualty = state.Ships.Count(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id)) == 1;
-            battle.Message = result + " " +
-                (onlyCasualty ? "The only eligible casualty will be resolved automatically." : $"{Name(battle.LosingPlayerId)} must choose a participating ship to lose.");
+            battle.Message = result + " " + LossPrompt(battle, onlyCasualty);
         }
         Log("roll", battle.Message, blackWhiteResult: battle.BlackWhiteResult,
             blackWhiteOwnerId: battle.BlackWhiteOwnerId);
         ActionClock();
-        ResolveOnlyLoss($"{Name(battle.WinnerId!)} wins the Black and White exchange.");
+        ResolveAutomaticLoss($"{Name(battle.WinnerId!)} wins the Black and White exchange.");
     }
     private bool TryCheatDeath(CombatState battle)
     {
@@ -561,16 +563,25 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         ActionClock();
         return true;
     }
-    private bool ResolveOnlyLoss(string? result = null)
+    private string LossPrompt(CombatState battle, bool onlyCasualty)
+    {
+        if (onlyCasualty) return "The only eligible casualty will be resolved automatically.";
+        if (IsGhost(battle.LosingPlayerId!)) return "The server will choose a ghost ship to sink.";
+        return $"{Name(battle.LosingPlayerId!)} must choose a participating ship to lose.";
+    }
+    private bool ResolveAutomaticLoss(string? result = null)
     {
         var battle = state.Combat;
         if (battle?.Status != "choose-loss") return false;
-        var casualties = state.Ships.Where(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id)).ToArray();
-        if (casualties.Length != 1) return false;
+        var casualties = state.Ships.Where(s => s.OwnerId == battle.LosingPlayerId && battle.ParticipantShipIds.Contains(s.Id))
+            .OrderBy(ship => ship.Number).ThenBy(ship => ship.Id, StringComparer.Ordinal).ToArray();
+        if (casualties.Length != 1 && !IsGhost(battle.LosingPlayerId!)) return false;
         if (battle.Ships.Count == 0) SnapshotBattleShips(battle);
         var casualty = casualties[0];
         result ??= $"{Name(battle.WinnerId!)} won the exchange.";
-        Log("casualty", $"Ship {casualty.Number} is the only eligible casualty; resolving automatically.");
+        Log("casualty", casualties.Length == 1
+            ? $"Ship {casualty.Number} is the only eligible casualty; resolving automatically."
+            : $"The server chose ghost ship {casualty.Number} as the casualty.");
         RemoveLoss(casualty.OwnerId, battle.Id, casualty.Id);
         var outcome = state.Ships.Contains(casualty) ? "was recruited by the Black Pearl" : "was lost";
         battle.Message = $"{result} Ship {casualty.Number} {outcome} automatically. {battle.Message}";
@@ -594,6 +605,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         {
             ship.OwnerId = battle!.WinnerId!;
             ship.ConvertedTurnNumber = state.TurnNumber;
+            battle.Ships = battle.Ships.Select(snapshot => snapshot.Id == ship.Id
+                ? snapshot with { OwnerId = ship.OwnerId }
+                : snapshot).ToList();
             Log("perk", $"{Name(ship.OwnerId)} recruited ship {ship.Number} at its current hex. No action dice were added this round.");
         }
         else
@@ -606,7 +620,13 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             }
             Log("casualty", $"{Name(actor)} lost ship {ship.Number}.");
         }
-        battle!.ParticipantShipIds.Remove(ship.Id);
+        var winningTriggerId = battle!.WinnerId == battle.AttackerId ? battle.TriggerShipId : battle.OpponentShipId;
+        var winningTrigger = state.Ships.SingleOrDefault(candidate => candidate.Id == winningTriggerId);
+        var joinsCurrentBattle = converted && winningTrigger is not null &&
+            ship.Id != battle.TriggerShipId && ship.Id != battle.OpponentShipId &&
+            ship.Hex.DistanceTo(winningTrigger.Hex) <= 2;
+        if (!joinsCurrentBattle) battle.ParticipantShipIds.Remove(ship.Id);
+        else Log("perk", $"Recruited ship {ship.Number} immediately joined its new fleet in the ongoing battle.");
         var a = state.Ships.SingleOrDefault(s => s.Id == battle.TriggerShipId);
         var b = state.Ships.SingleOrDefault(s => s.Id == battle.OpponentShipId);
         var encounterContinues = battle.Kind == "kraken"
@@ -631,7 +651,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         port.OwnerId = capturer; port.DefenseWeakness = 0;
         var voided = state.Constructions.RemoveAll(b => b.PortId == port.Id);
         if (voided > 0) Log("construction", $"{voided} ship build(s) at {port.Name} were lost on capture.");
-        if (previous is not null && !state.Ports.Any(p => p.OwnerId == previous))
+        if (previous is not null && !IsGhost(previous) && !state.Ports.Any(p => p.OwnerId == previous))
         {
             foreach (var ship in state.Ships.Where(s => s.OwnerId == previous)) ship.OwnerId = capturer;
             Log("elimination", $"{Name(previous)} lost their final port. Their surviving ships now sail for {Name(capturer)}.");
@@ -731,7 +751,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     private void AdvanceTurn(string owner)
     {
         var index = state.TurnOrder.IndexOf(owner);
-        var next = Enumerable.Range(1, state.TurnOrder.Count).Select(i => state.TurnOrder[(index + i) % state.TurnOrder.Count]).First(id => state.Ports.Any(p => p.OwnerId == id));
+        var next = Enumerable.Range(1, state.TurnOrder.Count).Select(i => state.TurnOrder[(index + i) % state.TurnOrder.Count])
+            .First(id => !IsGhost(id) && state.Ports.Any(p => p.OwnerId == id));
         state.TurnNumber++;
         BeginTurn(next);
     }
@@ -777,27 +798,34 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
         Require(state.Phase is "draft" or "playing", "Wait for the game to finish setting up.");
         player.HasForfeited = true;
-        state.Ships.RemoveAll(s => s.OwnerId == actor);
         state.Constructions.RemoveAll(b => b.OwnerId == actor);
-        foreach (var port in state.Ports.Where(p => p.OwnerId == actor))
-        {
-            port.OwnerId = null;
-            port.DefenseWeakness = 0;
-        }
         if (state.HostPlayerId == actor) state.HostPlayerId = state.Players.FirstOrDefault(p => !p.HasForfeited)?.Id;
-        Log("forfeit", $"{player.Name} forfeited and left. Their ports are now neutral with full defense; their ships, carried perks, and construction vanished.");
+        Log("forfeit", $"{player.Name} forfeited and left. Their ships and ports remain as a stationary ghost fleet; carried perks and port defense are unchanged. Construction vanished.");
         if (TryFinishGame()) return;
         if (state.Phase == "draft") { AdvanceDraft(); return; }
         var wasActive = state.ActivePlayerId == actor;
         var battle = state.Combat;
-        if (wasActive || battle?.AttackerId == actor || battle?.DefenderId == actor)
+        if (battle is not null && IsGhost(battle.AttackerId) && IsGhost(battle.DefenderId))
         {
             state.Combat = null;
-            Log("combat", "The pending battle was cleared after the forfeit; remaining encounters will be checked.");
+            Log("combat", "A battle between two ghost fleets was cleared; ghosts do not fight each other.");
         }
-        else if (battle is not null) battle.SupportingPortIds.RemoveAll(id => !state.Ports.Any(p => p.Id == id));
-        state.CombatChoices.Clear();
-        if (wasActive) { SnapshotRound(); AdvanceWhirlpool(); AdvanceTurn(actor); }
+        else if (battle?.Status == "choose-loss" && battle.LosingPlayerId == actor)
+            ResolveAutomaticLoss();
+        state.CombatChoices.RemoveAll(choice =>
+        {
+            var first = state.Ships.FirstOrDefault(ship => ship.Id == choice.TriggerShipId);
+            var second = state.Ships.FirstOrDefault(ship => ship.Id == choice.OpponentShipId);
+            return first is not null && second is not null && IsGhost(first.OwnerId) && IsGhost(second.OwnerId);
+        });
+        if (wasActive && (state.Combat is not null || state.CombatChoices.Count > 0))
+        {
+            state.RemainingActions = 0; state.RemainingMovement = 0; state.AvailableBuilds = 0;
+            state.IsBuildPhase = true; state.IsEndingRound = true; state.TurnEndsAt = null;
+            ActionClock();
+            Log("turn", "The forfeited captain's pending battles must resolve before the next captain begins.");
+        }
+        else if (wasActive) { SnapshotRound(); AdvanceWhirlpool(); AdvanceTurn(actor); }
         else
         {
             RefreshEncounters();
@@ -891,7 +919,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
         // Resume an older saved single-casualty choice without waiting for a captain.
         // Already expired rounds continue through the normal timeout path below.
-        if (state.Phase == "playing" && HasTime && ResolveOnlyLoss()) return true;
+        if (state.Phase == "playing" && HasTime && ResolveAutomaticLoss()) return true;
         if (state.Phase != "playing" || HasTime) return false;
         Log("timeout", $"{Name(state.ActivePlayerId!)} ran out of time. The round is ending.");
         // Resolve mandatory battles with public server rolls and deterministic

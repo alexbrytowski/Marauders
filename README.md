@@ -108,8 +108,10 @@ slot. Cheat Death rerolls the first losing exchange its carrier joins, then resp
 in open water. Ships grant one action die per three ships before round 85 and per
 two ships starting at round 85, always rounding up. Ports assist
 their owner's triggering ship from up to two hexes away, even outside harbor water.
-**Forfeit and leave** asks for confirmation, removes your fleet, leaves your ports
-neutral with full defense, and releases your browser seat. The last remaining port owner wins.
+**Forfeit and leave** asks for confirmation, leaves ships already at sea and owned ports
+as a stationary white ghost fleet, cancels all pending builds, prevents those ports from
+rebuilding, and releases your browser seat. The last active port owner wins without
+needing to clear ghost assets.
 
 The whole map fits the monitor by default, with the original corner captain cards,
 controls underneath, and personal Ports/Fleet/Shipyards tabs. Zoom is optional;

@@ -107,6 +107,11 @@ public partial class GameRulesTests
         var (s, _, _) = LaunchBattleSetup(); var owner = s.ActivePlayerId!;
         Rules(s).Act(owner, new("end-turn"));
         Rules(s).Act(s.Players[leaving].Id, new("forfeit"));
+        Assert.True(s.IsEndingRound); Assert.NotNull(s.Combat); Assert.Empty(s.CombatChoices);
+        var controller = s.CombatPlayerId!; var battle = s.Combat!;
+        Rules(s, leaving == 0 ? 1 : 6, leaving == 0 ? 6 : 1).Act(controller, new("roll-combat", CombatId: battle.Id));
+        Assert.Equal("resolved", battle.Status);
+        Rules(s).Act(controller, new("continue-combat", CombatId: battle.Id));
         Assert.False(s.IsEndingRound); Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
         Assert.Equal(s.Players[2].Id, s.ActivePlayerId); Assert.Equal(6, s.TurnNumber);
         Assert.Single(s.RoundHistory); Assert.Equal(7, s.Whirlpool!.RemainingTurns);

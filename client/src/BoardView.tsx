@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { directions, distance, isKrakenActive, key, perks, portNumber, whirlpoolExit } from './game'
+import { directions, distance, ghostColor, isKrakenActive, key, perks, portNumber, whirlpoolExit } from './game'
 import type { Board, Cell, Game, Hex } from './game'
 import { outline, point } from './boardGeometry'
 import { ShipPiece, PortPiece } from './BoardPieces'
@@ -204,7 +204,8 @@ export function BoardView({
               port = cell.portId ? ports.get(cell.portId) : undefined
             const exit = whirlpoolExit(game, cell)
             const builds = port ? buildsAt(port.id) : []
-            const owner = players.get(ship?.ownerId ?? port?.ownerId ?? '')
+            const shipOwner = players.get(ship?.ownerId ?? '')
+            const portOwner = players.get(port?.ownerId ?? '')
             const isSelected = ship?.id === selectedShipId || port?.id === selectedPortId
             const highlighted = highlights.has(key(cell))
             const harborFocus = cell.harborId && cell.harborId === focusedHarbor
@@ -214,9 +215,9 @@ export function BoardView({
             const isKraken = activeKraken && isKrakenCenter
             const inKrakenReach = krakenDistance <= 2 && ['water', 'harbor'].includes(cell.terrain)
             const baseDescription = ship
-              ? `${owner?.name}'s ship ${ship.number}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
+              ? `${shipOwner?.hasForfeited ? `Ghost ship ${ship.number} from ${shipOwner.name}'s forfeited fleet` : `${shipOwner?.name}'s ship ${ship.number}`}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
               : port
-                ? `${port.name}, port ${portNumber(port.id)}, ${owner?.name ?? 'unclaimed'}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
+                ? `${port.name}, port ${portNumber(port.id)}, ${portOwner?.hasForfeited ? `${portOwner.name}'s ghost port` : (portOwner?.name ?? 'unclaimed')}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
                 : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup. ${perks[pickup.kind]?.description} ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
             const description = isKraken
               ? `The Kraken, ${kraken!.lives} of 3 lives remaining, hex ${key(cell)}`
@@ -271,7 +272,7 @@ export function BoardView({
                 )}
                 {port && (
                   <g filter="url(#token-shadow)">
-                    <PortPiece color={owner?.color} number={portNumber(port.id)} />
+                    <PortPiece color={portOwner?.hasForfeited ? ghostColor : portOwner?.color} number={portNumber(port.id)} />
                   </g>
                 )}
                 {builds.length > 0 && (
@@ -286,7 +287,7 @@ export function BoardView({
                 {ship && (
                   <g filter="url(#token-shadow)">
                     <ShipPiece
-                      color={owner?.color}
+                      color={shipOwner?.hasForfeited ? ghostColor : shipOwner?.color}
                       number={ship.number}
                       selected={isSelected}
                       perk={ship.perk}
@@ -308,7 +309,7 @@ export function BoardView({
                 return (
                   <g key={port.portId} data-port-label={port.portId}>
                     <line x1={a.x + dx * 16} y1={a.y + dy * 16} x2={b.x - dx * 12} y2={b.y - dy * 12} />
-                    <circle cx={b.x} cy={b.y} r="13" stroke={owner?.color ?? '#dfc795'} />
+                    <circle cx={b.x} cy={b.y} r="13" stroke={owner?.hasForfeited ? ghostColor : (owner?.color ?? '#dfc795')} />
                     <text x={b.x} y={b.y + 6}>
                       {portNumber(port.portId!)}
                     </text>

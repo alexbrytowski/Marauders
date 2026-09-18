@@ -89,7 +89,7 @@ export function PlayerCard({
       <div className="captain-foot">
         <span className={active ? 'crew-text' : ''}>
           {player.hasForfeited
-            ? 'Forfeited · left'
+            ? 'Forfeited · ghost fleet'
             : eliminated
               ? 'Eliminated · watching'
               : active

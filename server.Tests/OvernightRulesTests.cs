@@ -140,18 +140,20 @@ public partial class GameRulesTests
     }
 
     [Theory] [InlineData(false)] [InlineData(true)]
-    public void Forfeit_removes_fleet_neutralizes_ports_clears_involved_combat_and_skips_active_captain(bool active)
+    public void Forfeit_preserves_ghost_fleet_cancels_builds_and_transfers_battle_control(bool active)
     {
         var (s, a, b) = Duel("mouth-to-feed", "black-pearl"); var actor = active ? a.OwnerId : b.OwnerId;
         var turn = s.TurnNumber; var deadline = s.TurnEndsAt;
         s.Constructions.Add(new() { OwnerId = actor, PortId = s.Ports.First(p => p.OwnerId == actor).Id });
         Rules(s).Act(actor, new("forfeit"));
-        Assert.DoesNotContain(s.Ships, ship => ship.OwnerId == actor);
-        Assert.DoesNotContain(s.Ports, port => port.OwnerId == actor); Assert.Equal(13, s.Ports.Count);
-        Assert.Equal(4, s.Ports.Count(p => p.OwnerId is null));
-        Assert.Empty(s.Constructions); Assert.Empty(s.PerkPickups); Assert.Null(s.Combat);
+        Assert.Contains(s.Ships, ship => ship.OwnerId == actor);
+        Assert.Equal(3, s.Ports.Count(port => port.OwnerId == actor)); Assert.Equal(13, s.Ports.Count);
+        Assert.Single(s.Ports, p => p.OwnerId is null);
+        Assert.Empty(s.Constructions); Assert.Empty(s.PerkPickups); Assert.NotNull(s.Combat);
         Assert.True(s.Players.Single(p => p.Id == actor).HasForfeited);
-        Assert.Equal(active ? turn + 1 : turn, s.TurnNumber);
+        Assert.Equal(turn, s.TurnNumber);
+        Assert.NotEqual(actor, s.CombatPlayerId);
+        if (active) Assert.True(s.IsEndingRound);
         if (!active) Assert.Equal(deadline, s.TurnEndsAt);
         Assert.Throws<RuleException>(() => Rules(s).Act(actor, new("roll-movement")));
     }
@@ -161,7 +163,8 @@ public partial class GameRulesTests
         var s = Playing();
         foreach (var player in s.Players.Skip(1)) Rules(s).Act(player.Id, new("forfeit"));
         Assert.Equal("finished", s.Phase); Assert.Equal(s.Players[0].Id, s.WinnerId);
-        Assert.Contains(s.Ports, p => p.OwnerId is null); Assert.Null(s.TurnEndsAt); Assert.True(s.RoundHistory.Last().IsFinal);
+        Assert.Contains(s.Ports, p => s.Players.Skip(1).Any(player => player.Id == p.OwnerId));
+        Assert.Null(s.TurnEndsAt); Assert.True(s.RoundHistory.Last().IsFinal);
         s = Lobby(); var host = s.HostPlayerId!; Rules(s).Act(host, new("vote-map", MapId: "narrows"));
         Rules(s).Act(host, new("forfeit")); Assert.Equal(3, s.Players.Count); Assert.Empty(s.MapVotes);
         Assert.Equal(s.Players[0].Id, s.HostPlayerId);
@@ -175,17 +178,44 @@ public partial class GameRulesTests
         Rules(s).Act(left, new("forfeit"));
         while (s.Phase == "draft") Rules(s).Act(s.ActivePlayerId!, new("draft", PortId: s.Ports.First(p => p.OwnerId is null).Id));
         Assert.Equal("playing", s.Phase); Assert.Equal(18, s.Ships.Count); Assert.Equal(13, s.Ports.Count);
-        Assert.DoesNotContain(s.Ships, ship => ship.OwnerId == left); Assert.NotEqual(left, s.ActivePlayerId);
+        Assert.DoesNotContain(s.Ships, ship => ship.OwnerId == left); Assert.Contains(s.Ports, port => port.OwnerId == left);
+        Assert.NotEqual(left, s.ActivePlayerId);
     }
 
-    [Fact] public void Forfeited_port_keeps_harbor_combat_but_has_no_allied_support()
+    [Fact] public void Ghost_port_keeps_harbor_combat_and_supports_nearby_ghost_ships()
     {
         var s = Playing(); var port = s.Ports[3]; var harbor = BoardDefinition.Harbor(port.Id);
         var aHex = harbor.First(a => harbor.Any(b => a.DistanceTo(b) > 1)); var bHex = harbor.First(b => aHex.DistanceTo(b) > 1);
-        var a = Add(s, 0, aHex); var b = Add(s, 2, bHex);
+        var a = Add(s, 0, aHex); var b = Add(s, 1, bHex);
         Assert.True(GameRules.Triggers(a, b, BoardDefinition.Classic, s.Ports));
         Rules(s).Act(s.Players[1].Id, new("forfeit"));
         Assert.True(GameRules.Triggers(a, b, BoardDefinition.Classic, s.Ports));
-        Assert.NotNull(s.Combat); Assert.Empty(s.CombatChoices); Assert.Empty(s.Combat.SupportingPortIds);
+        Assert.NotNull(s.Combat); Assert.Empty(s.CombatChoices);
+        Assert.Contains(port.Id, s.Combat.SupportingPortIds);
+    }
+
+    [Fact] public void Server_selects_lowest_numbered_ghost_casualty_and_preserves_its_perk_until_sunk()
+    {
+        var s = Playing(); var attacker = Add(s, 0, Open); var trigger = Add(s, 1, Offset(Open, 2));
+        var helper = Add(s, 1, Offset(Open, 3)); trigger.Perk = "loaded-dice"; s.RemainingMovement = 1;
+        Rules(s).Act(attacker.OwnerId, new("move", ShipId: attacker.Id, Q: Open.Q + 1, R: Open.R));
+        if (s.Combat is null) Rules(s).Act(attacker.OwnerId, new("choose-combat", ChoiceId: s.CombatChoices.First().Id));
+        Rules(s).Act(trigger.OwnerId, new("forfeit"));
+        Rules(s, 6, 1, 1).Act(attacker.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.DoesNotContain(trigger, s.Ships); Assert.Contains(helper, s.Ships);
+        Assert.Equal("loaded-dice", Assert.Single(s.PerkPickups).Kind);
+        Assert.Contains(s.Events, e => e.Kind == "casualty" && e.Message.Contains("server chose ghost ship"));
+    }
+
+    [Fact] public void Capturing_last_ghost_port_does_not_transfer_surviving_ghost_ships()
+    {
+        var s = Playing(); var ghost = s.Players[1];
+        foreach (var port in s.Ports.Where(port => port.OwnerId == ghost.Id).Skip(1)) port.OwnerId = s.Players[2].Id;
+        var last = s.Ports.Single(port => port.OwnerId == ghost.Id); last.DefenseWeakness = 6;
+        var survivor = Add(s, 1, Open); var attacker = Add(s, 0, BoardDefinition.Harbor(last.Id)[0]);
+        Rules(s).Act(ghost.Id, new("forfeit"));
+        Rules(s).Act(attacker.OwnerId, new("attack-port", ShipId: attacker.Id, PortId: last.Id));
+        Rules(s, 6, 1).Act(attacker.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
+        Assert.Equal(attacker.OwnerId, last.OwnerId); Assert.Equal(ghost.Id, survivor.OwnerId);
     }
 }

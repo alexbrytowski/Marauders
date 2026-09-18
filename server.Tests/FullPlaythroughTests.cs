@@ -216,12 +216,12 @@ public partial class GameRulesTests
         Assert.Equal(cells[4].Hex, new(pickup.Q, pickup.R));
     }
 
-    [Fact] public void Forfeited_ports_reset_defense_and_can_be_captured_normally()
+    [Fact] public void Ghost_ports_retain_defense_and_can_be_captured_normally()
     {
         var s = Playing(); var port = s.Ports[3]; port.DefenseWeakness = 7;
         var ship = Add(s, 0, BoardDefinition.Harbor(port.Id)[0]);
         Rules(s).Act(s.Players[1].Id, new("forfeit"));
-        Assert.Contains(port, s.Ports); Assert.Null(port.OwnerId); Assert.Equal(0, port.DefenseWeakness);
+        Assert.Contains(port, s.Ports); Assert.Equal(s.Players[1].Id, port.OwnerId); Assert.Equal(7, port.DefenseWeakness);
         Rules(s).Act(ship.OwnerId, new("attack-port", ShipId: ship.Id, PortId: port.Id));
         Rules(s, 6, 1).Act(ship.OwnerId, new("roll-combat", CombatId: s.Combat!.Id));
         Assert.Equal(ship.OwnerId, port.OwnerId); Assert.Equal(13, s.Ports.Count);

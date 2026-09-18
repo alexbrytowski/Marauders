@@ -138,6 +138,7 @@ export type Command = {
   lobbyVersion?: string
 }
 export const colors = ['#ed7866', '#69c5bc', '#b19bdf', '#e6be68']
+export const ghostColor = '#f7f7f2'
 export const constructionOwnerTurns = (build: Construction) => (build.startedTurnNumber >= 66 ? 3 : 2)
 export const perks: Record<string, { name: string; symbol: string; description: string }> = {
   'black-pearl': {
@@ -145,8 +146,8 @@ export const perks: Record<string, { name: string; symbol: string; description: 
     symbol: '●',
     description: '1-in-6 chance to recruit an enemy casualty in a winning battle.',
   },
-  'glass-cannon': { name: 'Glass Cannon', symbol: '◇', description: 'Combat rolls range from 0 to 8.' },
-  'loaded-dice': { name: 'Loaded Dice', symbol: '⚄', description: 'Combat rolls of 1 or 2 become 3.' },
+  'glass-cannon': { name: 'Glass Cannon', symbol: '◇', description: 'Combat rolls range from −1 to 8.' },
+  'loaded-dice': { name: 'Loaded Dice', symbol: '⚄', description: 'Combat rolls of 1, 2, or 3 become 4.' },
   'mouth-to-feed': {
     name: 'Mouth to Feed',
     symbol: '+1',
