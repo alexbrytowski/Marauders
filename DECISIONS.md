@@ -1,5 +1,23 @@
 # Implementation decisions
 
+## 2026-09-20: completed-round movement trails
+
+- A captain's movement is accumulated privately in game state during their
+  turn, then published as yellow board trails only after that round completes.
+  Each captain's published trails remain visible through the other captains'
+  turns and disappear when that captain's next turn begins. Trail segments are
+  masked beneath current ship and perk-pickup tokens. Whirlpool teleportation
+  breaks a trail instead of drawing a line across the map.
+- Trail visibility is an on-by-default presentation preference stored in each
+  browser profile, not shared game state. The map-footer toggle persists across
+  reloads without changing what other viewers see.
+
+## 2026-09-20: whirlpools avoid the Kraken's reach
+
+- New whirlpool endpoints cannot appear within the living Kraken's marked
+  two-hex attack reach. This applies during its warning rounds as well as after
+  it rises; once slain, the former reach no longer blocks whirlpool placement.
+
 ## 2026-09-17: perk rebalance and forfeited ghost fleets
 
 - Glass Cannon now rolls uniformly from -1 through 8. Loaded Dice changes raw

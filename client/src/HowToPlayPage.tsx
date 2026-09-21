@@ -734,18 +734,18 @@ function Perks() {
   const examples: Record<string, ReactNode> = {
     'loaded-dice': (
       <>
-        <Die value={1} />
+        <span className="loaded-dice-values">
+          <Die value={1} />
+          <Die value={2} />
+          <Die value={3} />
+        </span>
         <span>→</span>
-        <Die value={3} />
-        <span>and</span>
-        <Die value={2} />
-        <span>→</span>
-        <Die value={3} />
+        <Die value={4} />
       </>
     ),
     'glass-cannon': (
       <>
-        <Die value={0} />
+        <Die value={-1} />
         <span>… equally likely …</span>
         <Die value={8} />
       </>
@@ -986,7 +986,8 @@ function Extras() {
         <p>
           After each completed captain turn, including a timeout, there is a 10% chance to spawn a pair if
           none exists through round 49. Starting when round 50 completes, the chance is 25%. Endpoints are
-          empty ordinary water, at least ten hexes apart, away from ships, harbors, and pickups.
+          empty ordinary water, at least ten hexes apart, away from ships, harbors, pickups, and the living
+          Kraken's marked two-hex reach.
         </p>
         <p>
           A pair lasts twice the living captain count at spawn: eight subsequent turns with four captains. The

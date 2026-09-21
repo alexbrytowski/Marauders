@@ -29,6 +29,11 @@ export type RoundSnapshot = {
   isFinal: boolean
   teams: { playerId: string; ships: number; ports: number }[]
 }
+export type MovementTrail = {
+  playerId: string
+  shipId: string
+  hexes: Hex[]
+}
 export type Port = { id: string; name: string; ownerId: string | null; defenseWeakness: number }
 export type Ship = Hex & {
   id: string
@@ -117,6 +122,8 @@ export type Game = {
   combatPlayerId: string | null
   events: GameEvent[]
   roundHistory: RoundSnapshot[]
+  movementTrails: MovementTrail[]
+  currentMovementTrails: MovementTrail[]
   perkPickups: (Hex & { kind: string })[]
   whirlpool?: { first: Hex; second: Hex; remainingTurns: number } | null
   kraken?: (Hex & { lives: number; awakensOnRound?: number | null }) | null

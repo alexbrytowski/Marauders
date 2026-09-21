@@ -51,6 +51,8 @@ public sealed class GameState
     }
     public List<GameEvent> Events { get; set; } = [];
     public List<RoundSnapshot> RoundHistory { get; set; } = [];
+    public List<MovementTrail> MovementTrails { get; set; } = [];
+    public List<MovementTrail> CurrentMovementTrails { get; set; } = [];
     public List<PerkPickup> PerkPickups { get; set; } = [];
     public WhirlpoolPair? Whirlpool { get; set; }
     public KrakenState? Kraken { get; set; }
@@ -126,6 +128,7 @@ public sealed record MapSelection(string MapId, int Ticket, int TotalTickets, bo
 public sealed record JoinRequest(string Name, string Color, string Character);
 public sealed record TeamSnapshot(string PlayerId, int Ships, int Ports);
 public sealed record RoundSnapshot(int Turn, string? ActivePlayerId, DateTimeOffset At, bool IsFinal, List<TeamSnapshot> Teams);
+public sealed record MovementTrail(string PlayerId, string ShipId, List<Hex> Hexes);
 public sealed record ResetRequest(string Password, string GameId, long ExpectedRevision, bool ReleaseSeats = false);
 public sealed record PerkPickup(string Kind, int Q, int R);
 public sealed class WhirlpoolPair

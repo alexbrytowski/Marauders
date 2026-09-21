@@ -1,5 +1,17 @@
 # Marauders launch checklist
 
+## September 20: handbook perk visuals and movement recall
+
+- [x] Correct the How to Play examples for Glass Cannon to show −1 through 8
+  and Loaded Dice to show 1–3 becoming 4.
+- [x] Persist each captain's completed-round movement as yellow board trails,
+  hide trail sections beneath ships and perk pickups, and clear that captain's
+  trails when their next turn begins.
+- [x] Add an on-by-default, per-browser map-footer toggle for completed movement
+  trails and persist the preference across reloads.
+- [x] Keep both server-generated whirlpool endpoints outside the living
+  Kraken's marked two-hex attack reach, including its warning rounds.
+
 ## September 17: perk tuning and ghost fleets
 
 - [x] Change Glass Cannon to -1 through 8 and Loaded Dice to replace 1-3 with 4

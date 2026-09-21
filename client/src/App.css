@@ -741,6 +741,14 @@
   fill: none;
   stroke-dasharray: 5 4;
 }
+.previous-movement-line {
+  fill: none;
+  stroke: #ffd84d;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.78;
+}
 .route-number {
   fill: #18343b;
   text-anchor: middle;
@@ -804,6 +812,14 @@
   font-size: 11px;
   background: transparent;
   border: 0;
+}
+.zoom-controls .movement-trails-toggle {
+  margin-left: 4px;
+  border-left: 1px solid #43585d;
+  color: #819695;
+}
+.zoom-controls .movement-trails-toggle.active {
+  color: #ffd84d;
 }
 .command-deck {
   margin-top: 22px;

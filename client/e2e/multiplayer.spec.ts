@@ -1033,6 +1033,171 @@ test('late-game rule warnings synchronize across captains', async ({ browser }, 
   }
 })
 
+test('completed movement trails synchronize, persist, toggle by browser, mask tokens, and clear on the owners next turn', async ({
+  browser,
+}) => {
+  const contexts = await Promise.all(
+    Array.from({ length: 5 }, () =>
+      browser.newContext({ viewport: { width: 1366, height: 900 }, reducedMotion: 'reduce' }),
+    ),
+  )
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    for (let i = 0; i < pages.length; i++) {
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4)
+        expect(
+          (
+            await pages[i].request.post('/api/game/players', {
+              headers,
+              data: { name: `Trail captain ${i + 1}`, color: colors[i], character: characterIds[i] },
+            })
+          ).status(),
+        ).toBe(200)
+    }
+    let game = await readyCrew(pages)
+    const ids = game.players.map((player) => player.id)
+    const board: Board = await (await pages[0].request.get('/api/board')).json()
+    const water = new Set(board.cells.filter((cell) => cell.terrain === 'water').map(key))
+    const portIds = ids.map((id) => game.ports.find((port) => port.ownerId === id)!.id)
+    const idlePositions = portIds.slice(1).map((portId) => board.cells.find((cell) => cell.harborId === portId)!)
+    const open = board.cells.find(
+      (cell) =>
+        cell.terrain === 'water' &&
+        [0, 1, 2].every((offset) => water.has(key({ q: cell.q + offset, r: cell.r }))) &&
+        idlePositions.every((position) => distance(cell, position) > 3),
+    )!
+    const destination = { q: open.q + 2, r: open.r }
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    const saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      phase: 'playing',
+      activePlayerId: ids[0],
+      turnOrder: ids,
+      turnNumber: 1,
+      remainingActions: 1,
+      remainingMovement: 2,
+      lastRoll: 4,
+      isBuildPhase: false,
+      isEndingRound: false,
+      availableBuilds: 0,
+      combat: null,
+      combatChoices: [],
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      ships: ids.map((ownerId, index) => {
+        const position = index === 0 ? open : idlePositions[index - 1]
+        return {
+          id: `trail-ship-${index}`,
+          ownerId,
+          portId: portIds[index],
+          number: index + 1,
+          q: position.q,
+          r: position.r,
+          perk: index === 0 ? 'glass-cannon' : null,
+        }
+      }),
+      constructions: ids.flatMap((ownerId, ownerIndex) =>
+        Array.from({ length: 5 }, (_, buildIndex) => ({
+          id: `trail-build-${ownerIndex}-${buildIndex}`,
+          ownerId,
+          portId: portIds[ownerIndex],
+          remainingOwnerTurns: 99,
+          startedTurnNumber: 1,
+        })),
+      ),
+      perkPickups: [{ kind: 'loaded-dice', q: open.q + 1, r: open.r }],
+      movementTrails: [],
+      currentMovementTrails: [],
+      whirlpool: null,
+      kraken: null,
+      revision: saved.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+
+    await pages[0].locator('[data-ship="trail-ship-0"]').click()
+    await pages[0].locator(`[data-hex="${key(destination)}"]`).click()
+    game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Sail 2 hexes/ }).click())
+    expect(game.currentMovementTrails).toHaveLength(1)
+    expect(game.currentMovementTrails[0].hexes).toEqual([
+      { q: open.q, r: open.r },
+      { q: open.q + 1, r: open.r },
+      destination,
+    ])
+    expect(game.movementTrails).toHaveLength(0)
+    for (const page of pages) await expect(page.locator('.previous-movement-line')).toHaveCount(0)
+
+    await stopServer()
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.locator('.previous-movement-line')).toHaveCount(0)
+    }
+    expect((await state(pages[4])).currentMovementTrails).toHaveLength(1)
+
+    let response = await pages[0].request.post('/api/game/action', {
+      headers,
+      data: { type: 'end-turn', expectedRevision: game.revision },
+    })
+    expect(response.status(), await response.text()).toBe(200)
+    game = await response.json()
+    expect(game.activePlayerId).toBe(ids[1])
+    expect(game.currentMovementTrails).toHaveLength(0)
+    expect(game.movementTrails).toHaveLength(1)
+    for (const page of pages) {
+      await expect(page.locator('.previous-movement-line')).toHaveCount(1)
+      await expect(page.locator('.trail-token-mask')).toHaveCount(5)
+      await expect(page.locator(`[data-perk="loaded-dice"]`)).toHaveCount(1)
+    }
+
+    const trailToggle = pages[0].getByRole('button', { name: 'Past movement lines' })
+    await expect(trailToggle).toHaveAttribute('aria-pressed', 'true')
+    await trailToggle.click()
+    await expect(trailToggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(pages[0].locator('.previous-movement-line')).toHaveCount(0)
+    await expect(pages[1].locator('.previous-movement-line')).toHaveCount(1)
+    await pages[0].reload()
+    await expect(pages[0].locator('.connection')).toHaveText('Live')
+    await expect(pages[0].getByRole('button', { name: 'Past movement lines' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    await expect(pages[0].locator('.previous-movement-line')).toHaveCount(0)
+    await pages[0].getByRole('button', { name: 'Past movement lines' }).click()
+    await expect(pages[0].locator('.previous-movement-line')).toHaveCount(1)
+
+    await stopServer()
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+      await expect(page.locator('.previous-movement-line')).toHaveCount(1)
+    }
+
+    for (let ownerIndex = 1; ownerIndex < 4; ownerIndex++) {
+      response = await pages[ownerIndex].request.post('/api/game/action', {
+        headers,
+        data: { type: 'end-turn', expectedRevision: game.revision },
+      })
+      expect(response.status(), await response.text()).toBe(200)
+      game = await response.json()
+    }
+    expect(game.activePlayerId).toBe(ids[0])
+    expect(game.movementTrails).toHaveLength(0)
+    for (const page of pages) await expect(page.locator('.previous-movement-line')).toHaveCount(0)
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
+})
+
 test('early endings confirm unused dice and movement while other browsers and timeouts stay in sync', async ({
   browser,
 }, testInfo) => {

@@ -189,7 +189,8 @@ the completion of round 50, the chance is 25% (2.5 times the original rate).
 Every viewer receives a four-round public warning beginning at round 46. That
 is four independent chances per full four-player cycle. They appear in two
 empty ordinary-blue water hexes at least ten hexes apart, never in a port’s
-dark-blue water or on ships/pickups.
+dark-blue water, on ships/pickups, or within the living Kraken's marked two-hex
+attack reach (including its warning rounds).
 Only one pair exists at a time. It lasts two full cycles: eight subsequent
 captain turns with four living captains, or twice the living captain count at
 spawn. It fades after that many turns without moving any ship resting there.

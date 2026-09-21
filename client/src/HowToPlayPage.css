@@ -496,6 +496,10 @@
   gap: 6px;
   font-size: 10px;
 }
+.loaded-dice-values {
+  display: flex;
+  gap: 4px;
+}
 .black-white-example {
   padding: 7px 10px;
   border: 1px solid #b89b66;

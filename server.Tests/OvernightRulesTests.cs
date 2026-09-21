@@ -82,6 +82,24 @@ public partial class GameRulesTests
         Assert.Equal(spawns, s.Whirlpool is not null);
     }
 
+    [Fact] public void Whirlpool_endpoints_never_spawn_inside_the_krakens_attack_reach()
+    {
+        var s = Playing();
+        var water = BoardDefinition.Cells.Where(cell => cell.Terrain == "water").Select(cell => cell.Hex).ToArray();
+        var firstPossibleEndpoint = water.First(first => water.Any(second => first.DistanceTo(second) >= 10));
+        var firstIndex = Array.IndexOf(water, firstPossibleEndpoint);
+        var krakenHex = water.Skip(firstIndex + 1)
+            .First(hex => hex.DistanceTo(firstPossibleEndpoint) is > 0 and <= KrakenPlacement.Reach);
+        s.Kraken = new() { Q = krakenHex.Q, R = krakenHex.R, Lives = 3, AwakensOnRound = 33 };
+        s.IsBuildPhase = true;
+
+        new GameRules(s, new WhirlpoolDice(0), new(), Now).Act(s.ActivePlayerId!, new("end-turn"));
+
+        var pair = Assert.IsType<WhirlpoolPair>(s.Whirlpool);
+        Assert.All(new[] { pair.First, pair.Second }, endpoint =>
+            Assert.True(endpoint.DistanceTo(krakenHex) > KrakenPlacement.Reach));
+    }
+
     [Fact] public void Whirlpool_lasts_eight_subsequent_turns_with_no_overlapping_draw_or_expiry_respawn()
     {
         var s = Playing(); var dice = new WhirlpoolDice(0); var rules = new GameRules(s, dice, new(), Now);
@@ -107,6 +125,9 @@ public partial class GameRulesTests
         Assert.Equal(exit, ship.Hex); Assert.Equal(5, s.RemainingMovement);
         Rules(s).Act(ship.OwnerId, new("move", ShipId: ship.Id, Q: exit.Q - 1, R: exit.R));
         Assert.Equal(Offset(exit, -1), ship.Hex); Assert.Equal(4, s.RemainingMovement);
+        Assert.Equal(2, s.CurrentMovementTrails.Count);
+        Assert.Equal(new[] { Open, entry }, s.CurrentMovementTrails[0].Hexes);
+        Assert.Equal(new[] { exit, Offset(exit, -1) }, s.CurrentMovementTrails[1].Hexes);
         Assert.Contains(s.Events, e => e.Kind == "whirlpool" && e.Message.Contains("remaining movement"));
     }
 

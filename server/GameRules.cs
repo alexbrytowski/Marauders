@@ -256,10 +256,12 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             state.Whirlpool is { } whirlpool ? new HashSet<Hex> { whirlpool.First, whirlpool.Second } : null);
         Require(path is not null && path.Count > 1 && path.Count - 1 <= state.RemainingMovement, "Choose a reachable empty water hex within your movement.");
         var moved = 0;
+        var travelled = new List<Hex> { ship.Hex };
         foreach (var hex in path!.Skip(1))
         {
             var previousHarbor = Board.Cell(ship.Hex)?.HarborId;
             ship.Q = hex.Q; ship.R = hex.R;
+            travelled.Add(hex);
             CollectPerk(ship);
             state.RemainingMovement--; moved++;
             var harbor = Board.Cell(hex)?.HarborId;
@@ -283,9 +285,20 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             RefreshEncounters(ship.Id);
             if (state.Combat is not null || state.CombatChoices.Count > 0) break;
         }
+        RecordMovement(actor, ship.Id, travelled);
         Log("movement", $"{Name(actor)} moved ship {ship.Number} {moved} hex{(moved == 1 ? "" : "es")}.");
         if (state.RemainingMovement == 0 && state.Combat is null && state.CombatChoices.Count == 0) ActionClock();
         SettleActions();
+    }
+
+    private void RecordMovement(string actor, string shipId, List<Hex> travelled)
+    {
+        if (travelled.Count < 2) return;
+        var existing = state.CurrentMovementTrails.LastOrDefault(trail =>
+            trail.PlayerId == actor && trail.ShipId == shipId && trail.Hexes.Count > 0 &&
+            trail.Hexes[^1] == travelled[0]);
+        if (existing is null) state.CurrentMovementTrails.Add(new(actor, shipId, travelled));
+        else existing.Hexes.AddRange(travelled.Skip(1));
     }
 
     private void CollectPerk(Ship ship)
@@ -653,6 +666,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (voided > 0) Log("construction", $"{voided} ship build(s) at {port.Name} were lost on capture.");
         if (previous is not null && !IsGhost(previous) && !state.Ports.Any(p => p.OwnerId == previous))
         {
+            ClearMovementTrails(previous);
             foreach (var ship in state.Ships.Where(s => s.OwnerId == previous)) ship.OwnerId = capturer;
             Log("elimination", $"{Name(previous)} lost their final port. Their surviving ships now sail for {Name(capturer)}.");
         }
@@ -750,6 +764,9 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     }
     private void AdvanceTurn(string owner)
     {
+        state.MovementTrails.RemoveAll(trail => trail.PlayerId == owner);
+        state.MovementTrails.AddRange(state.CurrentMovementTrails.Where(trail => trail.PlayerId == owner));
+        state.CurrentMovementTrails.RemoveAll(trail => trail.PlayerId == owner);
         var index = state.TurnOrder.IndexOf(owner);
         var next = Enumerable.Range(1, state.TurnOrder.Count).Select(i => state.TurnOrder[(index + i) % state.TurnOrder.Count])
             .First(id => !IsGhost(id) && state.Ports.Any(p => p.OwnerId == id));
@@ -771,7 +788,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (dice.Next(1000) >= WhirlpoolSpawnThreshold) return;
         var candidates = Board.Cells.Where(c => c.Terrain == "water" &&
             !state.Ships.Any(s => s.Hex == c.Hex) && !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R) &&
-            !(state.Kraken is { Lives: > 0 } kraken && kraken.Hex == c.Hex)).Select(c => c.Hex).ToArray();
+            !(state.Kraken is { Lives: > 0 } kraken && kraken.Hex.DistanceTo(c.Hex) <= KrakenPlacement.Reach))
+            .Select(c => c.Hex).ToArray();
         var starts = candidates.Where(a => candidates.Any(b => a.DistanceTo(b) >= 10)).ToArray();
         if (starts.Length == 0) return;
         var first = starts[dice.Next(starts.Length)];
@@ -798,6 +816,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         }
         Require(state.Phase is "draft" or "playing", "Wait for the game to finish setting up.");
         player.HasForfeited = true;
+        ClearMovementTrails(actor);
         state.Constructions.RemoveAll(b => b.OwnerId == actor);
         if (state.HostPlayerId == actor) state.HostPlayerId = state.Players.FirstOrDefault(p => !p.HasForfeited)?.Id;
         Log("forfeit", $"{player.Name} forfeited and left. Their ships and ports remain as a stationary ghost fleet; carried perks and port defense are unchanged. Construction vanished.");
@@ -839,6 +858,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             state.Ports.Count(port => port.OwnerId == p.Id))).ToList()));
     private void BeginTurn(string owner)
     {
+        ClearMovementTrails(owner);
         state.ActivePlayerId = owner;
         state.RemainingActions = ActionCount(state.Ships.Count(s => s.OwnerId == owner), state.TurnNumber);
         state.RemainingMovement = 0; state.LastRoll = null;
@@ -875,6 +895,12 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("turn", "Endgame action surge is now active: captains receive 1 action die per 2 ships, rounding up.");
         RefreshEncounters();
         SettleActions();
+    }
+
+    private void ClearMovementTrails(string owner)
+    {
+        state.MovementTrails.RemoveAll(trail => trail.PlayerId == owner);
+        state.CurrentMovementTrails.RemoveAll(trail => trail.PlayerId == owner);
     }
 
     private void ResolveKrakenEmergence(KrakenState kraken)

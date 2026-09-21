@@ -1,9 +1,19 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { directions, distance, ghostColor, isKrakenActive, key, perks, portNumber, whirlpoolExit } from './game'
 import type { Board, Cell, Game, Hex } from './game'
 import { outline, point } from './boardGeometry'
 import { ShipPiece, PortPiece } from './BoardPieces'
+
+const movementTrailsPreferenceKey = 'marauders.showMovementTrails'
+
+const initialMovementTrailsPreference = () => {
+  try {
+    return window.localStorage.getItem(movementTrailsPreferenceKey) !== 'false'
+  } catch {
+    return true
+  }
+}
 
 export function BoardView({
   board,
@@ -30,7 +40,9 @@ export function BoardView({
   onHover: (cell: Cell | null) => void
   preview?: boolean
 }) {
+  const trailMaskId = useId().replace(/:/g, '')
   const [zoom, setZoom] = useState(1)
+  const [showMovementTrails, setShowMovementTrails] = useState(initialMovementTrailsPreference)
   const [inspected, setInspected] = useState<Cell | null>(null)
   const [focusKey, setFocusKey] = useState('9,0')
   const frame = useRef<HTMLDivElement>(null)
@@ -58,6 +70,17 @@ export function BoardView({
     }
     setZoom(next)
   }
+  const toggleMovementTrails = () => {
+    setShowMovementTrails((current) => {
+      const next = !current
+      try {
+        window.localStorage.setItem(movementTrailsPreferenceKey, String(next))
+      } catch {
+        // The toggle still works for this page when storage is unavailable.
+      }
+      return next
+    })
+  }
   useLayoutEffect(() => {
     const node = frame.current,
       map = node?.querySelector('svg'),
@@ -76,6 +99,7 @@ export function BoardView({
   const players = new Map(game.players.map((p) => [p.id, p]))
   const ships = new Map(game.ships.map((s) => [key(s), s]))
   const pickups = new Map(game.perkPickups.map((p) => [key(p), p]))
+  const movementTrails = game.movementTrails ?? []
   const kraken = game.kraken && game.kraken.lives > 0 ? game.kraken : null
   const activeKraken = isKrakenActive(game)
   const inspect = (cell: Cell | null) => {
@@ -194,6 +218,22 @@ export function BoardView({
             <filter id="token-shadow" x="-100%" y="-100%" width="300%" height="300%">
               <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity=".65" />
             </filter>
+            <mask id={trailMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="1032" height="838">
+              <rect width="1032" height="838" fill="white" />
+              {[...game.ships, ...game.perkPickups].map((token) => {
+                const tokenPoint = point(token)
+                return (
+                  <circle
+                    className="trail-token-mask"
+                    key={`${'id' in token ? token.id : token.kind}-${key(token)}`}
+                    cx={tokenPoint.x}
+                    cy={tokenPoint.y}
+                    r="13"
+                    fill="black"
+                  />
+                )
+              })}
+            </mask>
           </defs>
           <rect width="1032" height="838" fill="url(#sea-glow)" />
           <rect width="1032" height="838" fill="url(#chart-lines)" />
@@ -297,6 +337,29 @@ export function BoardView({
               </g>
             )
           })}
+          {!preview && showMovementTrails && movementTrails.length > 0 && (
+            <g
+              className="movement-trails"
+              mask={`url(#${trailMaskId})`}
+              pointerEvents="none"
+              aria-hidden="true"
+            >
+              {movementTrails.map((trail, index) => (
+                <polyline
+                  key={`${trail.playerId}-${trail.shipId}-${index}`}
+                  className="previous-movement-line"
+                  data-player={trail.playerId}
+                  data-ship={trail.shipId}
+                  points={trail.hexes
+                    .map((hex) => {
+                      const trailPoint = point(hex)
+                      return `${trailPoint.x},${trailPoint.y}`
+                    })
+                    .join(' ')}
+                />
+              ))}
+            </g>
+          )}
           {!preview && (
             <g className="port-callouts" pointerEvents="none" aria-hidden="true">
               {portLabels.map(({ port, land }) => {
@@ -448,6 +511,15 @@ export function BoardView({
               aria-label="Zoom in"
             >
               +
+            </button>
+            <button
+              className={`movement-trails-toggle ${showMovementTrails ? 'active' : ''}`}
+              onClick={toggleMovementTrails}
+              aria-label="Past movement lines"
+              aria-pressed={showMovementTrails}
+              title={`${showMovementTrails ? 'Hide' : 'Show'} past movement lines`}
+            >
+              Trails {showMovementTrails ? 'on' : 'off'}
             </button>
           </div>
         )}

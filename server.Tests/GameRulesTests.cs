@@ -69,6 +69,39 @@ public partial class GameRulesTests
             }
         }
     }
+
+    [Fact] public void Completed_movement_trails_publish_until_the_captains_next_turn()
+    {
+        var s = Playing();
+        var owner = s.ActivePlayerId!;
+        var ship = Add(s, 0, Open);
+        s.RemainingMovement = 6;
+
+        Rules(s).Act(owner, new("move", ShipId: ship.Id, Q: Open.Q + 2, R: Open.R));
+
+        Assert.Empty(s.MovementTrails);
+        var current = Assert.Single(s.CurrentMovementTrails);
+        Assert.Equal(owner, current.PlayerId);
+        Assert.Equal(new[] { Open, Offset(Open, 1), Offset(Open, 2) }, current.Hexes);
+
+        s.IsBuildPhase = true;
+        Rules(s).Act(owner, new("end-turn"));
+
+        var published = Assert.Single(s.MovementTrails);
+        Assert.Equal(current, published);
+        Assert.Empty(s.CurrentMovementTrails);
+        Assert.NotEqual(owner, s.ActivePlayerId);
+
+        for (var i = 0; i < 3; i++)
+        {
+            var next = s.ActivePlayerId!;
+            Assert.NotEqual(owner, next);
+            Rules(s).Act(next, new("end-turn"));
+        }
+
+        Assert.Equal(owner, s.ActivePlayerId);
+        Assert.Empty(s.MovementTrails);
+    }
     [Theory]
     [InlineData(84, 0, 0)] [InlineData(84, 1, 1)] [InlineData(84, 3, 1)] [InlineData(84, 4, 2)]
     [InlineData(84, 9, 3)] [InlineData(84, 13, 5)] [InlineData(85, 0, 0)] [InlineData(85, 1, 1)]
