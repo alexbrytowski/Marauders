@@ -1,5 +1,19 @@
 # Marauders launch checklist
 
+## September 30: NPC warnings ignore ships
+
+- [x] Keep Cam's warned island and the Kraken's warned center independent of current ship positions; ships have four rounds to move away.
+
+## September 30: Delta Port 5 spacing
+
+- [x] Move Delta Port 5 to the southern landmass coast between Ports 11 and 7, with Port 10 on the same coast.
+- [x] Version the updated map as `delta-v2` and retain `delta-v1` for existing saves.
+
+## September 30: Siren presentation
+
+- [x] Keep Call of the Siren's three effects in a shorter in-game description.
+- [x] Use a more muted blue water fill for Cam's call and the Call of the Siren perk's reach, while retaining the light-blue outline.
+
 ## September 29: random first captain and Cam's clear water
 
 - [x] Draw the first captain on the server after all four captains ready, show the result to all browsers, and remove the lobby selector.

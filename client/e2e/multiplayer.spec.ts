@@ -3166,7 +3166,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       expect(game.mapSelection?.totalTickets).toBe(4)
       const board: Board = await (await pages[0].request.get('/api/board')).json()
       expect(board.id).toBe(mapId)
-      expect(board.version).toBe(mapId === 'delta' ? 'delta-v1' : `${mapId}-v7`)
+      expect(board.version).toBe(mapId === 'delta' ? 'delta-v2' : `${mapId}-v7`)
       expect(board.version).toBe(game.boardVersion)
       expect(game.ports).toHaveLength(13)
       const neutralPort = game.ports.filter((port) => port.ownerId === null)

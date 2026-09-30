@@ -2664,14 +2664,14 @@
 .kraken-status {
   color: #ff9cbc;
 }
-.hex.siren-reach > polygon {
-  fill: #245c78;
+.hex.siren-reach:is(.water, .harbor):not(.siren-center) > polygon {
+  fill: #20536b;
   stroke: #8bdcff;
   stroke-width: 1.25;
 }
-.hex.siren-reach:hover > polygon,
-.hex.siren-reach:focus-visible > polygon {
-  fill: #347796;
+.hex.siren-reach:is(.water, .harbor):not(.siren-center):hover > polygon,
+.hex.siren-reach:is(.water, .harbor):not(.siren-center):focus-visible > polygon {
+  fill: #3a7389;
   stroke: #c1efff;
 }
 .hex.siren-center > polygon {

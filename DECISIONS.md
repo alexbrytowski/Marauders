@@ -1,5 +1,9 @@
 # Implementation decisions
 
+## 2026-09-30: Warned NPC locations ignore ships
+
+- Ship positions do not influence Cam's round-8 island or the Kraken's round-29 center. The warning gives ships four rounds to leave. Existing ship removal rules still apply when either NPC arrives.
+
 ## 2026-09-29: First turn and Cam's clear water
 
 - Once all four captains are ready, the server uniformly draws one of their seats to take the first turn. Turn order then follows the seated order from that captain. The lobby does not choose or display a first captain before the draw. This supersedes the earlier host-selected first captain decision.
@@ -20,6 +24,11 @@
 - The owner retired Serpent's Coil and its saved games. Delta is the third playable map and uses a new `delta` map ID and `delta-v1` board version. The old Coil boards are no longer offered or loaded.
 - The supplied `Delta.png` is a screenshot with numbered ports, markup strokes, and an editor toolbar. The 34-by-31 hex terrain is a good-faith tracing of its visible water and land. Markup and the toolbar do not affect terrain; the obscured southern edge is inferred from adjacent visible rows. The source PNG remains untouched and outside the shipped app.
 - Port IDs and display names follow the image's 1–13 numbers. A few port tiles move one hex toward the visible shore to provide at least two connected harbor hexes under the existing ship rules. Port 11 is closest to the map center and remains neutral at setup.
+
+## 2026-09-30: Delta Port 5 relocation
+
+- Move Port 5 from the crowded northeastern island to column 10, row 25 on the northwest shore of the southern landmass shared with Port 10, between Ports 11 and 7. Its former tile becomes ordinary land.
+- Bump Delta to `delta-v2` and retain `delta-v1` for saved games already using the original layout.
 
 ## 2026-09-29: map input and trail colors
 
@@ -93,11 +102,12 @@
   later-round development start or an older compatible save that has not spawned
   it, create it on the next turn-start boundary at or after round 33. Retain a
   zero-life Kraken record after its death so it never respawns.
-- Randomly choose the spawn server-side for every game from empty ordinary-water
+- Randomly choose the spawn server-side for every game from ordinary-water
   cells. The Kraken cell must be more than four direct hexes from every port:
   consequently, every possible triggering cell in its two-hex reach is more than
-  two hexes from every port and cannot receive port support. Avoid ships, pickups,
-  and whirlpool endpoints. The living Kraken also blocks movement through its hex.
+  two hexes from every port and cannot receive port support. Avoid pickups and
+  whirlpool endpoints, but allow a ship already on the selected hex during the
+  warning. The living Kraken also blocks movement through its hex.
 - Treat each fleet as the player side of a normal public combat. Its triggering
   ship enters combat within two Kraken hexes and friendly ships within two of that
   ship help without chaining. The Kraken is a stationary neutral side with three

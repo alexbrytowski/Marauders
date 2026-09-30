@@ -30,6 +30,16 @@ public partial class GameRulesTests
     }
 
     [Fact]
+    public void Kraken_warning_location_does_not_avoid_ships_already_there()
+    {
+        var state = Lobby();
+        ReadyCrew(state);
+        var chosen = KrakenPlacement.Spawn(state, new FixedDice());
+        var ship = state.Ships[0]; ship.Q = chosen.Q; ship.R = chosen.R;
+        Assert.Equal(chosen.Hex, KrakenPlacement.Spawn(state, new FixedDice()).Hex);
+    }
+
+    [Fact]
     public void Kraken_reach_is_revealed_at_29_and_activates_at_33()
     {
         var state = Lobby();

@@ -23,6 +23,7 @@ public static class MapCatalog
     ];
     private static readonly IReadOnlyDictionary<string, BoardMap> Legacy = new Dictionary<string, BoardMap>
     {
+        ["delta-v1"] = BoardMap.Load("maps/delta-v1.json"),
         ["narrows-v2"] = BoardMap.Load("maps/narrows-v2.json"),
         ["narrows-v3"] = BoardMap.Load("maps/narrows-v3.json"),
         ["narrows-v4"] = BoardMap.Load("maps/narrows-v4.json"),

@@ -120,6 +120,7 @@ that counter advances:
 - **Round 29:** A four-round public warning begins. The server chooses the
   Kraken's future ordinary-water hex, reserves that center against movement and
   other spawns, and marks its future two-hex reach red so fleets can move clear.
+  Ships already there do not affect the choice of location.
 - **Round 33:** The Kraken appears at a server-randomized ordinary-water hex, so
   its location can differ in every game. It rises at the location marked since
   round 29. Its pink hex has a tentacle marker and
@@ -153,6 +154,7 @@ from this guide so the reward remains a surprise.
 
 At the start of round 8, the server selects Cam's future one-hex island in central
 open water, reserves that hex, and marks her three-hex reach light blue. Her island
+may be chosen beneath an existing ship, which has four rounds to move away. It
 has two complete hex rings of ordinary water clear of land and ports. The server
 prefers sites more than three hexes from every port, using a closer site only if
 none are available. The third ring of her reach may overlap land or a port's

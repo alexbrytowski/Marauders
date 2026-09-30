@@ -181,7 +181,7 @@ export const perks: Record<string, { name: string; symbol: string; description: 
   'call-of-the-siren': {
     name: 'Call of the Siren',
     symbol: 'C',
-    description: 'After every captain turn, draws enemy ships within three hexes one hex closer. Adjacent enemy ships take −1 on each combat die. Suppresses Black and White when this ship participates.',
+    description: 'After every captain turn, pulls enemy ships within 3 hexes 1 hex closer. Adjacent enemies: −1 per combat die. Cancels Black and White when fighting.',
   },
   'ear-plugs': {
     name: "Sailor's Wax",
