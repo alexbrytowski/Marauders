@@ -1,5 +1,16 @@
 # Implementation decisions
 
+## 2026-09-29: Call of the Siren in combat
+
+- The Call's combat effect is positional and always active: each enemy ship one hex from its carrier takes -1 on each of its combat dice. Allied ships are unaffected. Apply the penalty after that ship's own perk changes its roll and before taking each team's highest die. Thus all three dice from an adjacent Mark of the Kraken carrier take -1, while port dice do not. The effect uses current ship positions and stops if the Call carrier is removed. Whether this also affects the Kraken boss's dice is awaiting clarification.
+- The Call of the Siren and Mark of the Kraken both suppress Black and White entirely when their carriers participate. Without either NPC reward carrier participating, Black and White remains 50/50. A suppressed binary draw uses normal numbered dice, including the Call's positional penalty.
+
+## 2026-09-29: Delta replaces Serpent's Coil
+
+- The owner retired Serpent's Coil and its saved games. Delta is the third playable map and uses a new `delta` map ID and `delta-v1` board version. The old Coil boards are no longer offered or loaded.
+- The supplied `Delta.png` is a screenshot with numbered ports, markup strokes, and an editor toolbar. The 34-by-31 hex terrain is a good-faith tracing of its visible water and land. Markup and the toolbar do not affect terrain; the obscured southern edge is inferred from adjacent visible rows. The source PNG remains untouched and outside the shipped app.
+- Port IDs and display names follow the image's 1–13 numbers. A few port tiles move one hex toward the visible shore to provide at least two connected harbor hexes under the existing ship rules. Port 11 is closest to the map center and remains neutral at setup.
+
 ## 2026-09-29: map input and trail colors
 
 - The board adds an invisible pointer target across every interactive hex, including ships and ports, so child SVG detail does not create dead spots. On desktop and laptop layouts, the fitted board uses more of the available viewport height to keep small hexes easier to hit; optional zoom remains.

@@ -275,7 +275,7 @@ function Setup({ board }: { board?: Board }) {
       <p>
         Each captain receives three geographically balanced random ports and six ships. The server avoids
         strong three-port clusters while keeping many possible deals. The most central port stays neutral:
-        Blackwater on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Seven perk pickups
+        Blackwater on Classic, Northgate on The Choke, or Port 11 on Delta. Seven perk pickups
         await at sea.
       </p>
       <details>

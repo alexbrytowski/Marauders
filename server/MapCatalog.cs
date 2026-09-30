@@ -9,7 +9,7 @@ public sealed record MapOption(string Id, string Name, string Description, [prop
     {
         "classic" => "port-7",
         "narrows" => "port-12",
-        "shattered-isles" => "port-13",
+        "delta" => "port-11",
         _ => throw new RuleException("This map needs a designated neutral starting port.")
     };
 }
@@ -19,21 +19,15 @@ public static class MapCatalog
     public static IReadOnlyList<MapOption> All { get; } = [
         new("classic", "Classic", "The original Marauder Sea: familiar coastlines, sheltered harbors, and open crossings.", BoardDefinition.Classic),
         new("narrows", "The Choke", "Six ports ring each sea around one three-ship-wide crossing and a neutral central gate.", BoardMap.Load("maps/narrows.json")),
-        new("shattered-isles", "Serpent's Coil", "A northwest island and a winding inner sea, with northern, western, eastern, and southern passages.", BoardMap.Load("maps/shattered-isles.json"))
+        new("delta", "Delta", "A broad central sea with branching coastlines, sheltered island ports, and an eastern channel.", BoardMap.Load("maps/delta.json"))
     ];
     private static readonly IReadOnlyDictionary<string, BoardMap> Legacy = new Dictionary<string, BoardMap>
     {
         ["narrows-v2"] = BoardMap.Load("maps/narrows-v2.json"),
-        ["shattered-isles-v2"] = BoardMap.Load("maps/shattered-isles-v2.json"),
         ["narrows-v3"] = BoardMap.Load("maps/narrows-v3.json"),
-        ["shattered-isles-v3"] = BoardMap.Load("maps/shattered-isles-v3.json"),
         ["narrows-v4"] = BoardMap.Load("maps/narrows-v4.json"),
-        ["shattered-isles-v4"] = BoardMap.Load("maps/shattered-isles-v4.json"),
         ["narrows-v5"] = BoardMap.Load("maps/narrows-v5.json"),
-        ["shattered-isles-v5"] = BoardMap.Load("maps/shattered-isles-v5.json"),
-        ["narrows-v6"] = BoardMap.Load("maps/narrows-v6.json"),
-        ["shattered-isles-v6"] = BoardMap.Load("maps/shattered-isles-v6.json"),
-        ["shattered-isles-v7"] = BoardMap.Load("maps/shattered-isles-v7.json")
+        ["narrows-v6"] = BoardMap.Load("maps/narrows-v6.json")
     };
     public static BoardMap Resolve(string id, string version)
     {
@@ -43,7 +37,6 @@ public static class MapCatalog
         throw new RuleException("The saved map version is unavailable. Preserve the save before starting a new match.");
     }
     public static string Name(string id, string version) => version == "narrows-v2" ? "The Narrows (legacy)"
-        : version == "shattered-isles-v2" ? "Shattered Isles (legacy)"
         : Get(id).Name + (version == Get(id).Version ? "" : " (legacy)");
     public static MapOption? Find(string? id) => All.FirstOrDefault(m => m.Id == id);
     public static MapOption Get(string id) => Find(id) ?? throw new RuleException("Choose a map from the lobby.");

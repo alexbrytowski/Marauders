@@ -8,7 +8,7 @@ public partial class GameRulesTests
     [Theory]
     [InlineData("classic")]
     [InlineData("narrows")]
-    [InlineData("shattered-isles")]
+    [InlineData("delta")]
     public void Cam_and_remote_Ear_Plugs_spawn_on_each_map_without_overlaps(string mapId)
     {
         var state = Lobby();
@@ -137,5 +137,54 @@ public partial class GameRulesTests
         Rules(state).Act(state.ActivePlayerId!, new("end-turn"));
         Assert.Equal(2, enemy.Hex.DistanceTo(holder.Hex));
         Assert.Equal(friendStart, friend.Hex);
+    }
+
+    [Fact]
+    public void Call_weakens_only_adjacent_enemies_during_an_ordinary_ship_battle()
+    {
+        var state = Playing();
+        var carrier = Add(state, 0, Open); carrier.Perk = "call-of-the-siren";
+        var enemy = Add(state, 1, Offset(Open, 2));
+        var ally = Add(state, 0, Offset(Open, 1, -1));
+        state.RemainingMovement = 1;
+        Rules(state).Act(carrier.OwnerId, new("move", ShipId: carrier.Id, Q: Open.Q + 1, R: Open.R));
+
+        new GameRules(state, new ControlledDice([4, 6, 6]), new(), Now)
+            .Act(carrier.OwnerId, new("roll-combat", CombatId: state.Combat!.Id));
+
+        Assert.Equal(new[] { 4, 6 }, state.Combat.Rolls[carrier.OwnerId]);
+        Assert.Equal(new[] { 5 }, state.Combat.Rolls[enemy.OwnerId]);
+        Assert.Equal(carrier.OwnerId, state.Combat.WinnerId);
+        Assert.Equal(1, carrier.Hex.DistanceTo(ally.Hex));
+    }
+
+    [Fact]
+    public void Call_subtracts_one_from_each_adjacent_Mark_die()
+    {
+        var (state, carrier, markedEnemy) = Duel("call-of-the-siren", "mark-of-the-kraken");
+        new GameRules(state, new ControlledDice([6, 6, 5, 4]), new(), Now)
+            .Act(carrier.OwnerId, new("roll-combat", CombatId: state.Combat!.Id));
+
+        Assert.Equal(new[] { 6 }, state.Combat.Rolls[carrier.OwnerId]);
+        Assert.Equal(new[] { 5, 4, 3 }, state.Combat.Rolls[markedEnemy.OwnerId]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Participating_Call_suppresses_Black_and_White_on_either_side(bool callAttacks)
+    {
+        var (state, attacker, defender) = Duel(
+            callAttacks ? "call-of-the-siren" : "black-and-white",
+            callAttacks ? "black-and-white" : "call-of-the-siren");
+        var dice = new ControlledDice([6, 6]);
+        new GameRules(state, dice, new(), Now)
+            .Act(attacker.OwnerId, new("roll-combat", CombatId: state.Combat!.Id));
+
+        Assert.Null(state.Combat.BlackWhiteResult);
+        Assert.Null(state.Combat.BlackWhiteOwnerId);
+        Assert.Equal(new[] { 6, 6 }, dice.Sides);
+        Assert.Equal(callAttacks ? 6 : 5, Assert.Single(state.Combat.Rolls[attacker.OwnerId]));
+        Assert.Equal(callAttacks ? 5 : 6, Assert.Single(state.Combat.Rolls[defender.OwnerId]));
     }
 }

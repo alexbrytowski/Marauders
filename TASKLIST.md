@@ -1,5 +1,16 @@
 # Marauders launch checklist
 
+## September 29: Call of the Siren combat aura
+
+- [ ] Give adjacent enemy ships -1 per combat die after their own perk adjustment, including all three Mark dice; allied ships and port dice are unaffected. Confirm whether the Kraken boss's dice are also affected.
+- [ ] Suppress Black and White when a Call carrier participates, as the Mark already does.
+- [ ] Show the combat effects in the perk and battle UI; verify server rules, multiplayer synchronization, lint, and builds.
+
+## September 29: Delta map
+
+- [x] Replace Serpent's Coil in the lobby and rules with a playable Delta tracing of the supplied PNG, retaining its 13 numbered ports and a neutral Port 11. Retire Coil's runtime files and saved-map support as requested.
+- [x] Verify connected sailing water, starting fleets, balanced deals, perk/NPC placement, client rendering, and map selection. Debug tests (214), Debug/Release builds, client lint/build, and the focused five-browser voting/setup/sailing/restart scenario pass. Reviewed the Delta board and lobby preview screenshots.
+
 ## September 29: map input and trail colors
 
 - [x] Make the full drawn hex receive map clicks and enlarge the fitted map on laptop layouts.

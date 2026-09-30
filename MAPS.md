@@ -1,97 +1,25 @@
 # Marauders maps
 
-New matches offer **Classic**, **The Choke**, and **Serpent's Coil**. All start
-with thirteen ports, three randomly assigned ports per captain, two ships per owned port, and the same
-rules. Blackwater (Classic), Northgate (The Choke), and Serpent's Heart (Serpent's
-Coil) always begin neutral. Captains vote before play; each vote is one
-ticket in a server-drawn lottery. With no votes, all three maps have equal odds.
+New matches offer **Classic**, **The Choke**, and **Delta**. Every map has 13 ports. Each captain receives three geographically balanced random ports and two starting ships per owned port. One central port begins neutral. Captains vote before play; each vote is one ticket in the server's map draw. With no votes, all three maps have equal odds.
 
 ## Classic
 
-The original `server/board.json`, version `original-map-v2`, is unchanged. The
-source JPEG is untouched. See BOARD_MAPPING.md for the remaining owner review
-of photo-derived harbor membership.
+The original `server/board.json`, version `original-map-v2`, is unchanged. The source JPEG is untouched. See `BOARD_MAPPING.md` for the remaining review of the photo-derived harbor membership. Blackwater (port 7) starts neutral.
 
 ## The Choke
 
-The owner's September 10 concept and name replace The Narrows. Two large bodies
-of water fill the western and eastern halves of the board. A continuous land
-divide reaches both boundaries; the **only crossing is three hexes wide** at
-the center. Three ships can seal it, while any one open lane permits passage.
-Northgate (12) is the only central port and occupies the northern bank of the
-passage with two harbor hexes. It is the map's neutral starting port. Six ports
-ring each sea; Dusk Harbor (13) fills the western ring's lower outer shore, so
-the two sides have the same port count and spacing. Ports occupy the inner
-shores, northern and southern ends, and outer shores.
+Two large seas meet at a three-hex-wide crossing. Six ports ring each sea, with neutral Northgate (port 12) on the crossing's northern bank. A small island in each bay divides local routes without adding another crossing. See `server/maps/narrows.json`, version `narrows-v7`.
 
-A small island in the north of the western bay and one in the south of the
-eastern bay split open-water routes. Sail around either side to approach the
-ring of ports; neither island creates another crossing or adds a port.
+Saved Choke matches using versions 2 through 6 retain their geometry in `narrows-v*.json`. New matches use version 7.
 
-Owning ports on both sides protects access if a rival blocks the crossing. Starting
-near a gate gives direct pressure on it, at the cost of a small harbor and
-potential contact with enemy ships coming through. Whirlpools can temporarily
-change access across the land divide.
+## Delta
 
-The playable file is `server/maps/narrows.json`, version `narrows-v7`; its stable
-internal ID remains `narrows` for saved ballots. It has 578 sailable hexes.
+Delta is a playable tracing of the supplied `Delta.png`, with 34 columns and 31 rows. A broad central sea wraps around a large northern peninsula and a southern coast. Small islands, island ports, and a narrow eastern channel create several approaches. Its 13 ports keep the image's numbers; Port 11, the nearest to the center, starts neutral.
 
-## Serpent's Coil
-
-The third map replaces Shattered Isles with a distinct route concept. A spiral
-peninsula wraps around a winding inner sea. Outer ports face open sailing
-water; inner ports sit deeper in the coil. A two-hex-wide breach in the eastern
-arm offers a shortcut to the middle passage. A second, two-hex-wide northern
-cut through the inner arm opens another approach close to Serpent's Heart (13),
-so its owner must defend more than the winding route.
-
-A new two-hex-wide southern entrance opens the outer arm to the middle circuit.
-Across the wall at offset column 18, the route from row 26 to row 21 drops from
-29 movement to five. Turtle Quay's shortest harbor-to-harbor journey to
-Scalehaven drops from 36 to 17. Southern captains can contest interior ports
-sooner; the inner wall and winding route still matter on the way to the Heart.
-A small northwest island offers routes around either side between Dawn Watch,
-Serpent's Jaw, and the western approach.
-
-Breachwatch (9), Scalehaven (10), Coil's Reach (11), and Serpent's Jaw (8) sit
-within the coil. Gull's Rest (12) fills the northwestern outer ring between Dawn Watch and
-Westwind. The eight outer ports and four inner ports surround neutral Serpent's
-Heart (13). Distance across land can be small even when sailing distance is
-long, so nearby ports need not be easy to reinforce. Blocking the eastern breach
-lengthens the tested crossing by more than twenty movement points. The northern
-cut independently shortens one approach to the heart's harbor from 36 steps to
-six; closing the eastern breach does not close that approach. The longer winding
-route remains available.
-
-The playable file is `server/maps/shattered-isles.json`, version
-`shattered-isles-v7`; its internal ID remains `shattered-isles`. It has 593
-sailable hexes. The islands are terrain, while ports supply capacity, rebuilding
-positions, and elimination objectives. The Heart has the same value as any
-other port. These strategic tradeoffs still need four-player balance play.
-
-## Existing matches
-
-Versions 2 through 6 are preserved in the corresponding `narrows-v*.json` and
-`shattered-isles-v*.json` files. Saved matches keep their exact terrain, with a
-legacy label. Version 2 retains the names The Narrows and Shattered Isles;
-version 3 retains The Choke and Serpent's Coil. They can continue without moving
-ships or resetting saves. New matches use version 7. Unknown versions and
-versions belonging to another map fail
-explicitly. The API and client load the version saved in the match;
-perk-placement caches are also version-specific. No live save is reset.
+The screenshot contains hand-drawn markup and an editor toolbar. Neither is terrain. The southern coast hidden under the toolbar is inferred from adjacent visible rows. Some port tiles are moved one hex toward their shore so each has at least two connected harbor hexes. The source PNG is untouched and is not a runtime asset. The playable file is `server/maps/delta.json`, version `delta-v1`. Serpent's Coil has been retired; its saved matches are no longer supported, as requested by the owner.
 
 ## Reproduce and verify
 
-Run `python tools/create_alternate_maps.py`, then `python tools/render_maps.py`
-(Pillow required). They reproduce the current JSON and labeled PNG previews in
-`artifacts/maps/`. The generator leaves Classic, the source photo, and legacy
-JSON untouched. Coordinates use Classic's even-row hex grid; first-ring water
-around ports forms their harbors.
+`python tools/create_alternate_maps.py` regenerates The Choke; `python tools/render_maps.py` renders map previews from the playable JSON (Pillow required). Delta's terrain was traced from the supplied screenshot and is reviewed directly in its JSON, not regenerated from the screenshot.
 
-Checks cover connected water and harbors, thirteen distinct ports, at least
-two launch hexes each, automatic fleets, spillover, perk access, lottery rules,
-and saved versions. The Choke has an explicit three-cell cut test; the Coil has
-distance tests for all three cuts, including passage past one blocked southern
-entrance hex. Island tests preserve all port positions and harbor cells. The five-browser map scenario
-covers voting, random setup, sailing, shared state, and restart persistence on both
-maps, plus loading all ten legacy layouts.
+Automated checks cover connected sailing water and harbors, thirteen distinct ports, launch and spillover hexes, automatic fleets, balanced starting deals, perk and NPC placement, and server-authoritative map voting. The five-browser map scenario covers both alternate maps through voting, setup, sailing, synchronization, and restart.

@@ -18,10 +18,10 @@ COPY = {
         "One island in each bay creates flanking routes around those port rings.",
         "Whirlpools can temporarily change access across the divide.",
     ]),
-    "shattered-isles": ("SERPENT'S COIL", "A southern entrance. A northwest island. More routes to contest.", [
-        "The southern cut gives southern fleets direct access to the middle circuit.",
-        "The eastern breach, northern inner cut, and winding approach remain open.",
-        "Eight outer ports, four inner ports, and the neutral Heart are evenly spread.",
+    "delta": ("DELTA", "Open central water. Island ports. A winding eastern channel.", [
+        "Thirteen numbered ports follow the supplied map; Port 11 begins neutral.",
+        "Small islands interrupt the broad central sea without closing it.",
+        "The southern coast and eastern channel offer distinct sailing routes.",
     ]),
 }
 

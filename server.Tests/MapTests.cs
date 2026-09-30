@@ -14,11 +14,11 @@ public partial class GameRulesTests
 
     [Fact] public void Weighted_map_lottery_gives_each_vote_exactly_one_ticket()
     {
-        var maps = new[] { "classic", "narrows", "shattered-isles" };
+        var maps = new[] { "classic", "narrows", "delta" };
         var votes = new[] { "classic", "classic", "classic", "narrows" };
         var results = Enumerable.Range(0, 4).Select(i => MapLottery.Draw(maps, votes, new TicketRandom(i))).ToArray();
         Assert.Equal(3, results.Count(r => r.MapId == "classic")); Assert.Single(results, r => r.MapId == "narrows");
-        Assert.DoesNotContain(results, r => r.MapId == "shattered-isles"); Assert.All(results, r => Assert.Equal(4, r.TotalTickets));
+        Assert.DoesNotContain(results, r => r.MapId == "delta"); Assert.All(results, r => Assert.Equal(4, r.TotalTickets));
         Assert.All(results, r => Assert.False(r.UsedEqualOdds));
         var equal = Enumerable.Range(0, 3).Select(i => MapLottery.Draw(maps, [], new TicketRandom(i))).ToArray();
         Assert.Equal(maps, equal.Select(r => r.MapId)); Assert.All(equal, r => Assert.True(r.UsedEqualOdds));
@@ -29,11 +29,12 @@ public partial class GameRulesTests
     {
         var s = Lobby(); var captain = s.Players[2].Id;
         Rules(s).Act(captain, new("vote-map", MapId: "narrows"));
-        Rules(s).Act(captain, new("vote-map", MapId: "shattered-isles"));
-        Assert.Single(s.MapVotes); Assert.Equal("shattered-isles", s.MapVotes[captain]);
+        Rules(s).Act(captain, new("vote-map", MapId: "delta"));
+        Assert.Single(s.MapVotes); Assert.Equal("delta", s.MapVotes[captain]);
         Rules(s).Act(captain, new("vote-map")); Assert.Empty(s.MapVotes);
         Assert.Throws<RuleException>(() => Rules(s).Act("spectator", new("vote-map", MapId: "classic")));
         Assert.Throws<RuleException>(() => Rules(s).Act(captain, new("vote-map", MapId: "unknown")));
+        Assert.Throws<RuleException>(() => Rules(s).Act(captain, new("vote-map", MapId: "shattered-isles")));
         Rules(s).Act(captain, new("vote-map", MapId: "narrows"));
         var random = new TicketRandom(0); var rules = new GameRules(s, random, new(), Now);
         Assert.Throws<RuleException>(() => rules.Act(captain, new("start-draft", FirstPlayerId: captain)));
@@ -49,7 +50,7 @@ public partial class GameRulesTests
         s.MapVotes.Clear(); Assert.Equal(1, s.MapSelection!.Votes["narrows"]);
     }
 
-    [Theory] [InlineData("classic")] [InlineData("narrows")] [InlineData("shattered-isles")]
+    [Theory] [InlineData("classic")] [InlineData("narrows")] [InlineData("delta")]
     public void Each_map_supports_automatic_fleets_spillover_and_predraft_perk_layouts(string mapId)
     {
         var map = MapCatalog.Get(mapId).Board;
@@ -90,7 +91,7 @@ public partial class GameRulesTests
         }
     }
 
-    [Theory] [InlineData("narrows")] [InlineData("shattered-isles")]
+    [Theory] [InlineData("narrows")] [InlineData("delta")]
     public void Revised_coasts_have_no_isolated_water_or_split_harbors(string mapId)
     {
         var map = MapCatalog.Get(mapId).Board;
@@ -125,72 +126,26 @@ public partial class GameRulesTests
         Assert.Equal("The Choke", MapCatalog.Get("narrows").Name);
     }
 
-    [Fact] public void Coil_replaces_fang_harbor_on_the_outer_ring_and_keeps_the_heart_neutral()
+    [Fact] public void Delta_follows_the_numbered_ports_and_retires_the_coil()
     {
-        var map = MapCatalog.Get("shattered-isles").Board;
-        Assert.DoesNotContain(map.Ports, p => p.Name == "Fang Harbor");
-        var replacement = Assert.Single(map.Ports, p => p.Id == "port-12");
-        Assert.Equal("Gull's Rest", replacement.Name); Assert.Equal((2, 11), (replacement.Col, replacement.Row));
-        Assert.Equal("port-13", MapCatalog.Get("shattered-isles").NeutralPortId);
-        Assert.Equal("Serpent's Heart", Assert.Single(map.Ports, p => p.Id == "port-13").Name);
-    }
-
-    [Fact] public void Coil_outer_breach_shortens_the_crossing_and_inner_cut_opens_another_approach()
-    {
-        var map = MapCatalog.Get("shattered-isles").Board;
-        var start = BoardMap.Offset(28, 15); var middle = BoardMap.Offset(22, 15);
-        var breach = (from r in new[] { 14, 15 } from c in new[] { 24, 25 } select BoardMap.Offset(c, r)).ToHashSet();
-        var shortcut = map.FindPath(start, middle, new HashSet<Hex>())!;
-        var longRoute = map.FindPath(start, middle, breach)!;
-        Assert.True(longRoute.Count > shortcut.Count + 20);
-        var north = BoardMap.Offset(15, 8); var heart = map.Harbor("port-13")[0];
-        var innerCut = (from r in new[] { 10, 11 } from c in new[] { 14, 15 } select BoardMap.Offset(c, r)).ToHashSet();
-        Assert.All(innerCut, hex => Assert.True(map.IsSailable(hex)));
-        var direct = map.FindPath(north, heart, new HashSet<Hex>())!;
-        var winding = map.FindPath(north, heart, innerCut)!;
-        Assert.NotNull(direct); Assert.NotNull(winding);
-        Assert.Contains(direct, hex => innerCut.Contains(hex));
-        Assert.True(winding.Count > direct.Count + 10, $"Northern cut: {direct.Count - 1} movement; winding route: {winding.Count - 1}.");
-        // Both shortcuts are usable independently; closing the outer breach
-        // does not seal the northern approach to the heart.
-        Assert.Equal(direct.Count, map.FindPath(north, heart, breach)!.Count);
-    }
-
-    [Fact] public void Coil_southern_entrance_shortens_access_without_replacing_other_routes()
-    {
-        var map = MapCatalog.Get("shattered-isles").Board;
-        var legacy = MapCatalog.Resolve("shattered-isles", "shattered-isles-v4");
-        var south = BoardMap.Offset(18, 26); var middle = BoardMap.Offset(18, 21);
-        var cut = (from r in new[] { 23, 24 } from c in new[] { 17, 18 } select BoardMap.Offset(c, r)).ToHashSet();
-        Assert.All(cut, h => { Assert.True(map.IsSailable(h)); Assert.False(legacy.IsSailable(h)); });
-        var direct = map.FindPath(south, middle, new HashSet<Hex>())!;
-        var around = map.FindPath(south, middle, cut)!;
-        Assert.Equal(5, direct.Count - 1); Assert.Contains(direct, cut.Contains);
-        Assert.True(around.Count > direct.Count + 15);
-        // The two lanes remain independently navigable; one blocking ship
-        // cannot shut the entire entrance. The inner wall still needs a detour.
-        foreach (var hex in cut)
-            Assert.True(map.FindPath(south, middle, new HashSet<Hex> { hex })!.Count < around.Count);
-        Assert.False(map.IsSailable(BoardMap.Offset(17, 18)));
-    }
-
-    [Fact] public void Coil_v8_adds_two_double_passages_and_one_single_passage_from_the_marked_plan()
-    {
-        var map = MapCatalog.Get("shattered-isles").Board;
-        var legacy = MapCatalog.Resolve("shattered-isles", "shattered-isles-v7");
-        var doublePassages =
-            (from r in new[] { 1, 2 } from c in new[] { 14, 15 } select BoardMap.Offset(c, r))
-            .Concat(from r in new[] { 22, 23 } from c in new[] { 7, 8 } select BoardMap.Offset(c, r));
-        var singlePassage = from r in new[] { 18, 19 } select BoardMap.Offset(16, r);
-        var expected = doublePassages.Concat(singlePassage).ToHashSet();
-        Assert.Equal(10, expected.Count);
-        Assert.All(expected, h => { Assert.True(map.IsSailable(h)); Assert.False(legacy.IsSailable(h)); });
-        var changed = map.Cells.Where(c => c.Terrain != legacy.Cell(c.Hex)!.Terrain).Select(c => c.Hex).ToHashSet();
-        Assert.True(expected.SetEquals(changed));
+        var option = MapCatalog.Get("delta");
+        var map = option.Board;
+        Assert.Equal("Delta", option.Name);
+        Assert.Equal("delta-v1", map.Version);
+        Assert.Equal("port-11", option.NeutralPortId);
+        Assert.Equal(Enumerable.Range(1, 13).Select(i => $"Port {i}"), map.Ports.Select(port => port.Name));
+        Assert.Equal(new[] {
+            (27, 1), (18, 4), (12, 7), (22, 14), (25, 12), (29, 17), (2, 27),
+            (4, 14), (3, 6), (19, 23), (13, 18), (32, 5), (30, 27)
+        }, map.Ports.Select(port => (port.Col, port.Row)));
+        Assert.Null(MapCatalog.Find("shattered-isles"));
+        Assert.Throws<RuleException>(() => MapCatalog.Get("shattered-isles"));
+        Assert.Equal("land", map.Cell(BoardMap.Offset(7, 8))!.Terrain);
+        Assert.Equal("water", map.Cell(BoardMap.Offset(16, 21))!.Terrain);
+        Assert.Equal("water", map.Cell(BoardMap.Offset(27, 22))!.Terrain);
     }
 
     [Theory] [InlineData("narrows", 8, 10)] [InlineData("narrows", 24, 19)]
-    [InlineData("shattered-isles", 8, 6)]
     public void New_islands_are_small_separate_land_masses(string mapId, int col, int row)
     {
         var map = MapCatalog.Get(mapId).Board; var old = MapCatalog.Resolve(mapId, mapId + "-v4");
@@ -203,12 +158,12 @@ public partial class GameRulesTests
         Assert.All(island, h => { Assert.Equal("water", old.Cell(h)!.Terrain); Assert.Equal("land", map.Cell(h)!.Terrain); });
     }
 
-    [Theory] [InlineData("narrows", "shattered-isles-v3")] [InlineData("classic", "narrows-v3")]
+    [Theory] [InlineData("narrows", "delta-v1")] [InlineData("delta", "narrows-v3")] [InlineData("classic", "narrows-v3")]
     [InlineData("narrows", "narrows-v999")]
     public void Map_versions_cannot_select_another_maps_terrain_or_unknown_data(string id, string version)
         => Assert.Throws<RuleException>(() => MapCatalog.Resolve(id, version));
 
-    [Theory] [InlineData("narrows")] [InlineData("shattered-isles")]
+    [Theory] [InlineData("narrows")] [InlineData("delta")]
     public void Alternate_map_movement_and_port_combat_use_its_own_terrain(string mapId)
     {
         var map = MapCatalog.Get(mapId).Board; var s = Playing(); s.MapId = mapId; s.BoardVersion = map.Version;

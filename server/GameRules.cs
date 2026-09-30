@@ -442,8 +442,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         battle.BlackWhiteResult = null;
         battle.BlackWhiteOwnerId = null;
         var participants = battle.ParticipantShipIds.Select(Ship).ToList();
-        var markSuppressesBlackWhite = participants.Any(ship => ship.Perk == "mark-of-the-kraken");
-        var blackWhite = markSuppressesBlackWhite
+        var npcRewardSuppressesBlackWhite = participants.Any(ship => ship.Perk is "mark-of-the-kraken" or "call-of-the-siren");
+        var blackWhite = npcRewardSuppressesBlackWhite
             ? null
             : participants.FirstOrDefault(ship => ship.Perk == "black-and-white");
         if (blackWhite is not null)
@@ -454,11 +454,13 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         foreach (var ship in participants)
         {
             var count = ship.Perk == "mark-of-the-kraken" ? 3 : 1;
+            var callPenalty = state.Ships.Any(holder => holder.Perk == "call-of-the-siren" &&
+                holder.OwnerId != ship.OwnerId && holder.Hex.DistanceTo(ship.Hex) == 1) ? 1 : 0;
             for (var i = 0; i < count; i++)
             {
                 var roll = ship.Perk == "glass-cannon" ? dice.Roll(10) - 2 : dice.Roll();
                 if (ship.Perk == "loaded-dice" && roll is 1 or 2 or 3) roll = 4;
-                battle.Rolls[ship.OwnerId].Add(roll);
+                battle.Rolls[ship.OwnerId].Add(roll - callPenalty);
             }
         }
         if (battle.Kind == "port") battle.Rolls[battle.DefenderId].Add(dice.Roll());

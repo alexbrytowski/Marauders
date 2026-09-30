@@ -85,44 +85,7 @@ def narrows():
           "Northgate", "Dusk Harbor"])
 
 
-def shattered_isles():
-    rows = coast(
-        [32, 5, 3, 2, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 2, 3, 5, 32],
-        [0, 27, 29, 30, 30, 31, 31, 30, 31, 31, 30, 31, 31, 30, 31, 31, 31, 30, 31, 31, 30, 31, 31, 30, 31, 31, 30, 30, 29, 27, 0],
-    )
-    # A square spiral, two hexes thick, curling into the prize harbor. The
-    # eastern/southern outer breaches and northern inner cut offer different routes.
-    land(rows, 1, [(14, 15)] * 5)
-    land(rows, 5, [(14, 25)] * 2)
-    land(rows, 6, [(24, 25)] * 19)
-    land(rows, 23, [(7, 25)] * 2)
-    land(rows, 10, [(7, 8)] * 14)
-    land(rows, 10, [(7, 20)] * 2)
-    land(rows, 11, [(19, 20)] * 9)
-    land(rows, 18, [(12, 20)] * 2)
-    land(rows, 15, [(12, 13)] * 4)
-    land(rows, 15, [(12, 16)])
-    for r in (14, 15):
-        rows[r][24] = rows[r][25] = "."
-    # A second entrance near the heart makes the inner harbor contestable from
-    # the north as well as by sailing around the coil's southern arm.
-    for r in (10, 11):
-        rows[r][14] = rows[r][15] = "."
-    # Southern fleets can enter the middle circuit without circling the wall.
-    # Keep the inner arm intact so this does not become a straight shot to the Heart.
-    for r in (23, 24):
-        rows[r][17] = rows[r][18] = "."
-    # Break up the northwest sea with a small island, leaving broad routes on
-    # both sides between Dawn Watch, Serpent's Jaw, and the western approach.
-    land(rows, 4, [(8, 9), (6, 9), (6, 10), (7, 9), (8, 8)])
-    # Eight ports form an outer ring, four sit within the coil, and Serpent's
-    # Heart remains the neutral center port.
-    points = [(3, 3), (26, 2), (30, 10), (30, 21), (25, 28), (7, 28), (2, 19),
-              (14, 6), (23, 9), (23, 21), (9, 14), (2, 11), (16, 15)]
-    write("shattered-isles", rows, points, ["Dawn Watch", "North Star", "Eastwind", "Last Light", "South Star",
-          "Turtle Quay", "Westwind", "Serpent's Jaw", "Breachwatch", "Scalehaven", "Coil's Reach", "Gull's Rest", "Serpent's Heart"])
 
 
 if __name__ == "__main__":
     narrows()
-    shattered_isles()

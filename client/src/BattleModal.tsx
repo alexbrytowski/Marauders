@@ -3,7 +3,7 @@ import { Die, Icon } from './Icons'
 import { BattleMap } from './BattleMap'
 import { RollingDie } from './RollingDie'
 import type { Board, Command, Game } from './game'
-import { ghostColor, perks } from './game'
+import { distance, ghostColor, perks } from './game'
 import { LeaveGame } from './LeaveGame'
 
 export function BattleModal({
@@ -48,6 +48,10 @@ export function BattleModal({
   const selectLoss = (id: string) => setSelection({ exchange, id })
   const shipsFor = (id: string) =>
     game.ships.filter((ship) => ship.ownerId === id && battle?.participantShipIds.includes(ship.id))
+  const weakenedByCall = (ship: (typeof game.ships)[number]) =>
+    game.ships.some((holder) =>
+      holder.perk === 'call-of-the-siren' && holder.ownerId !== ship.ownerId && distance(holder, ship) === 1,
+    )
   const diceFor = (ship: (typeof game.ships)[number]) => (ship.perk === 'mark-of-the-kraken' ? 3 : 1)
   const fleet = (id: string) => (
     <div className="battle-fleet">
@@ -60,6 +64,7 @@ export function BattleModal({
         >
           Ship {s.number}
           {s.perk && ` · ${perks[s.perk]?.name}`}
+          {weakenedByCall(s) && ' · Call −1 per die'}
           {s.id === battle?.triggerShipId || s.id === battle?.opponentShipId ? ' · trigger' : ' · helper'}
         </button>
       ))}
@@ -126,17 +131,16 @@ export function BattleModal({
         (ship) => battle.participantShipIds.includes(ship.id) && ship.perk === 'black-and-white',
       )
     : undefined
-  const markSuppressesBlackWhite = battle
+  const npcRewardSuppressesBlackWhite = battle
     ? game.ships.some(
-        (ship) => battle.participantShipIds.includes(ship.id) && ship.perk === 'mark-of-the-kraken',
+        (ship) => battle.participantShipIds.includes(ship.id) &&
+          (ship.perk === 'mark-of-the-kraken' || ship.perk === 'call-of-the-siren'),
       )
     : false
   const blackWhiteOwnerId =
-    markSuppressesBlackWhite
-      ? null
-      : battle?.status === 'awaiting-roll'
-        ? (currentBlackWhiteHolder?.ownerId ?? null)
-        : (battle?.blackWhiteOwnerId ?? currentBlackWhiteHolder?.ownerId ?? null)
+    battle?.status === 'awaiting-roll'
+      ? npcRewardSuppressesBlackWhite ? null : (currentBlackWhiteHolder?.ownerId ?? null)
+      : battle?.blackWhiteResult ? (battle.blackWhiteOwnerId ?? null) : null
   const blackWhiteActive = !!blackWhiteOwnerId
   const opposingBlackWhiteId =
     battle && blackWhiteOwnerId

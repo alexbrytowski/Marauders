@@ -692,6 +692,55 @@ test('Cam pulls another captain into battle and her reward persists across brows
     expect((await state(pages[4])).siren?.alive).toBe(false)
     expect((await state(pages[4])).ships.find((ship) => ship.id === 'siren-helper')?.perk).toBe('call-of-the-siren')
     await expect(pages[4].locator('[data-perk="call-of-the-siren"]')).toHaveCount(0)
+
+    // The earned Call changes a later battle for every connected captain and
+    // suppresses Black and White before its adjacent enemy rolls.
+    await stopServer()
+    const combatSave = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(combatSave.game, {
+      activePlayerId: ids[0],
+      isBuildPhase: false,
+      isEndingRound: false,
+      remainingActions: 2,
+      remainingMovement: 1,
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      combat: null,
+      combatChoices: [],
+      sirenPullsStarted: false,
+      sirenPullQueue: [],
+      ships: [
+        { id: 'call-duelist', ownerId: ids[0], portId: 'port-1', number: 10,
+          q: open.q - 2, r: open.r, perk: 'call-of-the-siren' },
+        { id: 'cursed-opponent', ownerId: ids[1], portId: 'port-4', number: 20,
+          q: open.q, r: open.r, perk: 'black-and-white' },
+      ],
+    })
+    combatSave.game.revision++
+    await writeFile(savePath, JSON.stringify(combatSave))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('.connection')).toHaveText('Live')
+    }
+    await pages[0].locator('[data-ship="call-duelist"]').click()
+    await pages[0].locator(`[data-hex="${open.q - 1},${open.r}"]`).click()
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: /Sail 1 hex · battle ahead/ }).click(),
+    )
+    for (const page of pages) {
+      await expect(page.getByLabel('Black and White battle override')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /Ship 20 .*Call −1 per die/ })).toBeVisible()
+    }
+    game = await clickAction(pages[0], () =>
+      pages[0].getByRole('button', { name: 'Roll battle dice', exact: true }).click(),
+    )
+    expect(game.combat?.blackWhiteResult).toBeNull()
+    const cursedRoll = game.combat!.rolls[ids[1]][0]
+    expect(cursedRoll).toBeLessThanOrEqual(5)
+    for (const page of pages) {
+      await expect(page.locator('.battle-side').nth(1).getByLabel(`Rolled ${cursedRoll}`)).toBeVisible()
+    }
   } finally {
     await Promise.all(contexts.map((context) => context.close()))
   }
@@ -3013,11 +3062,11 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       await expect(ballot(p, 'classic')).toContainText('66.7% chance')
       await expect(ballot(p, 'narrows')).toContainText('33.3% chance')
     }
-    await clickAction(pages[2], () => ballot(pages[2], 'shattered-isles').getByRole('button').click())
+    await clickAction(pages[2], () => ballot(pages[2], 'delta').getByRole('button').click())
     for (const p of pages) await expect(ballot(p, 'narrows')).toContainText('0% chance')
     await pages[2].reload()
     await expect(pages[2].locator('.connection')).toHaveText('Live')
-    await expect(ballot(pages[2], 'shattered-isles').getByRole('button')).toHaveAttribute(
+    await expect(ballot(pages[2], 'delta').getByRole('button')).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -3029,7 +3078,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
     expect(await pages[4].evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
     await pages[4].setViewportSize({ width: 1440, height: 1080 })
 
-    for (const mapId of ['narrows', 'shattered-isles']) {
+    for (const mapId of ['narrows', 'delta']) {
       for (let i = 0; i < 4; i++) {
         game = await clickAction(pages[i], () => ballot(pages[i], mapId).getByRole('button').click())
         const count = Object.values(game.mapVotes).filter((id) => id === mapId).length
@@ -3050,7 +3099,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       expect(game.mapSelection?.totalTickets).toBe(4)
       const board: Board = await (await pages[0].request.get('/api/board')).json()
       expect(board.id).toBe(mapId)
-      expect(board.version).toBe(mapId === 'shattered-isles' ? 'shattered-isles-v8' : `${mapId}-v7`)
+      expect(board.version).toBe(mapId === 'delta' ? 'delta-v1' : `${mapId}-v7`)
       expect(board.version).toBe(game.boardVersion)
       expect(game.ports).toHaveLength(13)
       const neutralPort = game.ports.filter((port) => port.ownerId === null)
@@ -3061,9 +3110,10 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         expect(game.ports.some((port) => port.name === 'Southgate')).toBeFalsy()
         expect(game.ports.some((port) => port.name === 'Dusk Harbor')).toBeTruthy()
       } else {
-        expect(neutralPort[0].name).toBe("Serpent's Heart")
-        expect(game.ports.some((port) => port.name === 'Fang Harbor')).toBeFalsy()
-        expect(game.ports.some((port) => port.name === "Gull's Rest")).toBeTruthy()
+        expect(neutralPort[0].name).toBe('Port 11')
+        expect(game.ports.map((port) => port.name)).toEqual(
+          Array.from({ length: 13 }, (_, i) => `Port ${i + 1}`),
+        )
       }
       for (const p of pages) {
         await p.getByRole('button', { name: /^All \d+ events$/ }).click()
@@ -3146,18 +3196,13 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         await expect(p.locator('.map-options')).toBeVisible()
       }
     }
-    // Existing matches retain v2-v6 geometry while new drafts receive v7.
+    // Existing Choke matches retain v2-v6 geometry while new drafts receive v7.
     for (const [mapId, version] of [
       ['narrows', 'v2'],
-      ['shattered-isles', 'v2'],
       ['narrows', 'v3'],
-      ['shattered-isles', 'v3'],
       ['narrows', 'v4'],
-      ['shattered-isles', 'v4'],
       ['narrows', 'v5'],
-      ['shattered-isles', 'v5'],
       ['narrows', 'v6'],
-      ['shattered-isles', 'v6'],
     ]) {
       await stopServer()
       const savePath = path.join(dataDirectory, 'game-state-v2.json')
@@ -3194,7 +3239,7 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
       const legacyBoard: Board = await (await pages[0].request.get('/api/board')).json()
       const latestBoard: Board = await (await pages[0].request.get(`/api/board?mapId=${mapId}`)).json()
       expect(legacyBoard.version).toBe(`${mapId}-${version}`)
-      expect(latestBoard.version).toBe(mapId === 'shattered-isles' ? 'shattered-isles-v8' : `${mapId}-v7`)
+      expect(latestBoard.version).toBe(`${mapId}-v7`)
       const changed = legacyBoard.cells.find(
         (c) => latestBoard.cells.find((next) => key(next) === key(c))?.terrain !== c.terrain,
       )!

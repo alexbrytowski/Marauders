@@ -31,7 +31,7 @@ public partial class GameRulesTests
         Assert.Equal(expected, s.Events.Last().Rolls![s.ActivePlayerId!][0]);
     }
 
-    [Theory] [InlineData("classic", "port-7")] [InlineData("narrows", "port-12")] [InlineData("shattered-isles", "port-13")]
+    [Theory] [InlineData("classic", "port-7")] [InlineData("narrows", "port-12")] [InlineData("delta", "port-11")]
     public void Random_deals_preserve_map_neutrality_equal_fleets_and_vary_ownership(string mapId, string neutral)
     {
         var deals = new HashSet<string>();
@@ -51,7 +51,7 @@ public partial class GameRulesTests
         Assert.True(deals.Count > 1);
     }
 
-    [Theory] [InlineData("classic")] [InlineData("narrows")] [InlineData("shattered-isles")]
+    [Theory] [InlineData("classic")] [InlineData("narrows")] [InlineData("delta")]
     public void Balanced_dealer_retains_many_cluster_free_random_layouts(string mapId)
     {
         var map = MapCatalog.Get(mapId);

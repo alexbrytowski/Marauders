@@ -45,12 +45,8 @@ public partial class GameStateStoreTests
     }
 
     [Theory] [InlineData("classic", "original-map-v2")] [InlineData("narrows", "narrows-v2")]
-    [InlineData("shattered-isles", "shattered-isles-v2")] [InlineData("narrows", "narrows-v3")]
-    [InlineData("shattered-isles", "shattered-isles-v3")]
-    [InlineData("narrows", "narrows-v4")] [InlineData("shattered-isles", "shattered-isles-v4")]
-    [InlineData("narrows", "narrows-v5")] [InlineData("shattered-isles", "shattered-isles-v5")]
-    [InlineData("narrows", "narrows-v6")] [InlineData("shattered-isles", "shattered-isles-v6")]
-    [InlineData("shattered-isles", "shattered-isles-v7")]
+    [InlineData("narrows", "narrows-v3")] [InlineData("narrows", "narrows-v4")]
+    [InlineData("narrows", "narrows-v5")] [InlineData("narrows", "narrows-v6")]
     public async Task Legacy_geometry_and_architect_migration_preserve_saved_ships_and_whirlpool_timer(string mapId, string version)
     {
         var directory = Directory.CreateTempSubdirectory("marauders-legacy-").FullName;
