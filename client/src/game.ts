@@ -127,6 +127,7 @@ export type Game = {
   perkPickups: (Hex & { kind: string })[]
   whirlpool?: { first: Hex; second: Hex; remainingTurns: number } | null
   kraken?: (Hex & { lives: number; awakensOnRound?: number | null }) | null
+  siren?: (Hex & { alive: boolean }) | null
   updatedAt: string
 }
 export type Session = { playerId: string | null; canReset: boolean }
@@ -178,6 +179,16 @@ export const perks: Record<string, { name: string; symbol: string; description: 
     description:
       'This ship contributes three dice instead of one. The Black and White perk has no effect when this ship participates.',
   },
+  'call-of-the-siren': {
+    name: 'Call of the Siren',
+    symbol: 'C',
+    description: 'After every captain turn, draws enemy ships within three hexes one hex closer.',
+  },
+  'ear-plugs': {
+    name: "Sailor's Wax",
+    symbol: 'W',
+    description: "Ignore the Siren's calls.",
+  },
 }
 export const key = (h: Hex) => `${h.q},${h.r}`
 export const distance = (a: Hex, b: Hex) =>
@@ -215,7 +226,9 @@ export function effectiveBoard(board: Board, game: Game): Board {
   return {
     ...board,
     cells: board.cells.map((cell) =>
-      cell.portId && !ports.has(cell.portId)
+      game.siren && key(cell) === key(game.siren)
+        ? { ...cell, terrain: 'land' }
+        : cell.portId && !ports.has(cell.portId)
         ? { ...cell, terrain: 'land', portId: null }
         : cell.harborId && !ports.has(cell.harborId)
           ? { ...cell, terrain: 'water', harborId: null }
@@ -253,6 +266,7 @@ export function movementPaths(board: Board, game: Game, ship: Ship): Map<string,
   const cells = new Map(board.cells.map((c) => [key(c), c]))
   const blocked = new Set(game.ships.filter((s) => s.id !== ship.id).map(key))
   if (game.kraken && game.kraken.lives > 0) blocked.add(key(game.kraken))
+  if (game.siren) blocked.add(key(game.siren))
   if (game.whirlpool) {
     if (blocked.has(key(game.whirlpool.first))) blocked.add(key(game.whirlpool.second))
     if (blocked.has(key(game.whirlpool.second))) blocked.add(key(game.whirlpool.first))
@@ -283,6 +297,7 @@ export function firstEncounter(board: Board, game: Game, ship: Ship, path: Hex[]
     const h = whirlpoolExit(game, step) ?? step
     return (
       (isKrakenActive(game) && distance(h, game.kraken!) <= 2) ||
+      (!!game.siren && game.siren.alive && distance(h, game.siren) === 1) ||
       game.ships.some(
         (other) =>
           other.ownerId !== ship.ownerId &&

@@ -24,7 +24,8 @@ export function BattleMap({
       cell.portId && (cell.portId === battle.portId || battle.supportingPortIds.includes(cell.portId)),
   )
   const kraken = battle.kind === 'kraken' ? game.kraken : null
-  const points = [...ships, ...portCells, ...(kraken ? [kraken] : [])].map(point)
+  const siren = battle.kind === 'siren' ? game.siren : null
+  const points = [...ships, ...portCells, ...(kraken ? [kraken] : []), ...(siren ? [siren] : [])].map(point)
   if (!points.length) return null
   const left = Math.min(...points.map((p) => p.x)) - 44,
     top = Math.min(...points.map((p) => p.y)) - 44
@@ -91,6 +92,12 @@ export function BattleMap({
               </g>
             )
           })()}
+        {siren && (
+          <g className="battle-map-siren" transform={`translate(${point(siren).x} ${point(siren).y})`} role="img" aria-label="Cam the Siren on her island">
+            <circle r="15" fill="#a8eaff" stroke="#15506b" strokeWidth="2" />
+            <text y="4" textAnchor="middle" fill="#15506b" fontSize="11">Cam</text>
+          </g>
+        )}
         {ships.map((ship) => {
           const p = point(ship),
             player = game.players.find((player) => player.id === ship.ownerId)

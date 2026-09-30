@@ -1,9 +1,25 @@
 # Implementation decisions
 
+## 2026-09-29: map input and trail colors
+
+- The board adds an invisible pointer target across every interactive hex, including ships and ports, so child SVG detail does not create dead spots. On desktop and laptop layouts, the fitted board uses more of the available viewport height to keep small hexes easier to hit; optional zoom remains.
+- Public completed-movement trails use the current color of their owning captain. A forfeited captain's trail uses the white ghost color. Unknown legacy owners retain the former yellow fallback.
+
+## 2026-09-29: Cam the Siren
+
+- When Cam is slain, Sailor's Wax becomes Call of the Siren on its carrying ship, even if that ship did not join the battle. If the Wax is still an open-water pickup, that pickup changes into Call of the Siren at the same hex. No reward drops beside Cam, and Wax no longer exists after the exchange. The owner specified direct replacement because Wax loses its purpose when Cam dies.
+- Board and sailing descriptions leave Cam's die size for crews to discover when combat begins. Her battle view reveals that she rolls one d20 but does not state that one fleet win slays her. Sailor's Wax describes only that it lets a ship ignore the Siren's calls; the underlying combat effect remains unchanged.
+- The player-facing How to Play hides all perks awarded for slaying an NPC, including their names, effects, and the promise of a reward. Their rules remain in GAME_RULES.md and become visible through play.
+
+- The owner confirmed that touching Cam's island means entering adjacent water, one fleet win slays her, and pulls run after every captain turn even for ships owned by another captain. A forfeited ghost fleet stays stationary. Any participating Sailor's Wax carrier fixes Cam's numeric die result at 1.
+- Cam spawns only in newly started matches. Her island is selected from central ordinary water, prioritizing the largest three-hex water ring on each map. Serpent's Coil has no complete three-hex ring, so its best available ring is used. The island remains impassable after Cam dies.
+- Six existing perks retain their placement rules; Sailor's Wax uses the existing internal `ear-plugs` ID for save stability. Cam is placed first. All ordinary-water hexes with six ordinary-water neighbors are ranked by distance from Cam; the server randomly chooses among the ten farthest. The six regular perks are placed afterward, at least six hexes from the Wax and outside Cam's reach. Cam's initial reach contains no ports or pickups; Kraken placement excludes overlapping reaches. Ships move only if an unoccupied adjacent sailable hex strictly reduces their distance to the source. Whirlpools do not carry ships pulled by a Siren call. A pulled ship collects a pickup on arrival and immediately checks normal encounters. If no valid step exists, it stays put.
+- The unique Call reward only exists after Cam's death, so Cam and the reward cannot pull a ship at once. Black and White still replaces a Cam exchange if active; Sailor's Wax affects Cam's numeric d20 roll when dice are used. Existing in-progress saves do not gain Cam retroactively.
+
 ## 2026-09-20: completed-round movement trails
 
 - A captain's movement is accumulated privately in game state during their
-  turn, then published as yellow board trails only after that round completes.
+  turn, then published as board trails only after that round completes.
   Each captain's published trails remain visible through the other captains'
   turns and disappear when that captain's next turn begins. Trail segments are
   masked beneath current ship and perk-pickup tokens. Whirlpool teleportation

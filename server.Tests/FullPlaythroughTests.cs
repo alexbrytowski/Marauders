@@ -44,7 +44,7 @@ public partial class GameRulesTests
             Assert.All(s.Players, p => { Assert.Equal(3, s.Ports.Count(port => port.OwnerId == p.Id)); Assert.Equal(6, s.Ships.Count(ship => ship.OwnerId == p.Id)); });
             Assert.All(s.Ports.Where(p => p.OwnerId is not null), p => Assert.Equal(2, s.Ships.Count(ship => ship.PortId == p.Id && ship.OwnerId == p.OwnerId)));
             Assert.DoesNotContain(s.Ships, ship => ship.PortId == neutral);
-            Assert.Equal(6, s.PerkPickups.Select(p => p.Kind).Distinct().Count());
+            Assert.Equal(7, s.PerkPickups.Select(p => p.Kind).Distinct().Count());
             Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
             deals.Add(string.Join(',', s.Ports.Select(p => s.Players.FindIndex(player => player.Id == p.OwnerId))));
         }

@@ -39,7 +39,7 @@ public sealed class GameState
             if (Combat is { } battle)
             {
                 var liveCombatants = new[] { battle.AttackerId, battle.DefenderId }
-                    .Where(id => id != GameRules.KrakenId && Players.Any(player => player.Id == id && !player.HasForfeited))
+                    .Where(id => id != GameRules.KrakenId && id != GameRules.SirenId && Players.Any(player => player.Id == id && !player.HasForfeited))
                     .ToArray();
                 return liveCombatants.Contains(ActivePlayerId) ? ActivePlayerId : liveCombatants.FirstOrDefault();
             }
@@ -56,6 +56,9 @@ public sealed class GameState
     public List<PerkPickup> PerkPickups { get; set; } = [];
     public WhirlpoolPair? Whirlpool { get; set; }
     public KrakenState? Kraken { get; set; }
+    public SirenState? Siren { get; set; }
+    public List<string> SirenPullQueue { get; set; } = [];
+    public bool SirenPullsStarted { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
@@ -144,6 +147,13 @@ public sealed class KrakenState
     public int R { get; set; }
     public int Lives { get; set; } = 3;
     public int? AwakensOnRound { get; set; }
+    public Hex Hex => new(Q, R);
+}
+public sealed class SirenState
+{
+    public int Q { get; set; }
+    public int R { get; set; }
+    public bool Alive { get; set; } = true;
     public Hex Hex => new(Q, R);
 }
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);

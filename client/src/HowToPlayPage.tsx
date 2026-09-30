@@ -275,7 +275,7 @@ function Setup({ board }: { board?: Board }) {
       <p>
         Each captain receives three geographically balanced random ports and six ships. The server avoids
         strong three-port clusters while keeping many possible deals. The most central port stays neutral:
-        Blackwater on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Six perk pickups
+        Blackwater on Classic, Northgate on The Choke, or Serpent’s Heart on Serpent’s Coil. Seven perk pickups
         await at sea.
       </p>
       <details>
@@ -791,7 +791,7 @@ function Perks() {
           </div>
           <div className="perk-example-options">
             {Object.entries(perks)
-              .filter(([id]) => id !== 'mark-of-the-kraken')
+              .filter(([id]) => id !== 'mark-of-the-kraken' && id !== 'call-of-the-siren')
               .map(([id, p]) => (
                 <button key={id} aria-pressed={selected === id} onClick={() => setSelected(id)}>
                   <span>{p.symbol}</span>
@@ -807,10 +807,9 @@ function Perks() {
         </>
       }
     >
-      <h3>Six pickups. Six different edges.</h3>
+      <h3>Seven starting pickups.</h3>
       <p>
-        One of each perk appears in open water at game start. Each ship can carry <strong>one perk</strong>; a
-        fleet can hold several.
+        The six regular perks and Sailor’s Wax appear in open water at game start. Each ship can carry <strong>one perk</strong>; a fleet can hold several.
       </p>
       <ul>
         <li>A ship already carrying a perk sails past other pickups.</li>
@@ -879,6 +878,15 @@ function Progression() {
         several captains may act during a full trip around the table.
       </p>
       <section className="progression-section">
+        <h3>Cam the Siren · From the start</h3>
+        <ul>
+          <li>Cam occupies a one-hex island. Ships may sail into her light-blue three-hex reach.</li>
+          <li>After every captain turn, ships in that reach move one available hex toward her, including ships whose owner is waiting for a turn. Ghost ships and Sailor’s Wax carriers stay still.</li>
+          <li>Reaching water next to her island starts battle.</li>
+          <li>Sailor’s Wax waits far from Cam. It lets its carrier ignore the Siren’s calls.</li>
+        </ul>
+      </section>
+      <section className="progression-section">
         <h3>The Kraken · Round 33</h3>
         <ul>
           <li>
@@ -898,7 +906,6 @@ function Progression() {
           </li>
           <li>It never moves, rolls three dice each exchange, and has three persistent lives.</li>
           <li>A fleet win removes one life. A Kraken win removes one participating ship. Ties reroll.</li>
-          <li>Defeating it reveals a unique seventh perk that any eligible ship can collect.</li>
         </ul>
       </section>
       <section className="progression-section">

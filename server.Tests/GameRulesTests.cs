@@ -114,7 +114,7 @@ public partial class GameRulesTests
         var s = Lobby(); var first = s.Players[2].Id;
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("start-draft", FirstPlayerId: first)));
         ReadyCrew(s, first);
-        Assert.Equal(6, s.PerkPickups.Count);
+        Assert.Equal(7, s.PerkPickups.Count);
         Assert.All(s.Players, player => Assert.Equal(3, s.Ports.Count(p => p.OwnerId == player.Id)));
         Assert.Throws<RuleException>(() => Rules(s).Act(first, new("draft", PortId: "port-7")));
         var unowned = Assert.Single(s.Ports, p => p.OwnerId is null);

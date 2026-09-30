@@ -102,6 +102,8 @@ export function BoardView({
   const movementTrails = game.movementTrails ?? []
   const kraken = game.kraken && game.kraken.lives > 0 ? game.kraken : null
   const activeKraken = isKrakenActive(game)
+  const siren = game.siren
+  const sirenHolders = game.ships.filter((ship) => ship.perk === 'call-of-the-siren')
   const inspect = (cell: Cell | null) => {
     setInspected(cell)
     onHover(cell)
@@ -114,6 +116,9 @@ export function BoardView({
   const inspectedExit = inspected ? whirlpoolExit(game, inspected) : null
   const inspectedKrakenReach = !!(inspected && kraken && distance(inspected, kraken) <= 2)
   const inspectedKraken = !!(inspected && kraken && key(inspected) === key(kraken))
+  const inspectedSiren = !!(inspected && siren && key(inspected) === key(siren))
+  const inspectedSirenReach = !!(inspected && siren?.alive && distance(inspected, siren) <= 3)
+  const inspectedCall = inspected && sirenHolders.find((ship) => distance(inspected, ship) <= 3)
   const buildsAt = (portId: string) => game.constructions.filter((build) => build.portId === portId)
   const buildDescription = (portId: string) =>
     buildsAt(portId)
@@ -254,27 +259,33 @@ export function BoardView({
             const isKrakenCenter = krakenDistance === 0
             const isKraken = activeKraken && isKrakenCenter
             const inKrakenReach = krakenDistance <= 2 && ['water', 'harbor'].includes(cell.terrain)
+            const isSiren = !!(siren && key(cell) === key(siren))
+            const inSirenReach = !!(siren?.alive && distance(cell, siren) <= 3 && ['water', 'harbor'].includes(cell.terrain))
+            const inCallReach = sirenHolders.some((holder) => distance(cell, holder) <= 3) && ['water', 'harbor'].includes(cell.terrain)
             const baseDescription = ship
               ? `${shipOwner?.hasForfeited ? `Ghost ship ${ship.number} from ${shipOwner.name}'s forfeited fleet` : `${shipOwner?.name}'s ship ${ship.number}`}${ship.perk ? `, carrying ${perks[ship.perk]?.name}` : ''}, hex ${key(cell)}`
               : port
                 ? `${port.name}, port ${portNumber(port.id)}, ${portOwner?.hasForfeited ? `${portOwner.name}'s ghost port` : (portOwner?.name ?? 'unclaimed')}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
                 : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup. ${perks[pickup.kind]?.description} ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
-            const description = isKraken
+            const description = isSiren
+              ? `${siren!.alive ? 'Cam the Siren' : 'Cam the Siren\'s island'}, hex ${key(cell)}`
+              : isKraken
               ? `The Kraken, ${kraken!.lives} of 3 lives remaining, hex ${key(cell)}`
               : isKrakenCenter
                 ? `The Kraken will rise here in round ${kraken!.awakensOnRound ?? 33}, hex ${key(cell)}`
-              : `${baseDescription}${inKrakenReach ? ". Within the Kraken's two-hex combat reach" : ''}`
+              : `${baseDescription}${inKrakenReach ? ". Within the Kraken's two-hex combat reach" : ''}${inSirenReach ? '. Within Cam the Siren’s three-hex call' : ''}${inCallReach ? '. Within Call of the Siren reach' : ''}`
             return (
               <g
                 key={key(cell)}
                 transform={`translate(${p.x} ${p.y})`}
-                className={`hex ${cell.terrain} ${coast ? 'coast' : ''} ${inKrakenReach && !isKraken ? 'kraken-reach' : ''} ${isKraken ? 'kraken-center' : ''} ${highlighted ? 'reachable' : ''} ${isSelected ? 'selected-hex' : ''} ${harborFocus ? 'harbor-focus' : ''}`}
+                className={`hex ${cell.terrain} ${coast ? 'coast' : ''} ${inSirenReach || inCallReach ? 'siren-reach' : ''} ${isSiren ? 'siren-center' : ''} ${inKrakenReach && !isKraken ? 'kraken-reach' : ''} ${isKraken ? 'kraken-center' : ''} ${highlighted ? 'reachable' : ''} ${isSelected ? 'selected-hex' : ''} ${harborFocus ? 'harbor-focus' : ''}`}
                 data-hex={key(cell)}
                 data-port={port?.id}
                 data-ship={ship?.id}
                 data-perk={pickup?.kind}
                 data-whirlpool={exit ? key(exit) : undefined}
                 data-kraken={isKraken ? 'kraken' : inKrakenReach ? 'reach' : undefined}
+                data-siren={isSiren ? siren!.alive ? 'siren' : 'island' : inSirenReach || inCallReach ? 'reach' : undefined}
                 data-building={builds.length || undefined}
                 role={cell.terrain !== 'land' ? 'button' : undefined}
                 aria-label={description}
@@ -310,6 +321,13 @@ export function BoardView({
                     <circle className="kraken-eye" cx="2.5" cy="-1.5" r="1" />
                   </g>
                 )}
+                {isSiren && (
+                  <g className={`siren-token ${siren!.alive ? '' : 'slain'}`} aria-hidden="true">
+                    <circle r="11" />
+                    <path d="M-6 5c0-7 12-7 12 0M-5-2c0-8 10-8 10 0M-8 7c5-3 11-3 16 0" />
+                    <circle cx="-2" cy="-3" r="1" /><circle cx="2" cy="-3" r="1" />
+                  </g>
+                )}
                 {port && (
                   <g filter="url(#token-shadow)">
                     <PortPiece color={portOwner?.hasForfeited ? ghostColor : portOwner?.color} number={portNumber(port.id)} />
@@ -334,6 +352,15 @@ export function BoardView({
                     />
                   </g>
                 )}
+                {(cell.terrain !== 'land' || port) && (
+                  <polygon
+                    className="hex-hit"
+                    points={outline}
+                    pointerEvents="all"
+                    style={{ fill: 'transparent', stroke: 'none' }}
+                    aria-hidden="true"
+                  />
+                )}
               </g>
             )
           })}
@@ -350,6 +377,9 @@ export function BoardView({
                   className="previous-movement-line"
                   data-player={trail.playerId}
                   data-ship={trail.shipId}
+                  style={{ stroke: players.get(trail.playerId)?.hasForfeited
+                    ? ghostColor
+                    : (players.get(trail.playerId)?.color ?? '#ffd84d') }}
                   points={trail.hexes
                     .map((hex) => {
                       const trailPoint = point(hex)
@@ -414,10 +444,12 @@ export function BoardView({
         </svg>
       </div>
       {!preview &&
-        (inspectedShip || inspectedPort || inspectedPickupPerk || inspectedExit || inspectedKrakenReach) && (
+        (inspectedShip || inspectedPort || inspectedPickupPerk || inspectedExit || inspectedKrakenReach || inspectedSiren || inspectedSirenReach || inspectedCall) && (
           <aside className="board-inspection" role="tooltip">
             <strong>
-              {inspectedKraken
+              {inspectedSiren
+                ? siren!.alive ? 'Cam the Siren' : 'Cam the Siren’s island'
+                : inspectedKraken
                 ? activeKraken ? 'The Kraken' : 'Kraken warning'
                 : inspectedShip
                   ? `Ship ${inspectedShip.number} · ${players.get(inspectedShip.ownerId)?.name}`
@@ -460,6 +492,9 @@ export function BoardView({
                   : `The Kraken will rise here in round ${kraken!.awakensOnRound ?? 33}. Ships left in the marked reach are removed immediately without battle.`}
               </span>
             )}
+            {inspectedSiren && <span>{siren!.alive ? 'Ships that reach her island must face Cam.' : 'Cam was slain. Her island remains impassable.'}</span>}
+            {inspectedSirenReach && !inspectedSiren && <span>Within Cam’s three-hex call. Ships without Sailor’s Wax move one hex toward her after each captain turn.</span>}
+            {inspectedCall && <span>Within ship {inspectedCall.number}’s Call of the Siren. Enemy ships move one hex closer after each captain turn.</span>}
           </aside>
         )}
       <div className="chart-footer">
@@ -480,6 +515,7 @@ export function BoardView({
                 : `Kraken warning · rises in ${(kraken.awakensOnRound ?? 33) - game.turnNumber} rounds`}
             </span>
           )}
+          {siren?.alive && <span className="siren-status">Cam the Siren · three-hex call</span>}
           <span>
             <i className="harbor-key" />
             Harbor

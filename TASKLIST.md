@@ -1,10 +1,25 @@
 # Marauders launch checklist
 
+## September 29: map input and trail colors
+
+- [x] Make the full drawn hex receive map clicks and enlarge the fitted map on laptop layouts.
+- [x] Render completed movement trails in their captain's crew color, including the ghost color after forfeit.
+
+## September 29: Cam the Siren
+
+- [x] Spawn Cam on a central one-hex island with a visible light-blue three-hex call, clear of starting ports, pickups, and the Kraken.
+- [x] Pull eligible ships after each captain turn, including outside their owner's turn; pause for battles and resume after resolution.
+- [x] Add Cam's d20 battle, one-win death, Call of the Siren reward, and remote Sailor's Wax pickup.
+- [x] Replace carried Sailor's Wax with Call of the Siren when Cam dies; transform an unclaimed Wax pickup in place and synchronize the change.
+- [x] Reveal Cam's d20 in combat while keeping it and her vulnerability out of sailing descriptions; describe Sailor's Wax as ignoring the Siren's calls.
+- [x] Hide Cam and Kraken slaying rewards from the player-facing How to Play.
+- [x] Verify multi-browser Cam synchronization and persistence in the end-to-end suite.
+
 ## September 20: handbook perk visuals and movement recall
 
 - [x] Correct the How to Play examples for Glass Cannon to show −1 through 8
   and Loaded Dice to show 1–3 becoming 4.
-- [x] Persist each captain's completed-round movement as yellow board trails,
+- [x] Persist each captain's completed-round movement as team-colored board trails,
   hide trail sections beneath ships and perk pickups, and clear that captain's
   trails when their next turn begins.
 - [x] Add an on-by-default, per-browser map-footer toggle for completed movement

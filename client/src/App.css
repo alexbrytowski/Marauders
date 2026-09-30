@@ -651,7 +651,7 @@
 }
 @media (min-width: 801px) {
   .game-table .fit-map {
-    max-height: max(260px, calc(100dvh - 430px));
+    max-height: max(350px, calc(100dvh - 300px));
   }
 }
 .hex {
@@ -665,6 +665,9 @@
   transition:
     fill 0.12s,
     stroke 0.12s;
+}
+.hex > polygon.hex-hit {
+  cursor: pointer;
 }
 .hex.water:nth-of-type(3n) polygon {
   fill: #183f4d;
@@ -2661,6 +2664,35 @@
 .kraken-status {
   color: #ff9cbc;
 }
+.hex.siren-reach > polygon {
+  fill: #245c78;
+  stroke: #8bdcff;
+  stroke-width: 1.25;
+}
+.hex.siren-reach:hover > polygon,
+.hex.siren-reach:focus-visible > polygon {
+  fill: #347796;
+  stroke: #c1efff;
+}
+.hex.siren-center > polygon {
+  fill: #89bcaa;
+  stroke: #c8f3e7;
+  stroke-width: 2;
+}
+.siren-token circle:first-child {
+  fill: #a8eaff;
+  stroke: #15506b;
+  stroke-width: 1.5;
+}
+.siren-token path {
+  fill: none;
+  stroke: #15506b;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+.siren-token circle:not(:first-child) { fill: #15506b; }
+.siren-token.slain { opacity: .4; }
+.siren-status { color: #a8eaff; }
 .building-badge circle {
   fill: #e6be68;
   stroke: #142b32;

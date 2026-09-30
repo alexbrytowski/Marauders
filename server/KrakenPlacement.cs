@@ -21,6 +21,7 @@ public static class KrakenPlacement
         var candidates = SafeCells(board).Where(hex =>
             !state.Ships.Any(ship => ship.Hex == hex) &&
             !state.PerkPickups.Any(perk => new Hex(perk.Q, perk.R) == hex) &&
+            !(state.Siren is { } siren && hex.DistanceTo(siren.Hex) <= Reach + SirenPlacement.Reach) &&
             state.Whirlpool?.Exit(hex) is null).ToArray();
         if (candidates.Length == 0)
             throw new RuleException("No port-safe open water is available for the Kraken.");

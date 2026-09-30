@@ -11,6 +11,7 @@ public static class PerkPlacement
             !state.Ships.Any(s => s.Hex == c.Hex) &&
             !state.PerkPickups.Any(p => p.Q == c.Q && p.R == c.R) &&
             !(state.Kraken is { Lives: > 0 } kraken && kraken.Hex == c.Hex) &&
+            !(state.Siren is { } siren && (siren.Hex == c.Hex || siren.Alive && siren.Hex.DistanceTo(c.Hex) <= SirenPlacement.Reach)) &&
             state.Whirlpool?.Exit(c.Hex) is null).ToArray();
         if (candidates.Length == 0) throw new RuleException("No empty open water is available for the perk.");
         var cell = candidates[random.Next(candidates.Length)];
@@ -49,7 +50,10 @@ public static class PerkPlacement
     public static List<PerkPickup> Create(GameState state, IDice random)
     {
         var data = For(state.MapId, state.BoardVersion);
-        var candidates = data.Candidates.Where(h => !state.Ships.Any(s => s.Hex == h)).ToArray();
+        var candidates = data.Candidates.Where(h =>
+            !state.Ships.Any(s => s.Hex == h) &&
+            !(state.Siren is { } siren && h.DistanceTo(siren.Hex) <= SirenPlacement.Reach) &&
+            state.PerkPickups.All(perk => h.DistanceTo(new(perk.Q, perk.R)) >= 6)).ToArray();
         List<Hex>? best = null;
         var bestScore = int.MaxValue;
         // Sampling keeps terrain constraints strict, with random variation among fair layouts.

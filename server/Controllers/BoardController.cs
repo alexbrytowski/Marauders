@@ -15,7 +15,10 @@ public sealed class BoardController(GameStateStore store) : ControllerBase
         try
         {
             var board = MapCatalog.Resolve(map.Id, version ?? (mapId is null ? game.BoardVersion : map.Version));
-            return Ok(new { id = map.Id, name = MapCatalog.Name(map.Id, board.Version), version = board.Version, cells = board.Cells });
+            var cells = game.Siren is { } siren && game.MapId == map.Id && game.BoardVersion == board.Version
+                ? board.Cells.Select(cell => cell.Hex == siren.Hex ? cell with { Terrain = "land" } : cell).ToArray()
+                : board.Cells.ToArray();
+            return Ok(new { id = map.Id, name = MapCatalog.Name(map.Id, board.Version), version = board.Version, cells });
         }
         catch (RuleException error) { return NotFound(new { error = error.Message }); }
     }

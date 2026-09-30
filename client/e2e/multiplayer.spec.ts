@@ -579,6 +579,124 @@ test.afterEach(async () => {
   await stopServer()
 })
 
+test('Cam pulls another captain into battle and her reward persists across browsers', async ({ browser }, testInfo) => {
+  const contexts = await Promise.all(Array.from({ length: 5 }, () =>
+    browser.newContext({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' }),
+  ))
+  try {
+    const pages = await Promise.all(contexts.map((context) => context.newPage()))
+    for (let i = 0; i < pages.length; i++) {
+      await pages[i].goto('/')
+      await expect(pages[i].locator('.connection')).toHaveText('Live')
+      if (i < 4) {
+        expect((await pages[i].request.post('/api/game/players', {
+          headers,
+          data: { name: `Siren ${i + 1}`, color: colors[i], character: characterIds[i] },
+        })).status()).toBe(200)
+        await pages[i].request.post('/api/game/action', { headers, data: { type: 'vote-map', mapId: 'classic' } })
+      }
+    }
+    let game = await readyCrew(pages)
+    const ids = game.players.map((player) => player.id)
+    const originalCam = game.siren!
+    expect(originalCam.alive).toBe(true)
+    expect(game.perkPickups.find((pickup) => pickup.kind === 'ear-plugs')).toBeTruthy()
+    for (const page of pages) {
+      await expect(page.locator('[data-siren="siren"]')).toHaveCount(1)
+      await expect(page.locator('[data-siren="reach"]').first()).toBeVisible()
+    }
+    await pages[4].screenshot({ path: testInfo.outputPath('cam-spawn.png') })
+
+    const board: Board = await (await pages[0].request.get('/api/board')).json()
+    expect(board.cells.find((cell) => key(cell) === key(originalCam))?.terrain).toBe('land')
+    const sea = new Set(board.cells.filter((cell) => cell.terrain === 'water').map(key))
+    const open = board.cells.find((cell) =>
+      [-2, -1, 0, 1, 2, 3].every((q) => [-1, 0, 1].every((r) =>
+        sea.has(key({ q: cell.q + q, r: cell.r + r })),
+      )),
+    )!
+    const cam = { q: open.q + 2, r: open.r, alive: true }
+    const savePath = path.join(dataDirectory, 'game-state-v2.json')
+    await stopServer()
+    const saved = JSON.parse(await readFile(savePath, 'utf8'))
+    Object.assign(saved.game, {
+      activePlayerId: ids[0],
+      turnOrder: ids,
+      turnNumber: 1,
+      remainingActions: 0,
+      remainingMovement: 0,
+      isBuildPhase: true,
+      isEndingRound: false,
+      sirenPullsStarted: false,
+      sirenPullQueue: [],
+      siren: cam,
+      kraken: null,
+      whirlpool: null,
+      combat: null,
+      combatChoices: [],
+      constructions: [],
+      perkPickups: [],
+      ships: [
+        { id: 'siren-target', ownerId: ids[2], portId: 'port-7', number: 1, q: open.q, r: open.r },
+        { id: 'siren-helper', ownerId: ids[2], portId: 'port-7', number: 2, q: open.q, r: open.r - 1, perk: 'ear-plugs' },
+        ...[0, 1, 3].map((index) => {
+          const port = saved.game.ports.find((candidate: { ownerId: string }) => candidate.ownerId === ids[index])
+          const harbor = board.cells.find((cell) => cell.harborId === port.id)!
+          return { id: `siren-idle-${index}`, ownerId: ids[index], portId: port.id, number: 3 + index, q: harbor.q, r: harbor.r }
+        }),
+      ],
+      turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+      actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+      revision: saved.game.revision + 1,
+    })
+    await writeFile(savePath, JSON.stringify(saved))
+    await startServer()
+    for (const page of pages) {
+      await page.reload()
+      await expect(page.locator('[data-siren="siren"]')).toHaveCount(1)
+    }
+    game = await state(pages[0])
+    const ended = await pages[0].request.post('/api/game/action', {
+      headers, data: { type: 'end-turn', expectedRevision: game.revision },
+    })
+    expect(ended.status(), await ended.text()).toBe(200)
+    game = await ended.json()
+    expect(game.activePlayerId).toBe(ids[0])
+    expect(game.combat?.kind).toBe('siren')
+    expect(game.combatPlayerId).toBe(ids[2])
+    expect(game.ships.find((ship) => ship.id === 'siren-target')).toMatchObject({ q: open.q + 1, r: open.r })
+    expect(game.ships.find((ship) => ship.id === 'siren-helper')).toMatchObject({ q: open.q, r: open.r - 1 })
+    for (const page of pages) await expect(page.getByRole('heading', { name: 'Clash with Cam the Siren' })).toBeVisible()
+    await pages[4].screenshot({ path: testInfo.outputPath('cam-battle.png') })
+    expect((await pages[0].request.post('/api/game/action', {
+      headers, data: { type: 'roll-combat', combatId: game.combat!.id, expectedRevision: game.revision },
+    })).status()).toBe(400)
+    for (let roll = 0; roll < 20 && game.combat?.status === 'awaiting-roll'; roll++) {
+      const response = await pages[2].request.post('/api/game/action', {
+        headers, data: { type: 'roll-combat', combatId: game.combat!.id, expectedRevision: game.revision },
+      })
+      expect(response.status(), await response.text()).toBe(200)
+      game = await response.json()
+      expect(game.combat?.rolls['cam-the-siren']).toEqual([1])
+    }
+    expect(game.siren?.alive).toBe(false)
+    expect(game.ships.find((ship) => ship.id === 'siren-helper')?.perk).toBe('call-of-the-siren')
+    expect(game.perkPickups.filter((pickup) => pickup.kind === 'call-of-the-siren' || pickup.kind === 'ear-plugs')).toHaveLength(0)
+    for (const page of pages) {
+      await expect(page.locator('[data-siren="island"]')).toHaveCount(1)
+      await expect(page.locator('[data-perk="call-of-the-siren"]')).toHaveCount(0)
+    }
+    await stopServer()
+    await startServer()
+    for (const page of pages) await page.reload()
+    expect((await state(pages[4])).siren?.alive).toBe(false)
+    expect((await state(pages[4])).ships.find((ship) => ship.id === 'siren-helper')?.perk).toBe('call-of-the-siren')
+    await expect(pages[4].locator('[data-perk="call-of-the-siren"]')).toHaveCount(0)
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+  }
+})
+
 test('Kraken warning, random spawn, combat, death, and secret reward synchronize', async ({
   browser,
 }, testInfo) => {
@@ -1122,6 +1240,7 @@ test('completed movement trails synchronize, persist, toggle by browser, mask to
       await expect(page.locator('.connection')).toHaveText('Live')
     }
 
+    await expect(pages[0].locator('[data-ship="trail-ship-0"] > .hex-hit')).toHaveCount(1)
     await pages[0].locator('[data-ship="trail-ship-0"]').click()
     await pages[0].locator(`[data-hex="${key(destination)}"]`).click()
     game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Sail 2 hexes/ }).click())
@@ -1154,6 +1273,7 @@ test('completed movement trails synchronize, persist, toggle by browser, mask to
     expect(game.movementTrails).toHaveLength(1)
     for (const page of pages) {
       await expect(page.locator('.previous-movement-line')).toHaveCount(1)
+      await expect(page.locator('.previous-movement-line')).toHaveCSS('stroke', 'rgb(237, 120, 102)')
       await expect(page.locator('.trail-token-mask')).toHaveCount(5)
       await expect(page.locator(`[data-perk="loaded-dice"]`)).toHaveCount(1)
     }
@@ -1983,9 +2103,9 @@ test('captains ready together, restore lobby setup, and automatically start one 
       game.events.filter((e) => e.message.startsWith('Three geographically balanced random ports')),
     ).toHaveLength(1)
     expect(game.mapId).toBe('classic')
-    expect(game.perkPickups).toHaveLength(6)
+    expect(game.perkPickups).toHaveLength(7)
     for (const page of [...pages, sameSeat]) {
-      await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
+      await expect(page.locator('.sea-map [data-perk]')).toHaveCount(7)
       await expect(page.getByLabel('Captain readiness')).toHaveCount(0)
     }
     expect(
@@ -2084,11 +2204,15 @@ test('paged handbook teaches with interactive game pieces without changing the v
   await expect(feedback).toContainText('cannot move until')
   await next()
   await chapter.getByRole('button', { name: 'Glass Cannon' }).click()
-  await expect(chapter.getByLabel('Rolled 0')).toBeVisible()
+  await expect(chapter.getByLabel('Rolled -1')).toBeVisible()
   await expect(chapter.getByLabel('Rolled 8')).toBeVisible()
+  await expect(chapter).not.toContainText('Call of the Siren')
+  await expect(chapter).not.toContainText('Mark of the Kraken')
   await next()
   await expect(page).toHaveURL(/how-to-play\/progression$/)
   await expect(chapter.getByLabel('Round progression timeline')).toBeVisible()
+  await expect(chapter).not.toContainText('Call of the Siren')
+  await expect(chapter).not.toContainText('reward perk')
   await next()
   await chapter.getByRole('button', { name: 'Enter the whirlpool' }).click()
   await expect(feedback).toContainText('now has 3')
@@ -2111,7 +2235,7 @@ test('paged handbook teaches with interactive game pieces without changing the v
   expect(errors).toEqual([])
 })
 
-test('four browser seats, random ports and six perks, automatic launch, permissions, reconnect, shared battles and persistence', async ({
+test('four browser seats, random ports and seven perks, automatic launch, permissions, reconnect, shared battles and persistence', async ({
   browser,
 }, testInfo) => {
   const contexts: BrowserContext[] = [],
@@ -2165,14 +2289,14 @@ test('four browser seats, random ports and six perks, automatic launch, permissi
   expect(game.phase).toBe('playing')
   expect(game.ships).toHaveLength(24)
   const revealedPerks = game.perkPickups
-  expect(revealedPerks).toHaveLength(6)
-  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
+  expect(revealedPerks).toHaveLength(7)
+  for (const page of pages) await expect(page.locator('.sea-map [data-perk]')).toHaveCount(7)
   await stopServer()
   await startServer()
   for (const page of pages) {
     await page.reload()
     await expect(page.locator('.connection')).toHaveText('Live')
-    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(6)
+    await expect(page.locator('.sea-map [data-perk]')).toHaveCount(7)
   }
   expect((await state(spectator)).perkPickups).toEqual(revealedPerks)
   expect((await state(spectator)).ports).toEqual(game.ports)
@@ -2955,13 +3079,13 @@ test('map ballots synchronize, exclude spectators, and both new maps support ful
         ).status(),
       ).toBe(400)
       const revealed = game.perkPickups
-      expect(revealed).toHaveLength(6)
-      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(6)
+      expect(revealed).toHaveLength(7)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(7)
       expect(game.phase).toBe('playing')
       expect(game.perkPickups).toEqual(revealed)
       expect(game.ships).toHaveLength(24)
-      expect(game.perkPickups).toHaveLength(6)
-      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(6)
+      expect(game.perkPickups).toHaveLength(7)
+      for (const p of pages) await expect(p.locator('.sea-map [data-perk]')).toHaveCount(7)
       await pages[4].screenshot({ path: testInfo.outputPath(`${mapId}-board.png`), fullPage: true })
       const actor = pages[ids.indexOf(game.activePlayerId!)]
       game = await clickAction(actor, () =>

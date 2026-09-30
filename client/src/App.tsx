@@ -735,7 +735,7 @@ export default function App() {
                             <span key={id}>
                               {game.players.find((p) => p.id === id)?.name ??
                                 game.ports.find((p) => p.id === id)?.name ??
-                                (id === 'the-kraken' ? 'The Kraken' : id)}
+                                (id === 'the-kraken' ? 'The Kraken' : id === 'cam-the-siren' ? 'Cam the Siren' : id)}
                               : {rolls.join(' · ')}
                             </span>
                           ))}
