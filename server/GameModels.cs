@@ -154,6 +154,7 @@ public sealed class SirenState
     public int Q { get; set; }
     public int R { get; set; }
     public bool Alive { get; set; } = true;
+    public int? AwakensOnRound { get; set; }
     public Hex Hex => new(Q, R);
 }
 public sealed record MutationResult(bool Success, GameState? State = null, string? Error = null, int StatusCode = 400);

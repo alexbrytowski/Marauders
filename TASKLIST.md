@@ -1,5 +1,15 @@
 # Marauders launch checklist
 
+## September 29: random first captain and Cam's clear water
+
+- [x] Draw the first captain on the server after all four captains ready, show the result to all browsers, and remove the lobby selector.
+- [x] Give Cam a two-hex clear water spawn radius and a three-hex call that cannot pull ships from harbor water; prefer sites away from ports.
+
+## September 29: lobby readiness and round-12 Siren
+
+- [x] Preserve existing captain readiness when another captain joins, while rejecting stale lobby clicks.
+- [x] Warn at round 8, activate Cam and spawn Sailor’s Wax at round 12, and verify rules, multiplayer synchronization, and persistence.
+
 ## September 29: Call of the Siren combat aura
 
 - [ ] Give adjacent enemy ships -1 per combat die after their own perk adjustment, including all three Mark dice; allied ships and port dice are unaffected. Confirm whether the Kraken boss's dice are also affected.

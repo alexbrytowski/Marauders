@@ -374,6 +374,15 @@ export default function App() {
                   </>
                 )}
               </section>
+              {game.phase === 'playing' && game.turnNumber >= 8 && game.turnNumber < 12 && game.siren && (
+                <section className="shipyard-warning siren-warning" role="status" aria-label="Siren warning">
+                  <Icon name="compass" />
+                  <div>
+                    <strong>Cam the Siren arrives in {12 - game.turnNumber} round{12 - game.turnNumber === 1 ? '' : 's'}</strong>
+                    <span>Her future island and three-hex call are marked light blue. Move ships off the island hex before she arrives. Sailor’s Wax arrives with her.</span>
+                  </div>
+                </section>
+              )}
               {game.phase === 'playing' && game.turnNumber >= 29 && game.turnNumber < 33 && (
                 <section
                   className="shipyard-warning kraken-warning"

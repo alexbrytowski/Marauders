@@ -20,13 +20,13 @@ Before joining, each player enters a name and explicitly picks one of eight pict
 
 The game is played with four players. Additional players are spectators only and cannot make moves. Players should be reliably identified by their browsers.
 
-The players decide who goes first; the host selects that captain in the lobby (the first seated captain is the default). Each of the four captains must press **Ready**. The fourth ready automatically draws the map, assigns ports, launches ships, and starts play. Captains may undo readiness before then. Changing your map vote clears your readiness; changing the first captain or the seated crew clears everyone's readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
+Each of the four captains must press **Ready**. The fourth ready automatically draws the map, randomly chooses the first captain, assigns ports, launches ships, and starts play. Turn order follows the seated order from the chosen captain. Captains may undo readiness before then. Changing your map vote clears your readiness; a captain leaving clears everyone's readiness. A newly joining captain does not clear existing readiness. Ready status survives refresh, reconnection, and server restart; a new game starts with everyone unready. Spectators cannot ready up.
 
 The server deals three geographically balanced random ports to each captain. It measures the shortest sailing routes between ports, excludes the strongest three-port clusters, and randomly draws from a broad band of the fairest remaining layouts so setup remains varied. The port nearest the center of the selected map starts unowned: Blackwater on Classic, Northgate on The Choke, and Port 11 on Delta. It can be captured during the game. There is no port draft in new games.
 
 Before play, each seated captain may cast one public map vote in the lobby, change it, or clear it. Spectators do not vote. When all four captains are ready, the server randomly chooses the map with each vote acting as one ticket. For example, three votes for Classic and one for The Choke give them 75% and 25% chances; Delta has 0%. With no votes, the three maps have equal chances. The result and draw are public, and voting closes for that game.
 
-Seven perk pickups appear in open water on the selected map as part of setup: the six regular perks and Sailor's Wax. Cam the Siren appears on a separate one-hex island.
+The six regular perk pickups appear in open water on the selected map as part of setup. Cam the Siren and Sailor's Wax arrive in round 12, after a four-round warning.
 
 The server automatically places two ships in empty dark-blue hexes at each owned port and starts the first captain's turn. Each captain begins with six ships. There is no separate ship placement or fleet confirmation. The unowned port receives no ships.
 
@@ -151,9 +151,17 @@ from this guide so the reward remains a surprise.
 
 ### Cam the Siren
 
-Cam spawns when a new game starts, on a one-hex island in central open water. Her
-three-hex reach is marked light blue and avoids ports, initial perk pickups, and
-the Kraken's reach. On the completion of **each captain turn**, every non-ghost
+At the start of round 8, the server selects Cam's future one-hex island in central
+open water, reserves that hex, and marks her three-hex reach light blue. Her island
+has two complete hex rings of ordinary water clear of land and ports. The server
+prefers sites more than three hexes from every port, using a closer site only if
+none are available. The third ring of her reach may overlap land or a port's
+harbor water, but Cam does not pull
+ships from harbor water. The island stays clear of existing perk pickups and the
+Kraken's reach. Cam and Sailor's Wax
+appear at the start of round 12. Ships still on the island's exact hex are removed
+at arrival; their carried perks wash into nearby available water. Other ships in
+the warned reach remain. Her call and battles begin then. On the completion of **each captain turn**, every non-ghost
 ship without Sailor's Wax within three hexes of Cam moves one available water hex
 closer. A ship may sail freely through the reach during its own turn. Reaching
 water adjacent to Cam's island, whether by sailing or being drawn outside its
@@ -175,10 +183,10 @@ Updated from the owner's September 13 playthrough notes and clarifications. Perk
 - **Mouth to Feed:** Adds one population slot to the captain of the ship carrying it, anywhere at sea. Each holder adds one slot. The bonus follows the ship’s owner; losing the perk never removes existing ships or cancels construction.
 - **Black and White:** When this ship participates in a combat exchange, all numbered ship and port dice and defense modifiers are replaced by one server-generated black-or-white result. Black wins for this ship's team; white wins for the opposing side. This applies in ship battles and port attacks, including when the holder helps. If the holder is removed and the ship battle continues, later exchanges return to normal dice.
 - **Cheat Death:** The first time this ship participates on the losing side of a combat exchange, consume the perk before any casualty, recruitment, capture, or defense weakening. This includes helpers, port attackers, and Black and White results. The losing result remains visible to every player, then the battle controller must publicly reroll the entire exchange as they would after a tie. Ties do not consume it. The perk immediately respawns in a random empty ordinary-water hex, avoiding other pickups and whirlpools. The new result applies normally; another losing participant carrying Cheat Death can then use its own perk.
-- **Sailor's Wax:** Starts in one of the ten farthest open-water hexes from Cam that have water on all six sides, chosen randomly and separated from other pickups. A carrying ship ignores Cam's pull. If any participating ship carries Sailor's Wax in a battle with Cam, her die result is 1 for that exchange. The Wax becomes Call of the Siren when Cam dies, whether carried or still a pickup.
+- **Sailor's Wax:** Appears in round 12 in one of the ten farthest available open-water hexes from Cam that have water on all six sides, chosen randomly and separated from other pickups. A carrying ship ignores Cam's pull. If any participating ship carries Sailor's Wax in a battle with Cam, her die result is 1 for that exchange. The Wax becomes Call of the Siren when Cam dies, whether carried or still a pickup.
 - **Call of the Siren:** Replaces Sailor's Wax when Cam is slain. After every captain turn, enemy ships within three hexes of its carrier move one available water hex closer. Friendly ships are unaffected. In every numbered combat exchange, each enemy ship next to the carrier subtracts 1 from every die it rolls after its own perk effects. This includes all three dice from a neighboring Mark of the Kraken carrier, but not port dice. When a Call carrier participates, it suppresses Black and White and the exchange uses numbered dice, just as when a Mark carrier participates. Destroying the carrier drops the perk normally.
 
-Combat perks work for participating helpers and port attackers. Shared movement rolls are always 4-6 and unaffected by perks. Port defense rolls remain normal d6s unless Black and White replaces the entire exchange. Games start with one pickup of each of the six regular types and Sailor's Wax. Only consumed Cheat Death respawns; there are no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
+Combat perks work for participating helpers and port attackers. Shared movement rolls are always 4-6 and unaffected by perks. Port defense rolls remain normal d6s unless Black and White replaces the entire exchange. Games start with one pickup of each of the six regular types; Sailor's Wax arrives in round 12. Only consumed Cheat Death respawns; there are no timed respawns. Exact spawn and timing interpretations are recorded in [DECISIONS.md](DECISIONS.md).
 
 ### Forfeit and leave
 

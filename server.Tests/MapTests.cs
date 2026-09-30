@@ -39,9 +39,9 @@ public partial class GameRulesTests
         var random = new TicketRandom(0); var rules = new GameRules(s, random, new(), Now);
         Assert.Throws<RuleException>(() => rules.Act(captain, new("start-draft", FirstPlayerId: captain)));
         Assert.Equal(0, random.Calls);
-        ReadyCrew(s, captain, rules);
+        ReadyCrew(s, rules);
         var callsAfterReveal = random.Calls;
-        Assert.True(callsAfterReveal > 1); Assert.Equal(7, s.PerkPickups.Count); Assert.Equal("narrows", s.MapId);
+        Assert.True(callsAfterReveal > 1); Assert.Equal(6, s.PerkPickups.Count); Assert.Equal("narrows", s.MapId);
         Assert.Equal(MapCatalog.Get("narrows").Version, s.BoardVersion);
         Assert.Equal("Westwatch", s.Ports[0].Name);
         Assert.Throws<RuleException>(() => rules.Act(captain, new("vote-map", MapId: "classic")));
@@ -65,9 +65,9 @@ public partial class GameRulesTests
         }
         var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("vote-map", MapId: mapId));
         ReadyCrew(s);
-        var revealed = s.PerkPickups.ToArray(); Assert.Equal(7, revealed.Length);
+        var revealed = s.PerkPickups.ToArray(); Assert.Equal(6, revealed.Length);
         Assert.Equal(revealed, s.PerkPickups);
-        Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(7, s.PerkPickups.Count);
+        Assert.Equal("playing", s.Phase); Assert.Equal(24, s.Ships.Count); Assert.Equal(6, s.PerkPickups.Count);
         Assert.Equal(MapCatalog.Get(mapId).NeutralPortId, Assert.Single(s.Ports, p => p.OwnerId is null).Id);
         Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
         Assert.Equal(24, s.Ships.Select(ship => ship.Hex).Distinct().Count());

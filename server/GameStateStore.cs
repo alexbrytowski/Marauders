@@ -87,7 +87,6 @@ public sealed class GameStateStore
                 Revision = candidate.Game.Revision
             };
             if (request.ReleaseSeats) candidate.Seats.Clear();
-            candidate.Game.FirstPlayerId = candidate.Game.HostPlayerId;
             foreach (var player in candidate.Game.Players) player.IsReady = false;
         }, archive: true);
     }

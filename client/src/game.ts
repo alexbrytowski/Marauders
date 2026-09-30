@@ -127,7 +127,7 @@ export type Game = {
   perkPickups: (Hex & { kind: string })[]
   whirlpool?: { first: Hex; second: Hex; remainingTurns: number } | null
   kraken?: (Hex & { lives: number; awakensOnRound?: number | null }) | null
-  siren?: (Hex & { alive: boolean }) | null
+  siren?: (Hex & { alive: boolean; awakensOnRound?: number | null }) | null
   updatedAt: string
 }
 export type Session = { playerId: string | null; canReset: boolean }
@@ -139,7 +139,6 @@ export type Command = {
   r?: number
   combatId?: string
   choiceId?: string
-  firstPlayerId?: string
   mapId?: string | null
   expectedRevision?: number
   isReady?: boolean
@@ -197,6 +196,10 @@ export const isKrakenActive = (game: Game) =>
   !!game.kraken &&
   game.kraken.lives > 0 &&
   (game.kraken.awakensOnRound == null || game.turnNumber >= game.kraken.awakensOnRound)
+
+export const isSirenActive = (game: Game) =>
+  !!game.siren && game.siren.alive &&
+  (game.siren.awakensOnRound == null || game.turnNumber >= game.siren.awakensOnRound)
 export const directions = [
   { q: 1, r: 0 },
   { q: 1, r: -1 },
@@ -297,7 +300,7 @@ export function firstEncounter(board: Board, game: Game, ship: Ship, path: Hex[]
     const h = whirlpoolExit(game, step) ?? step
     return (
       (isKrakenActive(game) && distance(h, game.kraken!) <= 2) ||
-      (!!game.siren && game.siren.alive && distance(h, game.siren) === 1) ||
+      (isSirenActive(game) && distance(h, game.siren!) === 1) ||
       game.ships.some(
         (other) =>
           other.ownerId !== ship.ownerId &&

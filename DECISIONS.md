@@ -1,5 +1,15 @@
 # Implementation decisions
 
+## 2026-09-29: First turn and Cam's clear water
+
+- Once all four captains are ready, the server uniformly draws one of their seats to take the first turn. Turn order then follows the seated order from that captain. The lobby does not choose or display a first captain before the draw. This supersedes the earlier host-selected first captain decision.
+- Cam's future island needs ordinary water through a two-hex radius, including every cell in both rings. Prefer sites more than three hexes from each port; use a closer site only when no preferred site is available. Her call still reaches three hexes and may overlap land or harbor water in the outer ring. Ships in a port's harbor water are immune to Cam's pull while there; the Call of the Siren perk retains its existing behavior. The island also stays clear of existing pickups and the Kraken's reach.
+
+## 2026-09-29: Readiness and timed Siren arrival
+
+- A newly joined captain keeps the ready choices of captains already seated. The lobby version still changes so a Ready command from a stale screen must be retried against the updated crew. Leaving a seat clears everyone's readiness.
+- The four-round Siren warning starts at round 8. The server chooses and reveals Cam’s future island then, regardless of ships currently on the center, reserves it against new arrivals, and marks the future three-hex call. A ship already on the center can sail away during the warning. The call and Siren battles remain inactive until round 12. Sailor’s Wax is chosen from an available remote water hex and appears with Cam at round 12, separated from other pickups and ships. Ships still on the island’s exact hex are removed at arrival; any carried perk washes into the nearest available open-water hex. Other ships in the warned reach survive and subsequently follow normal pull and battle rules. Existing saved Sirens without an awakening round stay active.
+
 ## 2026-09-29: Call of the Siren in combat
 
 - The Call's combat effect is positional and always active: each enemy ship one hex from its carrier takes -1 on each of its combat dice. Allied ships are unaffected. Apply the penalty after that ship's own perk changes its roll and before taking each team's highest die. Thus all three dice from an adjacent Mark of the Kraken carrier take -1, while port dice do not. The effect uses current ship positions and stops if the Call carrier is removed. Whether this also affects the Kraken boss's dice is awaiting clarification.

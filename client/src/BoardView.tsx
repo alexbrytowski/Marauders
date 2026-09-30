@@ -1,6 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { directions, distance, ghostColor, isKrakenActive, key, perks, portNumber, whirlpoolExit } from './game'
+import { directions, distance, ghostColor, isKrakenActive, isSirenActive, key, perks, portNumber, whirlpoolExit } from './game'
 import type { Board, Cell, Game, Hex } from './game'
 import { outline, point } from './boardGeometry'
 import { ShipPiece, PortPiece } from './BoardPieces'
@@ -103,6 +103,7 @@ export function BoardView({
   const kraken = game.kraken && game.kraken.lives > 0 ? game.kraken : null
   const activeKraken = isKrakenActive(game)
   const siren = game.siren
+  const activeSiren = isSirenActive(game)
   const sirenHolders = game.ships.filter((ship) => ship.perk === 'call-of-the-siren')
   const inspect = (cell: Cell | null) => {
     setInspected(cell)
@@ -268,12 +269,12 @@ export function BoardView({
                 ? `${port.name}, port ${portNumber(port.id)}, ${portOwner?.hasForfeited ? `${portOwner.name}'s ghost port` : (portOwner?.name ?? 'unclaimed')}${builds.length ? `; Building ${builds.length} ship(s). ${buildDescription(port.id)}` : '; No construction'}`
                 : `${exit ? `Whirlpool to ${key(exit)}, ${game.whirlpool!.remainingTurns} captain turns left. ` : ''}${pickup ? `${perks[pickup.kind]?.name} pickup. ${perks[pickup.kind]?.description} ` : ''}${cell.terrain === 'harbor' ? `${ports.get(cell.harborId!)?.name} harbor` : cell.terrain}, hex ${key(cell)}`
             const description = isSiren
-              ? `${siren!.alive ? 'Cam the Siren' : 'Cam the Siren\'s island'}, hex ${key(cell)}`
+              ? `${siren!.alive ? activeSiren ? 'Cam the Siren' : `Cam the Siren will arrive in round ${siren!.awakensOnRound}` : 'Cam the Siren\'s island'}, hex ${key(cell)}`
               : isKraken
               ? `The Kraken, ${kraken!.lives} of 3 lives remaining, hex ${key(cell)}`
               : isKrakenCenter
                 ? `The Kraken will rise here in round ${kraken!.awakensOnRound ?? 33}, hex ${key(cell)}`
-              : `${baseDescription}${inKrakenReach ? ". Within the Kraken's two-hex combat reach" : ''}${inSirenReach ? '. Within Cam the Siren’s three-hex call' : ''}${inCallReach ? '. Within Call of the Siren reach' : ''}`
+              : `${baseDescription}${inKrakenReach ? ". Within the Kraken's two-hex combat reach" : ''}${inSirenReach ? activeSiren ? '. Within Cam the Siren’s three-hex call' : `. Cam's call begins in round ${siren!.awakensOnRound}` : ''}${inCallReach ? '. Within Call of the Siren reach' : ''}`
             return (
               <g
                 key={key(cell)}
@@ -285,11 +286,11 @@ export function BoardView({
                 data-perk={pickup?.kind}
                 data-whirlpool={exit ? key(exit) : undefined}
                 data-kraken={isKraken ? 'kraken' : inKrakenReach ? 'reach' : undefined}
-                data-siren={isSiren ? siren!.alive ? 'siren' : 'island' : inSirenReach || inCallReach ? 'reach' : undefined}
+                data-siren={isSiren ? activeSiren ? 'siren' : siren!.alive ? 'warning' : 'island' : inSirenReach || inCallReach ? 'reach' : undefined}
                 data-building={builds.length || undefined}
-                role={cell.terrain !== 'land' ? 'button' : undefined}
+                role={cell.terrain !== 'land' || !!ship ? 'button' : undefined}
                 aria-label={description}
-                tabIndex={!preview && cell.terrain !== 'land' ? (key(cell) === tabStop ? 0 : -1) : undefined}
+                tabIndex={!preview && (cell.terrain !== 'land' || !!ship) ? (key(cell) === tabStop ? 0 : -1) : undefined}
                 onKeyDown={(e) => handleKeys(e, cell)}
                 onFocus={() => {
                   setFocusKey(key(cell))
@@ -321,7 +322,7 @@ export function BoardView({
                     <circle className="kraken-eye" cx="2.5" cy="-1.5" r="1" />
                   </g>
                 )}
-                {isSiren && (
+                {isSiren && activeSiren && (
                   <g className={`siren-token ${siren!.alive ? '' : 'slain'}`} aria-hidden="true">
                     <circle r="11" />
                     <path d="M-6 5c0-7 12-7 12 0M-5-2c0-8 10-8 10 0M-8 7c5-3 11-3 16 0" />
@@ -352,7 +353,7 @@ export function BoardView({
                     />
                   </g>
                 )}
-                {(cell.terrain !== 'land' || port) && (
+                {(cell.terrain !== 'land' || port || ship) && (
                   <polygon
                     className="hex-hit"
                     points={outline}
@@ -448,7 +449,7 @@ export function BoardView({
           <aside className="board-inspection" role="tooltip">
             <strong>
               {inspectedSiren
-                ? siren!.alive ? 'Cam the Siren' : 'Cam the Siren’s island'
+                ? siren!.alive ? activeSiren ? 'Cam the Siren' : 'Siren warning' : 'Cam the Siren’s island'
                 : inspectedKraken
                 ? activeKraken ? 'The Kraken' : 'Kraken warning'
                 : inspectedShip
@@ -492,8 +493,8 @@ export function BoardView({
                   : `The Kraken will rise here in round ${kraken!.awakensOnRound ?? 33}. Ships left in the marked reach are removed immediately without battle.`}
               </span>
             )}
-            {inspectedSiren && <span>{siren!.alive ? 'Ships that reach her island must face Cam.' : 'Cam was slain. Her island remains impassable.'}</span>}
-            {inspectedSirenReach && !inspectedSiren && <span>Within Cam’s three-hex call. Ships without Sailor’s Wax move one hex toward her after each captain turn.</span>}
+            {inspectedSiren && <span>{siren!.alive ? activeSiren ? 'Ships that reach her island must face Cam.' : `Cam arrives in round ${siren!.awakensOnRound}. The island is reserved.` : 'Cam was slain. Her island remains impassable.'}</span>}
+            {inspectedSirenReach && !inspectedSiren && <span>{activeSiren ? 'Within Cam’s three-hex call. Ships outside harbor water and without Sailor’s Wax move one hex toward her after each captain turn.' : `Cam's call begins in round ${siren!.awakensOnRound}.`}</span>}
             {inspectedCall && <span>Within ship {inspectedCall.number}’s Call of the Siren. Enemy ships move one hex closer after each captain turn.</span>}
           </aside>
         )}
@@ -515,7 +516,7 @@ export function BoardView({
                 : `Kraken warning · rises in ${(kraken.awakensOnRound ?? 33) - game.turnNumber} rounds`}
             </span>
           )}
-          {siren?.alive && <span className="siren-status">Cam the Siren · three-hex call</span>}
+          {siren?.alive && <span className="siren-status">{activeSiren ? 'Cam the Siren · three-hex call' : `Siren warning · arrives in ${siren.awakensOnRound! - game.turnNumber} rounds`}</span>}
           <span>
             <i className="harbor-key" />
             Harbor

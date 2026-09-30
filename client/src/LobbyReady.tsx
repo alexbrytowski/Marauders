@@ -12,33 +12,10 @@ export function LobbyReady({
   disabled: boolean
   act: (command: Command) => Promise<boolean>
 }) {
-  const first = game.firstPlayerId ?? game.hostPlayerId
   const ready = game.players.filter((p) => p.isReady).length
   return (
     <section className="lobby-ready" aria-label="Captain readiness">
-      {me?.id === game.hostPlayerId ? (
-        <div className="host-start">
-          <label htmlFor="first-player">WHO GOES FIRST?</label>
-          <select
-            id="first-player"
-            value={first ?? ''}
-            disabled={disabled}
-            onChange={(e) => void act({ type: 'set-first-player', firstPlayerId: e.target.value })}
-          >
-            {game.players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <small>Changing the first captain clears everyone’s ready status.</small>
-        </div>
-      ) : (
-        <p>
-          <strong>{game.players.find((p) => p.id === first)?.name ?? 'The host'}</strong> takes the first
-          turn.
-        </p>
-      )}
+      <p>The server draws the first captain at random when everyone is ready.</p>
       <div className="readiness-count" role="status">
         <Icon name="flag" />
         <strong>{ready} / 4 captains ready</strong>

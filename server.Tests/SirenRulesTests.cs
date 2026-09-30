@@ -13,13 +13,21 @@ public partial class GameRulesTests
     {
         var state = Lobby();
         Rules(state).Act(state.HostPlayerId!, new("vote-map", MapId: mapId));
-        ReadyCrew(state);
+        var rules = new GameRules(state, new FixedDice(), new GameOptions { StartingRound = 12 }, Now);
+        ReadyCrew(state, rules: rules);
         var board = MapCatalog.Get(mapId).Board;
         var siren = Assert.IsType<SirenState>(state.Siren);
         Assert.True(siren.Alive);
         Assert.Equal("water", board.Cell(siren.Hex)!.Terrain);
-        Assert.All(board.Ports, port => Assert.True(siren.Hex.DistanceTo(board.PortHex(port.Id)) > 3));
-        Assert.All(state.PerkPickups, perk => Assert.True(siren.Hex.DistanceTo(new(perk.Q, perk.R)) > 3));
+        Assert.Equal(19, board.Cells.Count(cell => cell.Terrain == "water" && cell.Hex.DistanceTo(siren.Hex) <= 2));
+        Assert.All(board.Ports, port => Assert.True(siren.Hex.DistanceTo(board.PortHex(port.Id)) > 2));
+        var preferredSitesExist = board.Cells.Any(cell => cell.Terrain == "water" &&
+            board.Cells.Count(water => water.Terrain == "water" && water.Hex.DistanceTo(cell.Hex) <= 2) == 19 &&
+            board.Ports.All(port => cell.Hex.DistanceTo(board.PortHex(port.Id)) > 3) &&
+            state.PerkPickups.All(perk => cell.Hex.DistanceTo(new(perk.Q, perk.R)) > 2));
+        if (preferredSitesExist)
+            Assert.All(board.Ports, port => Assert.True(siren.Hex.DistanceTo(board.PortHex(port.Id)) > 3));
+        Assert.All(state.PerkPickups, perk => Assert.True(siren.Hex.DistanceTo(new(perk.Q, perk.R)) > 2));
         var plugs = Assert.Single(state.PerkPickups, perk => perk.Kind == "ear-plugs");
         var plugHex = new Hex(plugs.Q, plugs.R);
         Assert.True(siren.Hex.DistanceTo(plugHex) >= 10);
@@ -27,6 +35,8 @@ public partial class GameRulesTests
         var farthestTen = board.Cells.Where(cell => cell.Terrain == "water" &&
             cell.Hex.DistanceTo(siren.Hex) >= 10 &&
             BoardMap.Adjacent(cell.Hex).All(neighbor => board.Cell(neighbor)?.Terrain == "water") &&
+            state.PerkPickups.Where(perk => perk.Kind != "ear-plugs")
+                .All(perk => cell.Hex.DistanceTo(new(perk.Q, perk.R)) >= 6) &&
             !state.Ships.Any(ship => ship.Hex == cell.Hex))
             .OrderByDescending(cell => cell.Hex.DistanceTo(siren.Hex))
             .ThenBy(cell => cell.R).ThenBy(cell => cell.Q).Take(10).Select(cell => cell.Hex).ToArray();
@@ -34,6 +44,71 @@ public partial class GameRulesTests
         Assert.DoesNotContain(state.Ships, ship => ship.Hex == siren.Hex);
         var kraken = KrakenPlacement.Spawn(state, new FixedDice());
         Assert.True(kraken.Hex.DistanceTo(siren.Hex) > KrakenPlacement.Reach + SirenPlacement.Reach);
+    }
+
+    [Fact]
+    public void Cam_is_warned_at_round_8_and_activates_with_Wax_at_round_12()
+    {
+        var state = Lobby();
+        var rules = new GameRules(state, new FixedDice(), new GameOptions { StartingRound = 8 }, Now);
+        ReadyCrew(state, rules: rules);
+        var siren = Assert.IsType<SirenState>(state.Siren);
+        Assert.Equal(12, siren.AwakensOnRound);
+        Assert.False(SirenPlacement.IsActive(siren, state.TurnNumber));
+        Assert.Equal(6, state.PerkPickups.Count);
+        Assert.Single(state.Events, e => e.Kind == "siren" && e.Message.Contains("warning"));
+        var initialPickups = state.PerkPickups.ToArray();
+
+        var ship = state.Ships.First(s => s.OwnerId == state.ActivePlayerId);
+        ship.Q = siren.Q; ship.R = siren.R; ship.Perk = "loaded-dice";
+        state.IsBuildPhase = true;
+        rules.Act(state.ActivePlayerId!, new("end-turn"));
+        Assert.Equal(9, state.TurnNumber);
+        Assert.Contains(ship, state.Ships);
+        Assert.Null(state.Combat);
+        while (state.TurnNumber < 12) rules.Act(state.ActivePlayerId!, new("end-turn"));
+
+        Assert.Same(siren, state.Siren);
+        Assert.True(SirenPlacement.IsActive(siren, state.TurnNumber));
+        Assert.Single(state.PerkPickups, perk => perk.Kind == "ear-plugs");
+        Assert.Single(state.Events, e => e.Kind == "siren" && e.Message.Contains("appeared"));
+        Assert.DoesNotContain(ship, state.Ships);
+        var dropped = Assert.Single(state.PerkPickups, perk => perk.Kind == "loaded-dice" && !initialPickups.Contains(perk));
+        Assert.Equal("water", MapCatalog.Resolve(state.MapId, state.BoardVersion).Cell(new(dropped.Q, dropped.R))?.Terrain);
+        Assert.NotEqual(siren.Hex, new Hex(dropped.Q, dropped.R));
+        Assert.Contains(state.Events, e => e.Kind == "casualty" && e.Message.Contains("island rose"));
+        Assert.True(SirenPlacement.IsActive(new SirenState(), 1)); // Older saves stay active.
+    }
+
+    [Fact]
+    public void Siren_warning_location_does_not_avoid_ships_already_there()
+    {
+        var state = Lobby();
+        ReadyCrew(state);
+        var chosen = SirenPlacement.Spawn(state, new FixedDice());
+        var ship = state.Ships[0]; ship.Q = chosen.Q; ship.R = chosen.R;
+        Assert.Equal(chosen.Hex, SirenPlacement.Spawn(state, new FixedDice()).Hex);
+    }
+
+    [Fact]
+    public void Cam_cannot_pull_a_ship_from_port_harbor_water_inside_her_reach()
+    {
+        var state = Playing();
+        var board = BoardDefinition.Classic;
+        var pair = (from harbor in board.Cells
+                    where harbor.Terrain == "harbor"
+                    from island in board.Cells
+                    where island.Terrain == "water" && harbor.Hex.DistanceTo(island.Hex) is >= 2 and <= 3
+                    where board.Neighbors(harbor.Hex).Any(next => next.DistanceTo(island.Hex) < harbor.Hex.DistanceTo(island.Hex))
+                    select (harbor, island)).First();
+        state.Siren = new() { Q = pair.island.Q, R = pair.island.R };
+        var ship = Add(state, 1, pair.harbor.Hex);
+        state.IsBuildPhase = true;
+
+        Rules(state).Act(state.ActivePlayerId!, new("end-turn"));
+
+        Assert.Equal(pair.harbor.Hex, ship.Hex);
+        Assert.DoesNotContain(state.Events, e => e.Kind == "siren" && e.Message.Contains($"ship {ship.Number} from"));
     }
 
     [Fact]

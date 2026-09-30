@@ -17,11 +17,9 @@ public partial class GameStateStoreTests
     }
     private static GameStateStore Store(string directory, string? password = null) => new(new TestEnvironment(directory), Options.Create(new GameOptions { ResetPassword = password }), new FixedDice(), TimeProvider.System);
     private static JoinRequest Captain(int number) => new($"Captain {number}", GameRules.Colors[number], GameRules.Characters[number]);
-    private static async Task<GameState> ReadyCrewAsync(GameStateStore store, string? first = null, string prefix = "browser-")
+    private static async Task<GameState> ReadyCrewAsync(GameStateStore store, string prefix = "browser-")
     {
         var lobby = await store.ReadAsync();
-        Assert.True((await store.ActAsync(prefix + "0", new("set-first-player", FirstPlayerId: first ?? lobby.HostPlayerId))).Success);
-        lobby = await store.ReadAsync();
         foreach (var i in Enumerable.Range(0, 4))
             Assert.True((await store.ActAsync(prefix + i, new("set-ready", IsReady: true, LobbyVersion: lobby.LobbyVersion))).Success);
         return await store.ReadAsync();
@@ -133,9 +131,9 @@ public partial class GameStateStoreTests
         var store = Store(directory);
         for (var i = 0; i < 4; i++) Assert.True((await store.JoinAsync($"browser-{i}", Captain(i))).Success);
         var before = await store.ReadAsync();
-        await ReadyCrewAsync(store, before.Players[2].Id);
+        await ReadyCrewAsync(store);
         var restored = Store(directory); var after = await restored.ReadAsync();
-        Assert.Equal("playing", after.Phase); Assert.Equal(before.Players[2].Id, after.ActivePlayerId);
+        Assert.Equal("playing", after.Phase); Assert.Contains(after.ActivePlayerId, before.Players.Select(p => p.Id));
         Assert.Equal(before.Players[0].Id, await restored.PlayerIdAsync("browser-0"));
         after.Players.Clear();
         Assert.Equal(4, (await restored.ReadAsync()).Players.Count);

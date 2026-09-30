@@ -28,10 +28,9 @@ public partial class GameRulesTests
         for (var i = 0; i < 12; i++) s.Ports[i].OwnerId = s.Players[i / 3].Id;
         return s;
     }
-    private static void ReadyCrew(GameState state, string? first = null, GameRules? rules = null)
+    private static void ReadyCrew(GameState state, GameRules? rules = null)
     {
         rules ??= Rules(state);
-        rules.Act(state.HostPlayerId!, new("set-first-player", FirstPlayerId: first ?? state.HostPlayerId));
         foreach (var player in state.Players)
             rules.Act(player.Id, new("set-ready", IsReady: true, LobbyVersion: state.LobbyVersion));
     }
@@ -109,12 +108,12 @@ public partial class GameRulesTests
     public void Dice_follow_round_population_bands(int turn, int ships, int expected) =>
         Assert.Equal(expected, GameRules.ActionCount(ships, turn));
 
-    [Fact] public void Host_selects_first_and_ready_deals_ports_reveals_perks_and_launches_fleets_automatically()
+    [Fact] public void Ready_deals_ports_reveals_perks_and_launches_fleets_automatically()
     {
-        var s = Lobby(); var first = s.Players[2].Id;
+        var s = Lobby(); var first = s.Players[0].Id;
         Assert.Throws<RuleException>(() => Rules(s).Act(s.Players[1].Id, new("start-draft", FirstPlayerId: first)));
-        ReadyCrew(s, first);
-        Assert.Equal(7, s.PerkPickups.Count);
+        ReadyCrew(s);
+        Assert.Equal(6, s.PerkPickups.Count);
         Assert.All(s.Players, player => Assert.Equal(3, s.Ports.Count(p => p.OwnerId == player.Id)));
         Assert.Throws<RuleException>(() => Rules(s).Act(first, new("draft", PortId: "port-7")));
         var unowned = Assert.Single(s.Ports, p => p.OwnerId is null);

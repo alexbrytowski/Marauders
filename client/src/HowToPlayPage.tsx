@@ -275,8 +275,8 @@ function Setup({ board }: { board?: Board }) {
       <p>
         Each captain receives three geographically balanced random ports and six ships. The server avoids
         strong three-port clusters while keeping many possible deals. The most central port stays neutral:
-        Blackwater on Classic, Northgate on The Choke, or Port 11 on Delta. Seven perk pickups
-        await at sea.
+        Blackwater on Classic, Northgate on The Choke, or Port 11 on Delta. Six regular perk pickups
+        await at sea; Sailor’s Wax arrives in round 12.
       </p>
       <details>
         <summary>Map votes & changing your mind</summary>
@@ -286,7 +286,8 @@ function Setup({ board }: { board?: Board }) {
         </p>
         <p>
           You can undo ready before play starts. Changing your vote clears your readiness; changing the first
-          captain or the crew clears everyone’s. Refreshing keeps your seat and ready status.
+          captain or a captain leaving clears everyone’s. A new captain joining keeps existing ready choices.
+          Refreshing keeps your seat and ready status.
         </p>
       </details>
     </Lesson>
@@ -809,7 +810,7 @@ function Perks() {
     >
       <h3>Seven starting pickups.</h3>
       <p>
-        The six regular perks and Sailor’s Wax appear in open water at game start. Each ship can carry <strong>one perk</strong>; a fleet can hold several.
+        The six regular perks appear in open water at game start. Sailor’s Wax arrives in round 12. Each ship can carry <strong>one perk</strong>; a fleet can hold several.
       </p>
       <ul>
         <li>A ship already carrying a perk sails past other pickups.</li>
@@ -841,6 +842,8 @@ function Perks() {
 
 function Progression() {
   const milestones = [
+    ['8', 'Siren warning', 'Cam’s future island and three-hex call are marked four rounds before arrival.'],
+    ['12', 'Cam and Sailor’s Wax arrive', 'Cam becomes active on her island; Sailor’s Wax appears in remote open water.'],
     ['29', 'Kraken warning', 'Its future two-hex reach is marked red, giving fleets four rounds to move clear.'],
     ['33', 'The Kraken rises', 'It appears at a random, remote open-water hex with a red two-hex reach.'],
     [
@@ -857,7 +860,7 @@ function Progression() {
   ]
   return (
     <Lesson
-      takeaway="The Kraken warning starts at round 29; rounds 33, 50, 66, and 85 introduce lasting changes."
+      takeaway="Cam and Sailor’s Wax arrive at round 12 after a four-round warning. Later milestones change the seas again."
       visual={
         <div className="progression-timeline" aria-label="Round progression timeline">
           {milestones.map(([round, title, text]) => (
@@ -878,10 +881,11 @@ function Progression() {
         several captains may act during a full trip around the table.
       </p>
       <section className="progression-section">
-        <h3>Cam the Siren · From the start</h3>
+        <h3>Cam the Siren · Round 12</h3>
         <ul>
+          <li>At round 8, her future island and three-hex reach appear on the chart. Ships on the island hex can sail away during the warning; any still there when round 12 begins are lost. Her call and battles begin at round 12.</li>
           <li>Cam occupies a one-hex island. Ships may sail into her light-blue three-hex reach.</li>
-          <li>After every captain turn, ships in that reach move one available hex toward her, including ships whose owner is waiting for a turn. Ghost ships and Sailor’s Wax carriers stay still.</li>
+          <li>After every captain turn, ships in that reach move one available hex toward her, including ships whose owner is waiting for a turn. Ships in port harbor water, ghost ships, and Sailor’s Wax carriers stay still.</li>
           <li>Reaching water next to her island starts battle.</li>
           <li>Sailor’s Wax waits far from Cam. It lets its carrier ignore the Siren’s calls.</li>
         </ul>

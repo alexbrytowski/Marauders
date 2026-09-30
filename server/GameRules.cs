@@ -44,8 +44,8 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var player = new Player { Name = name, Color = request.Color, Character = request.Character };
         state.Players.Add(player);
         state.HostPlayerId ??= player.Id;
-        state.FirstPlayerId ??= state.HostPlayerId;
-        InvalidateLobbyReadiness();
+        // A newly filled seat does not change an existing captain's choice.
+        state.LobbyVersion = Guid.NewGuid().ToString("N");
         Log("lobby", $"{name} joined the crew.");
         return player;
     }
@@ -57,7 +57,6 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         Require(!state.Players.Single(p => p.Id == playerId).HasForfeited, "This captain has forfeited.");
         if (state.Phase == "playing") Require(HasTime, "The clock has expired. Wait for the next round.");
         if (command.Type == "vote-map") { VoteMap(playerId, command.MapId); return; }
-        if (command.Type == "set-first-player") { SetFirstPlayer(playerId, command.FirstPlayerId); return; }
         if (command.Type == "set-ready") { SetReady(playerId, command); return; }
         if (command.Type == "draft") { Draft(playerId, command.PortId); return; }
         Require(state.Phase == "playing" || (state.Phase == "finished" && command.Type == "continue-combat"), "The game is not in play.");
@@ -144,16 +143,6 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.LobbyVersion = Guid.NewGuid().ToString("N");
         foreach (var player in state.Players.Where(p => actor is null || p.Id == actor)) player.IsReady = false;
     }
-    private void SetFirstPlayer(string actor, string? first)
-    {
-        Require(state.Phase == "lobby", "The first captain is chosen before play.");
-        Require(state.HostPlayerId == actor, "Only the host can choose the first captain.");
-        Require(state.Players.Any(p => p.Id == first), "Choose a seated captain to go first.");
-        if ((state.FirstPlayerId ?? state.HostPlayerId) == first) return;
-        state.FirstPlayerId = first;
-        InvalidateLobbyReadiness();
-        Log("lobby", $"{Name(first!)} will take the first turn. Every captain must ready again.");
-    }
     private void SetReady(string actor, GameCommand command)
     {
         Require(state.Phase == "lobby", "Readiness closes when play begins.");
@@ -169,9 +158,6 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     {
         Require(state.Phase == "lobby" && state.Players.Count == 4, "Four captains must join before play.");
         Require(state.Players.All(p => p.IsReady), "Every captain must ready before play.");
-        var first = state.FirstPlayerId ?? state.HostPlayerId;
-        var start = state.Players.FindIndex(p => p.Id == first);
-        Require(start >= 0, "Choose which captain goes first.");
         state.MapSelection = MapLottery.Draw(MapCatalog.All.Select(m => m.Id).ToArray(),
             state.MapVotes.Where(v => state.Players.Any(p => p.Id == v.Key)).Select(v => v.Value), dice);
         var selected = MapCatalog.Get(state.MapSelection.MapId);
@@ -179,11 +165,11 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.Ports = selected.Board.Ports.Select(p => new Port { Id = p.Id, Name = p.Name }).ToList();
         var counts = string.Join(", ", MapCatalog.All.Select(m => $"{m.Name}: {state.MapSelection.Votes[m.Id]}"));
         Log("map", $"Map draw: {selected.Name}, ticket {state.MapSelection.Ticket}/{state.MapSelection.TotalTickets}. Votes — {counts}.{(state.MapSelection.UsedEqualOdds ? " No votes: all maps had equal odds." : " Each vote was one ticket.")}");
+        var start = dice.Next(state.Players.Count);
+        state.FirstPlayerId = state.Players[start].Id;
         state.TurnOrder = Enumerable.Range(0, 4).Select(i => state.Players[(start + i) % 4].Id).ToList();
-        state.Siren = SirenPlacement.Spawn(state, dice);
-        state.PerkPickups.Add(SirenPlacement.EarPlugs(state, dice));
+        Log("setup", $"First captain draw: {Name(state.FirstPlayerId)} takes the first turn.");
         RevealPerks();
-        Log("siren", $"Cam the Siren appeared on an island at {state.Siren.Q}, {state.Siren.R}. Sailor's Wax appeared far away.");
         var ports = state.Ports.Where(p => p.Id != selected.NeutralPortId).ToArray();
         Require(ports.Length == 12, "A new game needs exactly twelve starting ports.");
         var deal = StartingPortDealer.Create(selected.Board, ports.Select(port => port.Id).ToArray(), state.TurnOrder.Count, dice);
@@ -342,7 +328,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         if (KrakenPlacement.IsActive(state.Kraken, state.TurnNumber) && state.Kraken is { } kraken)
             foreach (var ship in state.Ships.Where(ship => !IsGhost(ship.OwnerId) && ship.Hex.DistanceTo(kraken.Hex) <= KrakenPlacement.Reach))
                 choices.Add(new($"kraken:{ship.Id}", ship.Id, null, null, "kraken"));
-        if (state.Siren is { Alive: true } siren)
+        if (SirenPlacement.IsActive(state.Siren, state.TurnNumber) && state.Siren is { } siren)
             foreach (var ship in state.Ships.Where(ship => !IsGhost(ship.OwnerId) && ship.Hex.DistanceTo(siren.Hex) == 1))
                 choices.Add(new($"siren:{ship.Id}", ship.Id, null, null, "siren"));
         // Different triggering pairs can describe exactly the same fight. Only
@@ -376,7 +362,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             var siren = state.Siren;
             Require(choice.Kind == "kraken"
                 ? KrakenPlacement.IsActive(kraken, state.TurnNumber) && a.Hex.DistanceTo(kraken!.Hex) <= KrakenPlacement.Reach
-                : siren is { Alive: true } && a.Hex.DistanceTo(siren.Hex) == 1,
+                : SirenPlacement.IsActive(siren, state.TurnNumber) && a.Hex.DistanceTo(siren!.Hex) == 1,
                 "That NPC encounter is no longer pending.");
             var npcBattle = new CombatState
             {
@@ -695,7 +681,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         var a = state.Ships.SingleOrDefault(s => s.Id == battle.TriggerShipId);
         var b = state.Ships.SingleOrDefault(s => s.Id == battle.OpponentShipId);
         var encounterContinues = battle.Kind == "siren"
-            ? a is not null && state.Siren is { Alive: true } siren && a.Hex.DistanceTo(siren.Hex) == 1
+            ? a is not null && SirenPlacement.IsActive(state.Siren, state.TurnNumber) && a.Hex.DistanceTo(state.Siren!.Hex) == 1
             : battle.Kind == "kraken"
             ? a is not null && KrakenPlacement.IsActive(state.Kraken, state.TurnNumber) && a.Hex.DistanceTo(state.Kraken!.Hex) <= KrakenPlacement.Reach
             : a is not null && b is not null && Triggers(a, b, Board, state.Ports);
@@ -838,9 +824,11 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
     }
     private void PullBySiren(Ship ship)
     {
-        if (IsGhost(ship.OwnerId) || (ship.Perk == "ear-plugs" && state.Siren is { Alive: true })) return;
+        if (IsGhost(ship.OwnerId)) return;
         var sources = new List<(Hex Hex, string Name, int Priority)>();
-        if (state.Siren is { Alive: true } siren) sources.Add((siren.Hex, "Cam the Siren", 0));
+        if (SirenPlacement.IsActive(state.Siren, state.TurnNumber) &&
+            ship.Perk != "ear-plugs" && Board.Cell(ship.Hex)?.Terrain != "harbor")
+            sources.Add((state.Siren!.Hex, "Cam the Siren", 0));
         sources.AddRange(state.Ships.Where(holder => holder.Perk == "call-of-the-siren" && holder.OwnerId != ship.OwnerId)
             .Select(holder => (holder.Hex, $"ship {holder.Number}'s Call of the Siren", holder.Number)));
         var source = sources.Where(candidate => ship.Hex.DistanceTo(candidate.Hex) is >= 1 and <= SirenPlacement.Reach)
@@ -912,7 +900,6 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         {
             state.Players.Remove(player);
             if (state.HostPlayerId == actor) state.HostPlayerId = state.Players.FirstOrDefault()?.Id;
-            if (state.FirstPlayerId == actor) state.FirstPlayerId = state.HostPlayerId;
             InvalidateLobbyReadiness();
             Log("lobby", $"{player.Name} left the lobby.");
             return;
@@ -969,6 +956,24 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         state.TurnEndsAt = now.AddSeconds(Math.Max(options.TurnSeconds, (state.RemainingActions + 1L) * options.ActionSeconds));
         ActionClock();
         Log("turn", $"{Name(owner)} begins round {state.TurnNumber} with {state.RemainingActions} action dice.");
+        var placedSiren = false;
+        if (state.TurnNumber >= SirenPlacement.WarningRound && state.Siren is null)
+        {
+            state.Siren = SirenPlacement.Spawn(state, dice);
+            state.Siren.AwakensOnRound = SirenPlacement.SpawnRound;
+            placedSiren = true;
+        }
+        if (placedSiren && state.TurnNumber < SirenPlacement.SpawnRound)
+            Log("siren", $"Siren warning: Cam's future island is marked at {state.Siren!.Q}, {state.Siren.R}. She and Sailor's Wax arrive in round {SirenPlacement.SpawnRound}; her three-hex call is marked on every chart.");
+        if (state.TurnNumber >= SirenPlacement.SpawnRound &&
+            (placedSiren || state.TurnNumber == SirenPlacement.SpawnRound) &&
+            state.Siren is { Alive: true } activeSiren &&
+            activeSiren.AwakensOnRound == SirenPlacement.SpawnRound)
+        {
+            state.PerkPickups.Add(SirenPlacement.EarPlugs(state, dice));
+            Log("siren", $"Cam the Siren appeared on her island at {activeSiren.Q}, {activeSiren.R}. Sailor's Wax appeared far away.");
+            ResolveSirenArrival(activeSiren);
+        }
         var placedKraken = false;
         if (state.TurnNumber >= KrakenPlacement.WarningRound && state.Kraken is null)
         {
@@ -998,6 +1003,28 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
             Log("turn", "Endgame action surge is now active: captains receive 1 action die per 2 ships, rounding up.");
         RefreshEncounters();
         SettleActions();
+    }
+
+    private void ResolveSirenArrival(SirenState siren)
+    {
+        foreach (var ship in state.Ships.Where(ship => ship.Hex == siren.Hex).ToArray())
+        {
+            state.Ships.Remove(ship);
+            if (ship.Perk is { } perk)
+            {
+                var drop = Board.Cells.Where(cell => cell.Terrain == "water" && cell.Hex != siren.Hex &&
+                        !state.Ships.Any(other => other.Hex == cell.Hex) &&
+                        !state.PerkPickups.Any(pickup => new Hex(pickup.Q, pickup.R) == cell.Hex) &&
+                        !(state.Kraken is { Lives: > 0 } kraken && kraken.Hex == cell.Hex) &&
+                        state.Whirlpool?.Exit(cell.Hex) is null)
+                    .OrderBy(cell => cell.Hex.DistanceTo(siren.Hex)).ThenBy(cell => cell.R).ThenBy(cell => cell.Q)
+                    .FirstOrDefault();
+                Require(drop is not null, "No open water is available for the ship's perk.");
+                state.PerkPickups.Add(new(perk, drop!.Q, drop.R));
+                Log("perk", $"{PerkName(perk)} washed ashore at {drop.Q}, {drop.R}.");
+            }
+            Log("casualty", $"{Name(ship.OwnerId)}'s ship {ship.Number} was lost when Cam's island rose beneath it.");
+        }
     }
 
     private void ClearMovementTrails(string owner)

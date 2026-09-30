@@ -38,13 +38,13 @@ public partial class GameRulesTests
         for (var seed = 0; seed < 12; seed++)
         {
             var s = Lobby(); Rules(s).Act(s.HostPlayerId!, new("vote-map", MapId: mapId));
-            ReadyCrew(s, s.Players[2].Id, new(s, new SeededDice(seed), new(), Now));
-            Assert.Equal("playing", s.Phase); Assert.Equal(s.Players[2].Id, s.ActivePlayerId);
+            ReadyCrew(s, new(s, new SeededDice(seed), new(), Now));
+            Assert.Equal("playing", s.Phase); Assert.Contains(s.ActivePlayerId, s.Players.Select(p => p.Id));
             Assert.Equal(neutral, Assert.Single(s.Ports, p => p.OwnerId is null).Id);
             Assert.All(s.Players, p => { Assert.Equal(3, s.Ports.Count(port => port.OwnerId == p.Id)); Assert.Equal(6, s.Ships.Count(ship => ship.OwnerId == p.Id)); });
             Assert.All(s.Ports.Where(p => p.OwnerId is not null), p => Assert.Equal(2, s.Ships.Count(ship => ship.PortId == p.Id && ship.OwnerId == p.OwnerId)));
             Assert.DoesNotContain(s.Ships, ship => ship.PortId == neutral);
-            Assert.Equal(7, s.PerkPickups.Select(p => p.Kind).Distinct().Count());
+            Assert.Equal(6, s.PerkPickups.Select(p => p.Kind).Distinct().Count());
             Assert.Null(s.Combat); Assert.Empty(s.CombatChoices);
             deals.Add(string.Join(',', s.Ports.Select(p => s.Players.FindIndex(player => player.Id == p.OwnerId))));
         }
