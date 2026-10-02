@@ -1128,6 +1128,34 @@
   color: #96aeac;
   font-size: 11px;
 }
+.battle-chances {
+  margin: 0 30px 20px;
+  padding: 12px 18px;
+  border: 1px solid #6b795e;
+  border-radius: 8px;
+  background: #253a36;
+  text-align: center;
+}
+.battle-chances > span {
+  color: #aebfac;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+.battle-chances > div {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  margin-top: 7px;
+}
+.battle-chances p {
+  margin: 0;
+  font-size: 13px;
+}
+.battle-chances strong {
+  color: #f2d493;
+  margin-left: 5px;
+}
 .battle-sides {
   display: grid;
   grid-template-columns: 1fr 40px 1fr;
@@ -2439,6 +2467,9 @@
   .battle-sides {
     margin: 0 12px;
     grid-template-columns: 1fr 20px 1fr;
+  }
+  .battle-chances {
+    margin: 0 12px 15px;
   }
   .battle-side {
     padding: 13px 8px;

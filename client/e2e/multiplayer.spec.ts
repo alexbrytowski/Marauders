@@ -226,9 +226,16 @@ test('overnight changes synchronize whirlpools, equivalent battles and persisten
     game = await clickAction(pages[0], () => pages[0].getByRole('button', { name: /Sail 1 hex/ }).click())
     expect(game.combatChoices).toHaveLength(0)
     expect(game.combat?.participantShipIds).toHaveLength(4)
+    expect(typeof game.combatAttackerWinChance).toBe('number')
+    expect(Number.isFinite(game.combatAttackerWinChance)).toBe(true)
+    const attackerChance = `${(game.combatAttackerWinChance! * 100).toFixed(2)}%`
+    const defenderChance = `${((1 - game.combatAttackerWinChance!) * 100).toFixed(2)}%`
     for (const page of pages) {
       await expect(page.getByLabel('Battle close-up')).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Choose your battle' })).toHaveCount(0)
+      await expect(page.getByLabel('Chance to win the next decisive exchange')).toContainText(attackerChance)
+      await expect(page.getByLabel('Chance to win the next decisive exchange')).toContainText(defenderChance)
+      expect((await state(page)).combatAttackerWinChance).toBe(game.combatAttackerWinChance)
     }
     await pages[0].screenshot({ path: testInfo.outputPath('overnight-single-battle.png') })
     expect(

@@ -31,6 +31,7 @@ public sealed class GameState
     public bool IsEndingRound { get; set; }
     public int AvailableBuilds { get; set; }
     public CombatState? Combat { get; set; }
+    public double? CombatAttackerWinChance => CombatWinChance.Calculate(this);
     public List<CombatChoice> CombatChoices { get; set; } = [];
     public string? CombatPlayerId
     {

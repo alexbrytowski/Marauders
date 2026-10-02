@@ -1,5 +1,10 @@
 # Marauders launch checklist
 
+## October 2: current exchange odds
+
+- [x] Show server-calculated win chances for the next decisive combat exchange to every viewer at the top of the battle dialog. Ties reroll; activating Cheat Death counts as a loss for that exchange, even though it prevents the casualty or port effect and requires another roll. This is not the chance of winning a multi-exchange encounter.
+- [x] Cover ship and port support, defense weakness, combat perks, Cam, and the Kraken in server tests; verify multiplayer display, lint, and builds. Nine odds tests and the five-browser battle scenario pass; the full server suite has one unrelated stale Delta map-version expectation.
+
 ## September 30: NPC warnings ignore ships
 
 - [x] Keep Cam's warned island and the Kraken's warned center independent of current ship positions; ships have four rounds to move away.

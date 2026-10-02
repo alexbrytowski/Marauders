@@ -196,6 +196,15 @@ export function BattleModal({
                 : 'Every roll is public. Highest die wins.'}
         </p>
       </div>
+      {battle?.status === 'awaiting-roll' && typeof game.combatAttackerWinChance === 'number' && (
+        <div className="battle-chances" aria-label="Chance to win the next decisive exchange">
+          <span>CHANCE TO WIN NEXT EXCHANGE</span>
+          <div>
+            <p>{combatantName(battle.attackerId)} <strong>{(game.combatAttackerWinChance * 100).toFixed(2)}%</strong></p>
+            <p>{combatantName(battle.defenderId)} <strong>{((1 - game.combatAttackerWinChance) * 100).toFixed(2)}%</strong></p>
+          </div>
+        </div>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}

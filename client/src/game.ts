@@ -118,6 +118,7 @@ export type Game = {
   isEndingRound: boolean
   availableBuilds: number
   combat: Battle | null
+  combatAttackerWinChance: number | null
   combatChoices: Encounter[]
   combatPlayerId: string | null
   events: GameEvent[]
