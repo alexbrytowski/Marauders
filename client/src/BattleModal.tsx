@@ -139,7 +139,9 @@ export function BattleModal({
     : false
   const blackWhiteOwnerId =
     battle?.status === 'awaiting-roll'
-      ? npcRewardSuppressesBlackWhite ? null : (currentBlackWhiteHolder?.ownerId ?? null)
+      ? npcRewardSuppressesBlackWhite || battle.kind === 'kraken' || battle.kind === 'siren'
+        ? null
+        : (currentBlackWhiteHolder?.ownerId ?? null)
       : battle?.blackWhiteResult ? (battle.blackWhiteOwnerId ?? null) : null
   const blackWhiteActive = !!blackWhiteOwnerId
   const opposingBlackWhiteId =

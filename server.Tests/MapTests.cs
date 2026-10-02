@@ -131,11 +131,11 @@ public partial class GameRulesTests
         var option = MapCatalog.Get("delta");
         var map = option.Board;
         Assert.Equal("Delta", option.Name);
-        Assert.Equal("delta-v1", map.Version);
+        Assert.Equal("delta-v2", map.Version);
         Assert.Equal("port-11", option.NeutralPortId);
         Assert.Equal(Enumerable.Range(1, 13).Select(i => $"Port {i}"), map.Ports.Select(port => port.Name));
         Assert.Equal(new[] {
-            (27, 1), (18, 4), (12, 7), (22, 14), (25, 12), (29, 17), (2, 27),
+            (27, 1), (18, 4), (12, 7), (22, 14), (10, 25), (29, 17), (2, 27),
             (4, 14), (3, 6), (19, 23), (13, 18), (32, 5), (30, 27)
         }, map.Ports.Select(port => (port.Col, port.Row)));
         Assert.Null(MapCatalog.Find("shattered-isles"));

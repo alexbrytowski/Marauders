@@ -19,7 +19,8 @@ public static class CombatWinChance
 
         var participants = state.Ships.Where(ship => battle.ParticipantShipIds.Contains(ship.Id)).ToArray();
         if (participants.Length != battle.ParticipantShipIds.Count) return null;
-        if (participants.Any(ship => ship.Perk is "mark-of-the-kraken" or "call-of-the-siren") is false &&
+        if (battle.Kind is not ("kraken" or "siren") &&
+            participants.Any(ship => ship.Perk is "mark-of-the-kraken" or "call-of-the-siren") is false &&
             participants.Any(ship => ship.Perk == "black-and-white")) return 0.5;
 
         var attackerDice = new List<IReadOnlyDictionary<int, double>>();

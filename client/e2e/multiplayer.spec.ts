@@ -3025,6 +3025,58 @@ test('perks, Black and White override, zero rolls, and victory history synchroni
     expect(game.combat?.blackWhiteOwnerId).toBeNull()
     expect(game.combat?.rolls[ids[0]]).toHaveLength(1)
     expect(game.combat?.rolls[ids[1]]).toHaveLength(3)
+    for (const boss of ['kraken', 'siren'] as const) {
+      await stopServer()
+      saved = JSON.parse(await readFile(savePath, 'utf8'))
+      Object.assign(saved.game, {
+        activePlayerId: ids[0],
+        turnNumber: 33,
+        isBuildPhase: false,
+        remainingActions: 2,
+        remainingMovement: 1,
+        turnEndsAt: new Date(Date.now() + 1_800_000).toISOString(),
+        actionEndsAt: new Date(Date.now() + 900_000).toISOString(),
+        combat: null,
+        combatChoices: [],
+        perkPickups: [],
+        kraken: boss === 'kraken' ? { q: open.q + 3, r: open.r, lives: 3 } : null,
+        siren: boss === 'siren' ? { q: open.q + 2, r: open.r, alive: true } : null,
+        ships: [{
+          id: `boss-black-white-${boss}`,
+          ownerId: ids[0],
+          portId: 'port-1',
+          number: 12,
+          q: open.q,
+          r: open.r,
+          perk: 'black-and-white',
+        }],
+      })
+      saved.game.revision++
+      await writeFile(savePath, JSON.stringify(saved))
+      await startServer()
+      for (const p of pages) {
+        await p.reload()
+        await expect(p.locator('.connection')).toHaveText('Live')
+      }
+      await pages[0].locator(`[data-ship="boss-black-white-${boss}"]`).click()
+      await pages[0].locator(`[data-hex="${open.q + 1},${open.r}"]`).click()
+      game = await clickAction(pages[0], () =>
+        pages[0].getByRole('button', { name: /Sail 1 hex .* battle ahead/ }).click(),
+      )
+      expect(game.combat?.kind).toBe(boss)
+      for (const p of pages) {
+        await expect(p.getByLabel('Black and White battle override')).toHaveCount(0)
+        await expect(p.getByRole('button', { name: 'Roll battle dice', exact: true })).toHaveCount(
+          p === pages[0] ? 1 : 0,
+        )
+      }
+      game = await clickAction(pages[0], () =>
+        pages[0].getByRole('button', { name: 'Roll battle dice', exact: true }).click(),
+      )
+      expect(game.combat?.blackWhiteResult).toBeNull()
+      expect(game.combat?.rolls[ids[0]]).toHaveLength(1)
+      expect(game.combat?.rolls[boss === 'kraken' ? 'the-kraken' : 'cam-the-siren']).toHaveLength(boss === 'kraken' ? 3 : 1)
+    }
     // A final port battle exercises real server capture and final-round recording.
     await stopServer()
     saved = JSON.parse(await readFile(savePath, 'utf8'))

@@ -429,7 +429,7 @@ public sealed class GameRules(GameState state, IDice dice, GameOptions options, 
         battle.BlackWhiteOwnerId = null;
         var participants = battle.ParticipantShipIds.Select(Ship).ToList();
         var npcRewardSuppressesBlackWhite = participants.Any(ship => ship.Perk is "mark-of-the-kraken" or "call-of-the-siren");
-        var blackWhite = npcRewardSuppressesBlackWhite
+        var blackWhite = npcRewardSuppressesBlackWhite || battle.Kind is "kraken" or "siren"
             ? null
             : participants.FirstOrDefault(ship => ship.Perk == "black-and-white");
         if (blackWhite is not null)

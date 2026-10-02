@@ -136,6 +136,28 @@ public partial class GameRulesTests
     }
 
     [Fact]
+    public void Black_and_white_is_ignored_against_Cam()
+    {
+        var state = Playing();
+        state.Siren = new() { Q = Open.Q + 2, R = Open.R };
+        var holder = Add(state, 0, Open);
+        holder.Perk = "black-and-white";
+        state.RemainingMovement = 1;
+        Rules(state).Act(holder.OwnerId, new("move", ShipId: holder.Id, Q: Open.Q + 1, R: Open.R));
+
+        var dice = new ControlledDice([6, 1]);
+        new GameRules(state, dice, new(), Now)
+            .Act(holder.OwnerId, new("roll-combat", CombatId: state.Combat!.Id));
+
+        Assert.Null(state.Combat.BlackWhiteResult);
+        Assert.Null(state.Combat.BlackWhiteOwnerId);
+        Assert.Equal(new[] { 6 }, state.Combat.Rolls[holder.OwnerId]);
+        Assert.Equal(new[] { 1 }, state.Combat.Rolls[GameRules.SirenId]);
+        Assert.Equal(new[] { 6, 20 }, dice.Sides);
+        Assert.False(state.Siren.Alive);
+    }
+
+    [Fact]
     public void Slaying_Cam_replaces_Wax_on_its_remote_carrier_even_if_another_fleet_wins()
     {
         var state = Playing();

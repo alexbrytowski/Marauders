@@ -67,6 +67,10 @@ public sealed class CombatWinChanceTests
 
         var kraken = Battle(kind: "kraken");
         Assert.Equal(0.2083333333333333, kraken.CombatAttackerWinChance!.Value, 10);
+        siren.Ships[0].Perk = "black-and-white";
+        kraken.Ships[0].Perk = "black-and-white";
+        Assert.Equal(15.0 / 114, siren.CombatAttackerWinChance!.Value, 10);
+        Assert.Equal(0.2083333333333333, kraken.CombatAttackerWinChance!.Value, 10);
     }
 
     [Fact]

@@ -178,7 +178,7 @@ public partial class GameRulesTests
     }
 
     [Fact]
-    public void Black_and_white_and_Cheat_Death_apply_to_Kraken_exchanges()
+    public void Black_and_white_is_ignored_but_Cheat_Death_applies_to_Kraken_exchanges()
     {
         var blackWhite = Playing();
         blackWhite.Kraken = new() { Q = Open.Q + 3, R = Open.R };
@@ -186,10 +186,15 @@ public partial class GameRulesTests
         holder.Perk = "black-and-white";
         blackWhite.RemainingMovement = 1;
         Rules(blackWhite).Act(holder.OwnerId, new("move", ShipId: holder.Id, Q: Open.Q + 1, R: Open.R));
-        Rules(blackWhite, 1).Act(holder.OwnerId, new("roll-combat", CombatId: blackWhite.Combat!.Id));
+        var dice = new ControlledDice([6, 1, 2, 3]);
+        new GameRules(blackWhite, dice, new(), Now)
+            .Act(holder.OwnerId, new("roll-combat", CombatId: blackWhite.Combat!.Id));
         Assert.Equal(2, blackWhite.Kraken.Lives);
-        Assert.Equal("black", blackWhite.Combat.BlackWhiteResult);
-        Assert.All(blackWhite.Combat.Rolls.Values, Assert.Empty);
+        Assert.Null(blackWhite.Combat.BlackWhiteResult);
+        Assert.Null(blackWhite.Combat.BlackWhiteOwnerId);
+        Assert.Equal(new[] { 6 }, blackWhite.Combat.Rolls[holder.OwnerId]);
+        Assert.Equal(new[] { 1, 2, 3 }, blackWhite.Combat.Rolls[GameRules.KrakenId]);
+        Assert.Equal(new[] { 6, 6, 6, 6 }, dice.Sides);
 
         var cheatDeath = Playing();
         cheatDeath.Kraken = new() { Q = Open.Q + 3, R = Open.R };
