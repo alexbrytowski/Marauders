@@ -592,6 +592,13 @@ export default function App() {
                           Roll to sail
                         </button>
                       )}
+                      <PortAttacks
+                        game={game}
+                        board={board}
+                        playerId={session.playerId}
+                        disabled={disabled}
+                        act={act}
+                      />
                     </>
                   )}
                   {game.phase === 'playing' && myTurn && game.isBuildPhase && (
@@ -621,13 +628,6 @@ export default function App() {
                     </span>
                   )}
                 </div>
-                <PortAttacks
-                  game={game}
-                  board={board}
-                  playerId={session.playerId}
-                  disabled={disabled}
-                  act={act}
-                />
               </section>
               {me && (
                 <section className="personal-deck">

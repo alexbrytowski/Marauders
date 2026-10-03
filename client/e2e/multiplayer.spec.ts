@@ -3630,7 +3630,10 @@ test('playtest readability, public roll reveal, map casualty choices and discove
       await expect(page.locator('.connection')).toHaveText('Live')
     }
     const target = game.ports[12]
-    await expect(pages[0].getByRole('region', { name: 'Available port attacks' })).toBeVisible()
+    const actionControls = pages[0].locator('.command-buttons')
+    await expect(actionControls.getByRole('button', { name: 'Roll to sail' })).toBeVisible()
+    await expect(actionControls.getByRole('region', { name: 'Available port attacks' })).toBeVisible()
+    await expect(actionControls.getByText('Spend one action die instead of rolling to sail.')).toBeVisible()
     await expect(pages[4].getByRole('region', { name: 'Available port attacks' })).toHaveCount(0)
     await pages[0].getByLabel(`Attacking ship at ${target.name}`).selectOption('port-attacker-1')
     await pages[0].screenshot({ path: testInfo.outputPath('available-port-attack.png') })

@@ -1456,13 +1456,14 @@
   opacity: 0.45;
 }
 .port-attacks {
-  flex-basis: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
-  padding-top: 12px;
-  border-top: 1px solid #49605e;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  border: 1px solid #806a4d;
+  border-radius: 6px;
+  background: #302e28;
 }
 .port-attacks strong {
   color: #edc98a;
@@ -1471,12 +1472,13 @@
 .port-attacks small {
   display: block;
   font-size: 11px;
-  margin-top: 5px;
+  margin-top: 3px;
   color: #b7c7c1;
 }
 .port-attack-option {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .port-attack-option select {

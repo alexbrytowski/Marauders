@@ -43,13 +43,13 @@ export function PortAttacks({
   return (
     <section className="port-attacks" aria-label="Available port attacks">
       <div>
-        <strong>Ports within reach</strong>
+        <strong>Or attack a port</strong>
         <small>
           {game.remainingActions === 0
             ? 'No unused action dice this round.'
             : game.remainingMovement > 0
-              ? 'Finish or pass movement to attack with your next die.'
-              : 'Each attack uses one action die.'}
+              ? 'Finish or pass movement, then spend a die to attack.'
+              : 'Spend one action die instead of rolling to sail.'}
         </small>
       </div>
       {targets.map((port) => (
